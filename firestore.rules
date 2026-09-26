@@ -2,8 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    match /users/{uid}/documents/{documentId} {
+      allow read, delete: if request.auth.uid == uid;
+      allow create, update: if request.auth.uid == uid
+        && request.resource.data.ownerId == uid;
+
+      match /extractions/{extractionId} {
+        allow read, write: if request.auth.uid == uid;
+      }
+    }
+
+    match /users/{uid}/folders/{folderId} {
+      allow read, write: if request.auth.uid == uid;
     }
   }
 }

@@ -99,9 +99,28 @@ Each app learns the other's origin differently:
 
 The Bus's `targetOrigin` allow-list is populated from these values — still exactly one Peer Origin per app per Environment.
 
+## App Check
+
+Decided in [App Check enforcement and Gemini abuse limits](https://github.com/JohnNooney/KlartextDMS/issues/21).
+
+Enforcement is `Enforced` on Firestore, Storage, and AI Logic — flipped on when the App Check SDK first lands in a deployable build, so previews and production run identical enforcement (AI Logic is auto-enforced on registration; there are no pre-App-Check clients to protect). Replay protection stays `Unenforced`; the reused-token metric in the console is the tripwire.
+
+Both apps call `initializeAppCheck` in every Environment; only the provider varies:
+
+| Environment | Provider | Token source |
+|---|---|---|
+| dev | debug | `KLARTEXT_HOST_DEBUG_TOKEN` / `KLARTEXT_GUEST_DEBUG_TOKEN` from the local `.env` |
+| e2e | debug | build-time env var; GitHub secret in CI |
+| preview | debug | same GitHub secret, injected at the preview build |
+| production | reCAPTCHA Enterprise | site key pinned to the exact prod hostnames — no `web.app` apex, so hashed preview channels can't attest and deliberately run the debug provider |
+
+The debug token is the only secret-ish value in the client config tree: never committed, never baked into production builds.
+
+The v1 Gemini abuse ceiling is enforced App Check plus, all without backend code: the AI Logic per-user quota lowered to ~10 Generate Content requests/min (default 100), a project-level cap of ~500 requests/day set as a quota override in the Cloud console, and billing alerts at €5/€25. A hard auto-shutdown would need a budget-automation Cloud Function — excluded by the no-backend constraint.
+
 ## CI
 
 Two workflows, replacing the auto-generated single-site skeletons:
 
 - **On PR** (`firebase-hosting-pull-request.yml`): pnpm install → lint → unit tests → build both apps → Playwright e2e against the emulator suite (`firebase emulators:exec`, using `FIREBASE_SERVICE_ACCOUNT_KLARTEXT_B836C`) → preview deploy: **Guest channel first** (`channelId: pr-<n>`), capture its URL, write it into the Host's `config.json`, then deploy the **Host channel**. The GitHub action posts both preview URLs on the PR.
-- **On merge to main** (`firebase-hosting-merge.yml`): same checks, then `firebase deploy --only hosting` to the live channel of both sites.
+- **On merge to main** (`firebase-hosting-merge.yml`): same checks, then `firebase deploy` — both sites' live channels plus `firestore.rules`/`storage.rules`.
