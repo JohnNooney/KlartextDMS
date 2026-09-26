@@ -17,7 +17,7 @@ _Avoid_: widget, child, embed, App B
 ### Documents
 
 **Document**:
-A file the user has uploaded together with its metadata (title, type, upload date). The unit the Host lists and opens.
+A file the user has uploaded together with its metadata (title, upload date). The unit the Host lists and opens.
 _Avoid_: file, upload, paper
 
 **Folder**:
