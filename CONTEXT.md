@@ -53,3 +53,13 @@ _Avoid_: message, event
 **Session**:
 The context the Host hands the Guest when a Document is opened: which Document, its stored Extraction or how producing one stands, and who the user is. A Session never carries the Document's bytes and never starts an Extraction. Each Session has an id the Guest echoes so the Host can discard replies to a Session it has moved past.
 _Avoid_: context, init data
+
+### Deployment
+
+**Environment**:
+One of the four places an app runs: dev (framework dev servers backed by the Firebase emulators), e2e (built output served by the Hosting emulator), preview (a per-PR Hosting preview channel), and production (the live Hosting channel). Each Environment fixes each app's Peer Origin.
+_Avoid_: stage, tier, mode
+
+**Peer Origin**:
+The single allowed origin of the other frame in a given Environment: the Guest's origin for the Host, the Host's origin for the Guest. The Bus's allow-list is built from it.
+_Avoid_: target origin, remote origin
