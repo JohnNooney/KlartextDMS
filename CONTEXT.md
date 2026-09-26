@@ -25,11 +25,11 @@ The AI-produced plain-English reading of one Document: its document type, transl
 _Avoid_: analysis, summary, result, TL;DR
 
 **Key Takeaway**:
-A single fact from a Document the user needs to know (amounts, dates, obligations).
+A single fact directly supported by a quotation from a Document that the user needs to know (amounts, dates, obligations). A Key Takeaway has normal or critical importance.
 _Avoid_: highlight, bullet
 
 **Critical Warning**:
-A Key Takeaway that can cost the user money or rights if missed (notice periods, hidden fees, liabilities).
+A Key Takeaway with critical importance that can cost the user money or rights if missed (notice periods, hidden fees, liabilities).
 _Avoid_: risk, alert, red flag
 
 ### Cross-frame communication
