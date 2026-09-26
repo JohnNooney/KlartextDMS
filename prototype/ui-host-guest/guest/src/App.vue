@@ -1,71 +1,51 @@
 <script setup>
+// PROTOTYPE ONLY — Guest as the "smart panel". Renders only what the Host hands it in the Session.
 import { ref, computed, onMounted } from 'vue';
 import ExtractionPanel from './components/ExtractionPanel.vue';
-import StateBadge from './components/StateBadge.vue';
 
-const params = new URLSearchParams(window.location.search);
-const docId = ref(params.get('doc') ?? 'none');
-const docType = ref(params.get('type') ?? 'Document');
+const HOST_ORIGIN = 'http://localhost:5173';
+const sessionId = new URLSearchParams(location.search).get('session');
+const session = ref(null);
 
-// Status comes from the Host via INIT_SESSION; default to query param if present.
-const toPanelState = (s) => ({ ready: 'success', success: 'success', processing: 'loading', loading: 'loading' })[s] ?? 'idle';
-const status = ref(toPanelState(params.get('status')));
+const SAMPLE = {
+  label: 'Tenancy agreement', sourceLanguage: 'German', extractionStatus: 'COMPLETE', model: 'gemini-2.5-flash', createdAt: 'Today',
+  plainEnglishSummary: 'Sample Extraction shown because this Document has none stored yet.',
+  keyTakeaways: [{ text: 'Sample critical takeaway.', importance: 'CRITICAL', sourceQuote: 'Beispiel', page: 1 }],
+};
 
-const extraction = ref({
-  documentType: docType.value,
-  translatedSummary:
-    'Der Mietvertrag ist unbefristet und kann von beiden Parteien nur unter bestimmten Bedingungen gekündigt werden.',
-  keyTakeaways: [
-    'Kündigungsfrist beträgt drei Monate.',
-    'Miete ist zum dritten Werktag fällig.',
-    'Nebenkosten werden jährlich mit dem Vermieter abgerechnet.',
-  ],
-  criticalWarnings: [
-    'Eine automatische Mietpreisbremse wird im Vertrag nicht erwähnt.',
-    'Kaution kann in drei Monatsmieten verlangt werden.',
-  ],
+// View = what the panel shows. Content statuses (COMPLETE / INSUFFICIENT_CONTENT) differ from processing errors.
+const view = computed(() => {
+  const s = session.value;
+  if (!s) return { kind: 'opening' };
+  const force = s.force ?? 'auto';
+  if (force === 'loading') return { kind: 'loading' };
+  if (force === 'error') return { kind: 'error', code: 'TIMEOUT' };
+  if (force === 'insufficient') return { kind: 'insufficient', extraction: { ...(s.extraction ?? SAMPLE), extractionStatus: 'INSUFFICIENT_CONTENT', statusExplanation: 'The scan is too blurry to read reliably. Try a sharper scan or the original PDF.' } };
+  if (force === 'complete') return { kind: 'complete', extraction: s.extraction?.extractionStatus === 'COMPLETE' ? s.extraction : SAMPLE };
+  if (s.status === 'processing' || !s.extraction) return { kind: 'loading' };
+  if (s.extraction.extractionStatus !== 'COMPLETE') return { kind: 'insufficient', extraction: s.extraction };
+  return { kind: 'complete', extraction: s.extraction };
 });
 
-const errorMessage = ref('The extraction could not be completed. Please try again later.');
-
-function setState(next) {
-  status.value = next;
+function send(type, payload) {
+  window.parent.postMessage({ v: 1, type, sessionId, payload }, HOST_ORIGIN);
 }
 
 onMounted(() => {
-  window.parent.postMessage({ v: 1, type: 'GUEST_READY', sessionId: 'proto' }, '*');
-  window.addEventListener('message', (event) => {
-    const msg = event.data;
-    if (!msg || msg.v !== 1) return;
-    if (msg.type === 'INIT_SESSION') {
-      setState(toPanelState(msg.payload?.status));
-      if (msg.payload?.type) docType.value = msg.payload.type;
-    } else if (msg.type === 'AI_PROCESSING_STARTED') {
-      setState('loading');
-    } else if (msg.type === 'AI_PROCESSING_SUCCESS') {
-      setState('success');
-    } else if (msg.type === 'AI_PROCESSING_ERROR') {
-      setState('error');
-    }
+  window.addEventListener('message', (e) => {
+    if (e.origin !== HOST_ORIGIN || e.source !== window.parent) return;
+    const msg = e.data;
+    if (msg?.v === 1 && msg.type === 'INIT_SESSION' && msg.sessionId === sessionId) session.value = msg.payload;
   });
+  send('GUEST_READY');
 });
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-kt-bg text-kt-text">
-    <header class="h-12 border-b border-kt-border bg-kt-surface flex items-center justify-between px-4 shrink-0">
-      <span class="text-sm font-medium text-kt-text-muted">Insights</span>
-      <StateBadge :status="status" />
-    </header>
-
-    <main class="flex-1 min-h-0 overflow-hidden">
-      <ExtractionPanel
-        :status="status"
-        :extraction="extraction"
-        :error-message="errorMessage"
-        class="h-full"
-        @set-state="setState"
-      />
-    </main>
-  </div>
+  <ExtractionPanel
+    :view="view"
+    :title="session?.title"
+    @show-page="(page) => send('GUEST_SHOW_PAGE', { page })"
+    @retry="send('GUEST_RETRY')"
+  />
 </template>
