@@ -8,8 +8,8 @@ const docId = ref(params.get('doc') ?? 'none');
 const docType = ref(params.get('type') ?? 'Document');
 
 // Status comes from the Host via INIT_SESSION; default to query param if present.
-const initialStatus = params.get('status') === 'ready' ? 'success' : params.get('status') === 'processing' ? 'loading' : 'idle';
-const status = ref(initialStatus);
+const toPanelState = (s) => ({ ready: 'success', success: 'success', processing: 'loading', loading: 'loading' })[s] ?? 'idle';
+const status = ref(toPanelState(params.get('status')));
 
 const extraction = ref({
   documentType: docType.value,
@@ -38,10 +38,7 @@ onMounted(() => {
     const msg = event.data;
     if (!msg || msg.v !== 1) return;
     if (msg.type === 'INIT_SESSION') {
-      const incoming = msg.payload?.status;
-      if (incoming === 'processing') setState('loading');
-      else if (incoming === 'ready') setState('success');
-      else setState('idle');
+      setState(toPanelState(msg.payload?.status));
       if (msg.payload?.type) docType.value = msg.payload.type;
     } else if (msg.type === 'AI_PROCESSING_STARTED') {
       setState('loading');

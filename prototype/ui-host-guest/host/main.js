@@ -1,3 +1,6 @@
+import '../shared/theme.css';
+import './styles.scss';
+
 const defaultFolders = [
   { id: 'all', name: 'All files', icon: '📁' },
   { id: 'mietvertrag', name: 'Mietvertrag', icon: '🏠' },
