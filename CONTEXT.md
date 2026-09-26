@@ -7,18 +7,22 @@ A personal filing cabinet for German paperwork that explains each document in pl
 ### Applications
 
 **Host**:
-The Angular dashboard that owns sign-in, the document list, and the frame the Guest renders in.
+The Angular dashboard that owns sign-in, the Document library and its Folders, the PDF view of an open Document, and the frame the Guest renders in.
 _Avoid_: shell, dashboard app, parent, App A
 
 **Guest**:
-The Vue widget rendered inside the Host's iframe that shows a Document and its Extraction.
+The Vue insights panel rendered inside the Host's iframe that shows an open Document's Extraction and produces new Extractions.
 _Avoid_: widget, child, embed, App B
 
 ### Documents
 
 **Document**:
-A file the user has uploaded together with its metadata (title, type, upload date). The unit the Host lists and the Guest opens.
+A file the user has uploaded together with its metadata (title, type, upload date). The unit the Host lists and opens.
 _Avoid_: file, upload, paper
+
+**Folder**:
+A named container the user files Documents in. Folders can contain other Folders.
+_Avoid_: directory, category, collection, tag
 
 **Extraction**:
 The AI-produced plain-English reading of one Document: its document type, translated summary, key takeaways, and critical warnings. One Extraction per Document, persisted and reused.
@@ -32,6 +36,10 @@ _Avoid_: highlight, bullet
 A Key Takeaway with critical importance that can cost the user money or rights if missed (notice periods, hidden fees, liabilities).
 _Avoid_: risk, alert, red flag
 
+**Extraction Job**:
+One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
+_Avoid_: analysis, task, background job
+
 ### Cross-frame communication
 
 **Bus**:
@@ -39,9 +47,9 @@ The `window.postMessage` channel between Host and Guest. The only way they talk.
 _Avoid_: bridge, event bus, channel
 
 **Envelope**:
-The `{ v, type, sessionId, payload }` shape every Bus message takes: protocol version, message type, the Session it belongs to, and a payload typed per message type.
+The `{ v, type, sessionId, payload }` shape every Bus message takes: protocol version, message type, the Session it belongs to (empty for messages outside a Session, such as Extraction Job messages), and a payload typed per message type.
 _Avoid_: message, event
 
 **Session**:
-The context the Host hands the Guest when a Document is opened: which Document (including its bytes), any stored Extraction, and who the user is. Each Session has an id the Guest echoes so the Host can discard replies to a Session it has moved past.
+The context the Host hands the Guest when a Document is opened: which Document, its stored Extraction or how producing one stands, and who the user is. A Session never carries the Document's bytes and never starts an Extraction. Each Session has an id the Guest echoes so the Host can discard replies to a Session it has moved past.
 _Avoid_: context, init data
