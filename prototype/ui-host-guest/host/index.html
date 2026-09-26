@@ -11,15 +11,25 @@
     <div id="app" class="host">
       <aside class="sidebar" id="sidebar">
         <header class="sidebar-header">
-          <h1>Klartext</h1>
+          <div class="brand">
+            <span class="brand-icon">✺</span>
+            <h1>Klartext</h1>
+          </div>
         </header>
         <nav class="file-tree" id="file-tree"></nav>
+        <button class="new-folder-btn" id="new-folder-btn">+ New folder</button>
       </aside>
 
       <main class="stage" id="stage">
         <header class="stage-header">
-          <h2 id="stage-title">All files</h2>
-          <button class="btn btn-primary" id="upload-btn">Upload file</button>
+          <div class="stage-title-block">
+            <h2 id="stage-title">All files</h2>
+            <span class="stage-meta" id="stage-meta">3 files • ~3 MB</span>
+          </div>
+          <div class="stage-actions">
+            <button class="btn btn-secondary" id="new-folder-header">New folder</button>
+            <button class="btn btn-primary" id="upload-btn">Upload file</button>
+          </div>
         </header>
 
         <section class="file-explorer" id="file-explorer"></section>
@@ -52,18 +62,70 @@
     <!-- Upload dialog -->
     <dialog class="upload-dialog" id="upload-dialog">
       <form method="dialog" class="upload-form">
-        <h3>Upload file</h3>
-        <label>
-          <span>Display name</span>
-          <input type="text" id="upload-name" placeholder="e.g. Mietvertrag 2024" required />
-        </label>
-        <label>
-          <span>Folder</span>
-          <select id="upload-folder"></select>
-        </label>
+        <div class="dialog-head">
+          <h3>Upload file</h3>
+          <button class="dialog-close" value="cancel" aria-label="Close">×</button>
+        </div>
+
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">⬆</div>
+          <p class="drop-title">Drag your files here</p>
+          <p class="drop-hint">PDF only, up to 10 MB</p>
+          <input type="file" id="file-input" accept="application/pdf" multiple />
+          <button type="button" class="btn btn-primary" id="browse-btn">Browse files</button>
+        </div>
+
+        <div class="upload-list" id="upload-list"></div>
+
         <div class="dialog-actions">
-          <button class="btn btn-ghost" value="cancel">Cancel</button>
-          <button class="btn btn-primary" value="confirm">Upload</button>
+          <button class="btn btn-ghost" value="cancel">Discard</button>
+          <button class="btn btn-primary" value="confirm" id="upload-submit">Upload</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- New folder dialog -->
+    <dialog class="folder-dialog" id="folder-dialog">
+      <form method="dialog" class="folder-form">
+        <div class="dialog-head">
+          <h3>Configure new folder</h3>
+          <button class="dialog-close" value="cancel" aria-label="Close">×</button>
+        </div>
+        <p class="dialog-sub">Makes it easier to <strong>find</strong>, <strong>organize</strong>, and <strong>manage</strong> your files.</p>
+
+        <label>
+          <span>Folder name</span>
+          <input type="text" id="folder-name" placeholder="e.g. Hardware contracts" required />
+        </label>
+        <label>
+          <span>Description</span>
+          <textarea id="folder-desc" rows="3" placeholder="What belongs in this folder?"></textarea>
+        </label>
+
+        <div class="type-select">
+          <span class="type-label">File types accepted</span>
+          <div class="type-options" id="type-options">
+            <button type="button" class="type-option active" data-type="pdf">pdf</button>
+            <button type="button" class="type-option" data-type="doc">doc</button>
+            <button type="button" class="type-option" data-type="xls">xls</button>
+            <button type="button" class="type-option" data-type="ppt">ppt</button>
+            <button type="button" class="type-option" data-type="img">img</button>
+          </div>
+          <p class="type-hint">For this prototype only PDF will be processed; the rest are visual placeholders.</p>
+        </div>
+
+        <label>
+          <span>Keywords</span>
+          <div class="keywords-row">
+            <input type="text" id="folder-keyword" placeholder="Add a keyword…" />
+            <button type="button" class="btn btn-primary" id="add-keyword">+</button>
+          </div>
+        </label>
+        <div class="keyword-tags" id="keyword-tags"></div>
+
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" value="cancel">Discard</button>
+          <button class="btn btn-primary" value="confirm">Submit</button>
         </div>
       </form>
     </dialog>
