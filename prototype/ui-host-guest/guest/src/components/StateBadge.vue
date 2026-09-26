@@ -7,10 +7,10 @@ const labels = {
   error: 'Error',
 };
 const styles = {
-  idle: 'bg-kt-surface-raised text-kt-text-muted',
-  loading: 'bg-kt-accent-dim text-kt-text animate-pulse',
-  success: 'bg-kt-success text-kt-bg',
-  error: 'bg-kt-danger text-kt-bg',
+  idle: 'bg-kt-surface border border-kt-border text-kt-text-muted',
+  loading: 'bg-kt-accent-dim text-kt-accent animate-pulse',
+  success: 'bg-kt-success text-white',
+  error: 'bg-kt-danger text-white',
 };
 </script>
 

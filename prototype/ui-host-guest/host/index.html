@@ -8,26 +8,69 @@
     <link rel="stylesheet" href="./styles.scss" />
   </head>
   <body>
-    <div id="app">
-      <aside id="sidebar" class="sidebar">
+    <div id="app" class="host">
+      <aside class="sidebar" id="sidebar">
         <header class="sidebar-header">
           <h1>Klartext</h1>
-          <span class="badge">Host</span>
         </header>
-        <nav id="document-list" class="document-list"></nav>
-        <footer class="sidebar-footer">
-          <button id="simulate-run" class="btn btn-secondary">Simulate extraction run</button>
-          <p class="hint">Click a document, then start a run to lock the sidebar.</p>
-        </footer>
+        <nav class="file-tree" id="file-tree"></nav>
       </aside>
-      <main id="stage" class="stage">
-        <div id="welcome" class="welcome">
-          <h2>Welcome</h2>
-          <p>Select a Document from the sidebar to load the Guest.</p>
-        </div>
-        <iframe id="guest-frame" class="guest-frame hidden" sandbox="allow-scripts allow-same-origin"></iframe>
+
+      <main class="stage" id="stage">
+        <header class="stage-header">
+          <h2 id="stage-title">All files</h2>
+          <button class="btn btn-primary" id="upload-btn">Upload file</button>
+        </header>
+
+        <section class="file-explorer" id="file-explorer"></section>
+
+        <section class="reader hidden" id="reader">
+          <div class="reader-toolbar">
+            <button class="btn btn-ghost" id="back-btn">← Back to files</button>
+            <span id="reader-title" class="reader-title"></span>
+            <button class="btn btn-primary mobile-only" id="insights-toggle">Insights</button>
+          </div>
+          <div class="reader-panes">
+            <div class="pdf-pane" id="pdf-pane"></div>
+            <div class="insights-pane" id="insights-pane">
+              <iframe id="guest-frame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <!-- Insights bottom sheet (mobile) -->
+      <div class="sheet-overlay hidden" id="sheet-overlay"></div>
+      <div class="sheet hidden" id="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-body" id="sheet-body">
+          <iframe id="guest-frame-mobile" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        </div>
+      </div>
     </div>
+
+    <!-- Upload dialog -->
+    <dialog class="upload-dialog" id="upload-dialog">
+      <form method="dialog" class="upload-form">
+        <h3>Upload file</h3>
+        <label>
+          <span>Display name</span>
+          <input type="text" id="upload-name" placeholder="e.g. Mietvertrag 2024" required />
+        </label>
+        <label>
+          <span>Folder</span>
+          <select id="upload-folder"></select>
+        </label>
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" value="cancel">Cancel</button>
+          <button class="btn btn-primary" value="confirm">Upload</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Notifications -->
+    <div class="toasts" id="toasts"></div>
+
     <script type="module" src="./main.js"></script>
   </body>
 </html>

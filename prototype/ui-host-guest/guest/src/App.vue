@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import ExtractionPanel from './components/ExtractionPanel.vue';
-import PdfPlaceholder from './components/PdfPlaceholder.vue';
 import StateBadge from './components/StateBadge.vue';
 
 const params = new URLSearchParams(window.location.search);
 const docId = ref(params.get('doc') ?? 'none');
 const docType = ref(params.get('type') ?? 'Document');
-const status = ref('idle'); // idle | loading | success | error
+
+// Status comes from the Host via INIT_SESSION; default to query param if present.
+const initialStatus = params.get('status') === 'ready' ? 'success' : params.get('status') === 'processing' ? 'loading' : 'idle';
+const status = ref(initialStatus);
 
 const extraction = ref({
   documentType: docType.value,
@@ -35,7 +37,13 @@ onMounted(() => {
   window.addEventListener('message', (event) => {
     const msg = event.data;
     if (!msg || msg.v !== 1) return;
-    if (msg.type === 'AI_PROCESSING_STARTED') {
+    if (msg.type === 'INIT_SESSION') {
+      const incoming = msg.payload?.status;
+      if (incoming === 'processing') setState('loading');
+      else if (incoming === 'ready') setState('success');
+      else setState('idle');
+      if (msg.payload?.type) docType.value = msg.payload.type;
+    } else if (msg.type === 'AI_PROCESSING_STARTED') {
       setState('loading');
     } else if (msg.type === 'AI_PROCESSING_SUCCESS') {
       setState('success');
@@ -47,22 +55,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col">
-    <header class="h-14 border-b border-kt-border bg-kt-surface flex items-center justify-between px-4 shrink-0">
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-medium text-kt-text-muted">Guest</span>
-        <span class="text-kt-accent">{{ docType }}</span>
-      </div>
+  <div class="h-full flex flex-col bg-kt-bg text-kt-text">
+    <header class="h-12 border-b border-kt-border bg-kt-surface flex items-center justify-between px-4 shrink-0">
+      <span class="text-sm font-medium text-kt-text-muted">Insights</span>
       <StateBadge :status="status" />
     </header>
 
-    <main class="flex-1 flex min-h-0">
-      <PdfPlaceholder :doc-id="docId" :doc-type="docType" class="flex-1" />
+    <main class="flex-1 min-h-0 overflow-hidden">
       <ExtractionPanel
         :status="status"
         :extraction="extraction"
         :error-message="errorMessage"
-        class="w-[420px] border-l border-kt-border flex-shrink-0"
+        class="h-full"
         @set-state="setState"
       />
     </main>

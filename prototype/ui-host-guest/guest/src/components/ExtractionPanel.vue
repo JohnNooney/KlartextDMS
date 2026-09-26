@@ -8,7 +8,7 @@ const emit = defineEmits(['set-state']);
 </script>
 
 <template>
-  <section class="bg-kt-surface flex flex-col h-full">
+  <section class="bg-kt-bg flex flex-col h-full">
     <div class="px-4 h-12 flex items-center border-b border-kt-border">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-kt-text-muted">Extraction</h2>
     </div>
@@ -19,12 +19,12 @@ const emit = defineEmits(['set-state']);
       </div>
 
       <div v-else-if="status === 'loading'" class="space-y-4 animate-pulse">
-        <div class="h-4 bg-kt-surface-raised rounded-kt-md w-3/4"></div>
-        <div class="h-24 bg-kt-surface-raised rounded-kt-md"></div>
+        <div class="h-4 bg-kt-surface rounded-kt-md w-3/4"></div>
+        <div class="h-24 bg-kt-surface rounded-kt-md border border-kt-border"></div>
         <div class="space-y-2">
-          <div class="h-3 bg-kt-surface-raised rounded-kt-md w-5/6"></div>
-          <div class="h-3 bg-kt-surface-raised rounded-kt-md w-4/6"></div>
-          <div class="h-3 bg-kt-surface-raised rounded-kt-md w-3/4"></div>
+          <div class="h-3 bg-kt-surface rounded-kt-md w-5/6"></div>
+          <div class="h-3 bg-kt-surface rounded-kt-md w-4/6"></div>
+          <div class="h-3 bg-kt-surface rounded-kt-md w-3/4"></div>
         </div>
       </div>
 
@@ -41,7 +41,7 @@ const emit = defineEmits(['set-state']);
           </ul>
         </div>
 
-        <div class="space-y-2 border border-kt-border rounded-kt-md p-3 bg-kt-bg">
+        <div class="space-y-2 border border-kt-warning rounded-kt-md p-3 bg-kt-surface">
           <h3 class="text-xs font-semibold uppercase text-kt-danger">Critical warnings</h3>
           <ul class="list-disc list-inside space-y-1 text-sm text-kt-warning">
             <li v-for="item in extraction.criticalWarnings" :key="item">{{ item }}</li>
@@ -49,40 +49,40 @@ const emit = defineEmits(['set-state']);
         </div>
       </div>
 
-      <div v-else-if="status === 'error'" class="border border-kt-danger rounded-kt-md p-4 bg-kt-bg text-kt-danger">
+      <div v-else-if="status === 'error'" class="border border-kt-danger rounded-kt-md p-4 bg-kt-surface text-kt-danger">
         <p class="font-medium">Extraction failed</p>
         <p class="text-sm mt-1">{{ errorMessage }}</p>
       </div>
     </div>
 
-    <div class="border-t border-kt-border p-4 flex gap-2">
+    <div class="border-t border-kt-border p-4 flex gap-2 bg-kt-surface">
       <button
-        class="flex-1 px-3 py-2 rounded-kt-md border border-kt-border text-sm hover:bg-kt-surface-raised disabled:opacity-40"
+        class="flex-1 px-3 py-2 rounded-kt-md border border-kt-border text-sm hover:bg-kt-surface-hover disabled:opacity-40"
         :disabled="status === 'loading'"
         @click="emit('set-state', 'idle')"
       >
         Reset
       </button>
       <button
-        class="flex-1 px-3 py-2 rounded-kt-md bg-kt-accent-dim text-sm hover:bg-kt-accent hover:text-kt-bg disabled:opacity-40"
+        class="flex-1 px-3 py-2 rounded-kt-md border border-kt-border text-sm hover:bg-kt-surface-hover disabled:opacity-40"
         :disabled="status === 'loading'"
         @click="emit('set-state', 'loading')"
       >
-        Simulate loading
+        Loading
       </button>
       <button
-        class="flex-1 px-3 py-2 rounded-kt-md bg-kt-success text-kt-bg text-sm hover:opacity-90 disabled:opacity-40"
+        class="flex-1 px-3 py-2 rounded-kt-md bg-kt-success text-white text-sm hover:opacity-90 disabled:opacity-40"
         :disabled="status === 'loading'"
         @click="emit('set-state', 'success')"
       >
-        Simulate success
+        Success
       </button>
       <button
-        class="flex-1 px-3 py-2 rounded-kt-md bg-kt-danger text-kt-bg text-sm hover:opacity-90 disabled:opacity-40"
+        class="flex-1 px-3 py-2 rounded-kt-md bg-kt-danger text-white text-sm hover:opacity-90 disabled:opacity-40"
         :disabled="status === 'loading'"
         @click="emit('set-state', 'error')"
       >
-        Simulate error
+        Error
       </button>
     </div>
   </section>

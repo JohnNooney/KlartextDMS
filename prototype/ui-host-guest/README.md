@@ -4,9 +4,17 @@ Throwaway prototype for Wayfinder ticket **Host and Guest UI prototype**.
 
 ## What this shows
 
-- **Host** (`http://localhost:5173`): Angular-ish SCSS sidebar with three hardcoded Documents, a welcome screen, and an iframe that loads the Guest. The sidebar locks during a simulated extraction run.
-- **Guest** (`http://localhost:5174`): Vue 3 + Tailwind split-screen with a PDF placeholder on the left and an Extraction panel on the right. The panel cycles through idle / loading / success / error states.
-- **Shared theme tokens** in `shared/theme.css` drive both apps so they feel like one product.
+A Drive/Files-style **Host** with:
+- A file-tree sidebar with categories/folders.
+- A file explorer grid (with an upload card).
+- Selecting a file opens a split **reader**: raw PDF placeholder on the left, Guest iframe (smart insights panel) on the right.
+- An upload dialog to add a new file; after 5 s a toast notification says processing is complete.
+- If you open a file that is still processing, the Guest panel shows a loading skeleton.
+- Mobile: the insights panel becomes a bottom sheet opened from the reader toolbar.
+
+The **Guest** is a Vue 3 + Tailwind smart panel that only renders extraction states (idle, loading, success, error) and receives session/ status messages from the Host over `postMessage`.
+
+Both apps share the light theme tokens in `shared/theme.css`.
 
 ## Run
 
@@ -16,11 +24,12 @@ npm install
 npm run dev
 ```
 
-Then open `http://localhost:5173`.
+Open `http://localhost:5173`.
 
 ## Interaction tips
 
-1. Click a Document in the Host sidebar.
-2. Click **Simulate extraction run** in the Host footer.
-3. Watch the Guest switch from loading skeleton to success (after 4 s) while the Host sidebar stays locked.
-4. Use the Guest footer buttons to force states directly.
+1. Click a folder in the left sidebar to filter files.
+2. Click a file card to open the split reader.
+3. Click **Upload file** in the top-right, fill the dialog, and click **Upload**. A new card appears with “Processing…”; after ~5 s a toast notification appears.
+4. Click the processing file to see the Guest loading skeleton; wait, then the toast appears and the Guest state can refresh (re-open the file).
+5. On a narrow viewport, the insights panel hides; use the **Insights** button in the toolbar to open the bottom sheet.
