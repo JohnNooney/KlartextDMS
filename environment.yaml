@@ -1,0 +1,41 @@
+# Devin Cloud environment for KlartextDMS.
+# Before issue #22 lands this repo is docs-only; the workspace commands are
+# conditional so the blueprint stays valid across the scaffold.
+
+initialize:
+  - run: |
+      set -e
+      corepack enable
+      corepack prepare pnpm@9 --activate
+      npm install -g firebase-tools
+      if ! command -v java >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y default-jre-headless
+      fi
+      node --version && pnpm --version && firebase --version && java -version
+
+maintenance:
+  - run: |
+      # Install only once the pnpm workspace exists (issue #22).
+      if [ -f pnpm-workspace.yaml ]; then pnpm install; fi
+      gh auth status || true
+
+knowledge:
+  - name: dev
+    contents: |
+      pnpm dev — runs Host (:4200), Guest (:5173), and the Firebase emulators via concurrently (exists after #22)
+  - name: test
+    contents: |
+      pnpm test — Vitest in both apps + packages
+      pnpm test:integration — emulator-backed repository and rules tests
+      firebase emulators:exec --only auth,firestore,storage,hosting 'pnpm test:e2e' — Playwright e2e
+  - name: orientation
+    contents: |
+      Read CONTEXT.md (domain vocabulary), docs/spec.md (build order + invariants),
+      and docs/adr/*. Pick work only from open issues labelled ready-for-agent
+      with no open blockers and no assignee.
+  - name: secrets
+    contents: |
+      App Check debug tokens are org secrets: KLARTEXT_HOST_DEBUG_TOKEN,
+      KLARTEXT_GUEST_DEBUG_TOKEN. Never commit them; inject into
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN via the build-time env var only in
+      dev/e2e/preview builds.
