@@ -1,0 +1,41 @@
+/* Klartext shared theme tokens — PROTOTYPE ONLY */
+:root {
+  /* Palette */
+  --kt-bg: #0f172a;
+  --kt-surface: #1e293b;
+  --kt-surface-raised: #334155;
+  --kt-text: #f8fafc;
+  --kt-text-muted: #94a3b8;
+  --kt-border: #475569;
+  --kt-accent: #38bdf8;
+  --kt-accent-dim: #0284c7;
+  --kt-success: #4ade80;
+  --kt-warning: #facc15;
+  --kt-danger: #f87171;
+
+  /* Type */
+  --kt-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --kt-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --kt-text-sm: 0.875rem;
+  --kt-text-base: 1rem;
+  --kt-text-lg: 1.125rem;
+  --kt-text-xl: 1.25rem;
+  --kt-text-2xl: 1.5rem;
+
+  /* Spacing */
+  --kt-space-1: 0.25rem;
+  --kt-space-2: 0.5rem;
+  --kt-space-3: 0.75rem;
+  --kt-space-4: 1rem;
+  --kt-space-6: 1.5rem;
+  --kt-space-8: 2rem;
+
+  /* Radii */
+  --kt-radius-sm: 0.375rem;
+  --kt-radius-md: 0.5rem;
+  --kt-radius-lg: 0.75rem;
+
+  /* Layout */
+  --kt-sidebar-width: 280px;
+  --kt-header-height: 56px;
+}
