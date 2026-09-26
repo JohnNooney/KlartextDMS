@@ -21,7 +21,7 @@ A file the user has uploaded together with its metadata (title, upload date). Th
 _Avoid_: file, upload, paper
 
 **Folder**:
-A named container the user files Documents in. Folders can contain other Folders.
+A named container the user files Documents in, optionally annotated with a description and keywords. Folders can contain other Folders.
 _Avoid_: directory, category, collection, tag
 
 **Extraction**:
