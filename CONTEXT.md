@@ -39,9 +39,9 @@ The `window.postMessage` channel between Host and Guest. The only way they talk.
 _Avoid_: bridge, event bus, channel
 
 **Envelope**:
-The `{ type, payload }` shape every Bus message takes.
+The `{ v, type, sessionId, payload }` shape every Bus message takes: protocol version, message type, the Session it belongs to, and a payload typed per message type.
 _Avoid_: message, event
 
 **Session**:
-The context the Host hands the Guest when a Document is opened: which Document, and who the user is.
+The context the Host hands the Guest when a Document is opened: which Document (including its bytes), any stored Extraction, and who the user is. Each Session has an id the Guest echoes so the Host can discard replies to a Session it has moved past.
 _Avoid_: context, init data
