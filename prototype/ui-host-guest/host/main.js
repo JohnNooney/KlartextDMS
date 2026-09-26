@@ -2,6 +2,7 @@
 import '../shared/theme.css';
 import './styles.scss';
 import { icon, docThumb, folderThumb } from './icons.js';
+import { createViewer, VIEWER_LABELS, DOC_SIMS } from './viewers.js';
 
 const GUEST_ORIGIN = 'http://localhost:5174';
 const ROOT_LABEL = 'Documents';
@@ -88,7 +89,7 @@ function genericExtraction(doc) {
 }
 
 // ---------- State (mirrored in the URL) ----------
-const state = { folderId: null, fileId: null, nav: 'A', panel: true, sheet: 'half', menu: null, dialog: null, guestForce: 'auto', page: null };
+const state = { folderId: null, fileId: null, nav: 'A', panel: true, sheet: 'half', menu: null, dialog: null, guestForce: 'auto', page: null, viewer: 'A', docSim: 'ok', pdfPage: 1 };
 let seq = 100;
 let uploads = [];
 let uploadFolderId = null;
@@ -103,6 +104,8 @@ function readUrl() {
   state.folderId = p.get('folder') || null;
   state.fileId = p.get('file') || null;
   state.nav = NAVS[p.get('nav')] ? p.get('nav') : 'A';
+  state.viewer = VIEWER_LABELS[p.get('viewer')] ? p.get('viewer') : 'A';
+  state.docSim = DOC_SIMS[p.get('sim')] ? p.get('sim') : 'ok';
 }
 
 function writeUrl(replace) {
@@ -110,6 +113,8 @@ function writeUrl(replace) {
   if (state.folderId) p.set('folder', state.folderId);
   if (state.fileId) p.set('file', state.fileId);
   p.set('nav', state.nav);
+  p.set('viewer', state.viewer);
+  if (state.docSim !== 'ok') p.set('sim', state.docSim);
   history[replace ? 'replaceState' : 'pushState'](null, '', `?${p}`);
 }
 
@@ -121,7 +126,7 @@ function go(patch, { replace = false } = {}) {
 
 function openFile(id) {
   const doc = files.find((f) => f.id === id);
-  if (doc) go({ fileId: id, folderId: doc.folderId, page: null, sheet: 'half', dialog: null });
+  if (doc) go({ fileId: id, folderId: doc.folderId, page: null, pdfPage: 1, sheet: 'half', dialog: null });
 }
 
 // ---------- Helpers ----------
@@ -288,13 +293,21 @@ function browser(m) {
     </div>`;
 }
 
-function pdfMock(doc) {
-  const pages = Array.from({ length: doc.pages ?? 2 }, (_, i) => `
-    <div class="pdf-page ${state.page === i + 1 ? 'is-target' : ''}" id="page-${i + 1}">
-      ${i === 0 ? '<div class="l h"></div>' : ''}${'<div class="l"></div>'.repeat(i === 0 ? 12 : 16)}<div class="l s"></div>
-      <span class="pdf-page-no">${i + 1}</span>
-    </div>`).join('');
-  return `<div class="pdf-scroll" id="pdf-scroll" aria-label="PDF preview (placeholder)">${pages}</div>`;
+// ---------- PDF viewer (decision under test: viewer A/B/C, see viewers.js) ----------
+let activeViewer = null;
+
+function mountViewer(doc) {
+  activeViewer?.destroy();
+  activeViewer = null;
+  const mount = document.getElementById('pdf-mount');
+  if (!doc || !mount) return;
+  activeViewer = createViewer(mount, {
+    doc,
+    viewer: state.viewer,
+    sim: state.docSim,
+    startPage: state.page ?? state.pdfPage,
+    onPage: (n) => { state.pdfPage = n; },
+  });
 }
 
 function reader(doc, m) {
@@ -321,7 +334,7 @@ function reader(doc, m) {
       </div>
     </header>
     <div class="split">
-      <div class="pdf-pane">${pdfMock(doc)}</div>
+      <div class="pdf-pane"><div class="pdf-mount" id="pdf-mount"></div></div>
       <div class="insights-slot" id="insights-slot"></div>
     </div>`;
 }
@@ -480,9 +493,11 @@ window.addEventListener('message', (e) => {
   if (msg.type === 'GUEST_READY') { guestReady = true; sendSession(); }
   if (msg.type === 'GUEST_SHOW_PAGE') {
     state.page = msg.payload.page;
+    state.pdfPage = msg.payload.page;
     if (isMobile()) state.sheet = 'closed';
-    render();
-    document.getElementById(`page-${state.page}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    positionInsights();
+    if (!activeViewer) render();
+    activeViewer?.showPage(msg.payload.page);
   }
   if (msg.type === 'GUEST_RETRY') {
     const doc = currentFile();
@@ -502,6 +517,9 @@ function renderProtoBar() {
     <button class="proto-arrow" data-action="nav-step" data-dir="-1" aria-label="Previous variant">‹</button>
     <span class="proto-label">${isMobile() ? 'Mobile (B-style)' : `${state.nav} · ${NAVS[state.nav]}`}</span>
     <button class="proto-arrow" data-action="nav-step" data-dir="1" aria-label="Next variant">›</button>
+    <span class="proto-div"></span><span class="proto-sub">Viewer</span>
+    <div class="proto-seg">${Object.entries(VIEWER_LABELS).map(([k, l]) => `<button class="${state.viewer === k ? 'on' : ''}" data-action="viewer-force" data-viewer="${k}" title="${esc(l)}">${k}</button>`).join('')}</div>
+    <div class="proto-seg">${Object.entries(DOC_SIMS).map(([k, l]) => `<button class="${state.docSim === k ? 'on' : ''}" data-action="doc-sim" data-sim="${k}">${l}</button>`).join('')}</div>
     <span class="proto-div"></span><span class="proto-sub">Guest</span>
     <div class="proto-seg">${Object.entries(GUEST_STATES).map(([k, l]) => `<button class="${state.guestForce === k ? 'on' : ''}" data-action="guest-force" data-state="${k}">${l}</button>`).join('')}</div>
   </div>`;
@@ -518,6 +536,7 @@ function render() {
   app.innerHTML = `${showSidebar ? sidebar() : ''}<main class="main"><div class="canvas-panel">${body}</div></main>`;
   renderOverlays();
   renderProtoBar();
+  mountViewer(doc);
   syncGuest(doc);
   requestAnimationFrame(positionInsights);
 }
@@ -563,6 +582,8 @@ document.addEventListener('click', (e) => {
       return go({ nav: keys[(keys.indexOf(state.nav) + Number(t.dataset.dir) + keys.length) % keys.length] }, { replace: true });
     }
     case 'guest-force': state.guestForce = t.dataset.state; renderProtoBar(); return sendSession();
+    case 'viewer-force': return go({ viewer: t.dataset.viewer }, { replace: true });
+    case 'doc-sim': return go({ docSim: t.dataset.sim, page: null, pdfPage: 1 }, { replace: true });
   }
 });
 

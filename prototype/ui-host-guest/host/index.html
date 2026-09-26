@@ -13,7 +13,14 @@
         B  Focus — sidebar collapses; "‹ Parent" back button, title path menu, prev/next.
         C  Columns — sidebar | Document list | split view; no back needed.
       Mobile (≤ 768px) always uses B-style push navigation + a bottom sheet.
+
+      PDF viewer variants (issue #17), switchable via ?viewer=A|B|C:
+        A  Native — the browser's built-in PDF viewer in an <iframe>.
+        B  Paged — pdf.js, one page at a time, custom chrome.
+        C  Scroll — pdf.js, continuous scroll with a floating page chip.
+      ?sim=slow|large|corrupt exercises loading, big-file, and failure states.
     -->
+
     <div id="app"></div>
     <div id="insights" class="insights">
       <div class="sheet-head">

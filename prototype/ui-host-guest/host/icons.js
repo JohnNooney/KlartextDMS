@@ -5,6 +5,7 @@ const paths = {
   folderPlus: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5zM12 10.5v6M9 13.5h6"/>',
   upload: '<path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
   chevronLeft: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
   chevronRight: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
   chevronDown: '<path d="M6 9.5 12 15.5l6-6"/>',
