@@ -1,0 +1,57 @@
+// Host-side view of the Klartext token set: SCSS variables aliased to the
+// custom properties in tokens.css, so the CSS file stays the single source.
+$kt-canvas: var(--kt-canvas);
+$kt-bg: var(--kt-bg);
+$kt-surface: var(--kt-surface);
+$kt-fill: var(--kt-fill);
+$kt-fill-strong: var(--kt-fill-strong);
+
+$kt-text: var(--kt-text);
+$kt-text-muted: var(--kt-text-muted);
+$kt-text-faint: var(--kt-text-faint);
+
+$kt-border: var(--kt-border);
+$kt-border-strong: var(--kt-border-strong);
+
+$kt-accent: var(--kt-accent);
+$kt-accent-hover: var(--kt-accent-hover);
+$kt-accent-tint: var(--kt-accent-tint);
+$kt-success: var(--kt-success);
+$kt-warning: var(--kt-warning);
+$kt-warning-tint: var(--kt-warning-tint);
+$kt-danger: var(--kt-danger);
+$kt-danger-tint: var(--kt-danger-tint);
+$kt-folder: var(--kt-folder);
+
+$kt-font-sans: var(--kt-font-sans);
+$kt-font-mono: var(--kt-font-mono);
+$kt-text-xs: var(--kt-text-xs);
+$kt-text-sm: var(--kt-text-sm);
+$kt-text-base: var(--kt-text-base);
+$kt-text-lg: var(--kt-text-lg);
+$kt-text-xl: var(--kt-text-xl);
+$kt-text-2xl: var(--kt-text-2xl);
+
+$kt-space-1: var(--kt-space-1);
+$kt-space-2: var(--kt-space-2);
+$kt-space-3: var(--kt-space-3);
+$kt-space-4: var(--kt-space-4);
+$kt-space-5: var(--kt-space-5);
+$kt-space-6: var(--kt-space-6);
+$kt-space-8: var(--kt-space-8);
+
+$kt-radius-sm: var(--kt-radius-sm);
+$kt-radius-md: var(--kt-radius-md);
+$kt-radius-lg: var(--kt-radius-lg);
+$kt-radius-xl: var(--kt-radius-xl);
+
+$kt-shadow-panel: var(--kt-shadow-panel);
+$kt-shadow-raised: var(--kt-shadow-raised);
+$kt-shadow-popover: var(--kt-shadow-popover);
+
+$kt-sidebar-width: var(--kt-sidebar-width);
+$kt-list-width: var(--kt-list-width);
+$kt-insights-width: var(--kt-insights-width);
+$kt-toolbar-height: var(--kt-toolbar-height);
+$kt-control-height: var(--kt-control-height);
+$kt-touch-target: var(--kt-touch-target);

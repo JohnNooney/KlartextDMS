@@ -1,6 +1,6 @@
 # Devin Cloud environment for KlartextDMS.
-# Before issue #22 lands this repo is docs-only; the workspace commands are
-# conditional so the blueprint stays valid across the scaffold.
+# Issue #22 landed the workspace scaffold; the conditional install stays so
+# older branches without pnpm-workspace.yaml remain valid.
 
 initialize:
   - run: |

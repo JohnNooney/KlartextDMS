@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "klartext-b836c"
+  },
+  "targets": {
+    "klartext-b836c": {
+      "hosting": {
+        "host": ["klartext-host"],
+        "guest": ["klartext-guest"]
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+/* Guest-side view of the Klartext token set: Tailwind theme keys aliased to the
+   custom properties in tokens.css. Import after `tailwindcss` in the Guest. */
+@import './tokens.css';
+
+@theme inline {
+  --color-kt-canvas: var(--kt-canvas);
+  --color-kt-bg: var(--kt-bg);
+  --color-kt-surface: var(--kt-surface);
+  --color-kt-fill: var(--kt-fill);
+  --color-kt-fill-strong: var(--kt-fill-strong);
+
+  --color-kt-text: var(--kt-text);
+  --color-kt-text-muted: var(--kt-text-muted);
+  --color-kt-text-faint: var(--kt-text-faint);
+
+  --color-kt-border: var(--kt-border);
+  --color-kt-border-strong: var(--kt-border-strong);
+
+  --color-kt-accent: var(--kt-accent);
+  --color-kt-accent-hover: var(--kt-accent-hover);
+  --color-kt-accent-tint: var(--kt-accent-tint);
+  --color-kt-success: var(--kt-success);
+  --color-kt-warning: var(--kt-warning);
+  --color-kt-warning-tint: var(--kt-warning-tint);
+  --color-kt-danger: var(--kt-danger);
+  --color-kt-danger-tint: var(--kt-danger-tint);
+  --color-kt-folder: var(--kt-folder);
+
+  --font-sans: var(--kt-font-sans);
+  --font-mono: var(--kt-font-mono);
+
+  --text-kt-xs: var(--kt-text-xs);
+  --text-kt-sm: var(--kt-text-sm);
+  --text-kt-base: var(--kt-text-base);
+  --text-kt-lg: var(--kt-text-lg);
+  --text-kt-xl: var(--kt-text-xl);
+  --text-kt-2xl: var(--kt-text-2xl);
+
+  --spacing-kt-1: var(--kt-space-1);
+  --spacing-kt-2: var(--kt-space-2);
+  --spacing-kt-3: var(--kt-space-3);
+  --spacing-kt-4: var(--kt-space-4);
+  --spacing-kt-5: var(--kt-space-5);
+  --spacing-kt-6: var(--kt-space-6);
+  --spacing-kt-8: var(--kt-space-8);
+
+  --radius-kt-sm: var(--kt-radius-sm);
+  --radius-kt-md: var(--kt-radius-md);
+  --radius-kt-lg: var(--kt-radius-lg);
+  --radius-kt-xl: var(--kt-radius-xl);
+
+  --shadow-kt-panel: var(--kt-shadow-panel);
+  --shadow-kt-raised: var(--kt-shadow-raised);
+  --shadow-kt-popover: var(--kt-shadow-popover);
+
+  --spacing-kt-sidebar: var(--kt-sidebar-width);
+  --spacing-kt-list: var(--kt-list-width);
+  --spacing-kt-insights: var(--kt-insights-width);
+  --spacing-kt-toolbar: var(--kt-toolbar-height);
+  --spacing-kt-control: var(--kt-control-height);
+  --spacing-kt-touch: var(--kt-touch-target);
+}

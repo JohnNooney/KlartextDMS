@@ -1,0 +1,68 @@
+/* Klartext theme tokens — Apple-HIG system colors (light).
+   Settled by the UI prototype (issue #12); the single source of truth for both apps. */
+:root {
+  /* Backgrounds */
+  --kt-canvas: #f5f5f7;
+  --kt-bg: #ffffff;
+  --kt-surface: #fbfbfd;
+  --kt-fill: rgba(120, 120, 128, 0.12);
+  --kt-fill-strong: rgba(120, 120, 128, 0.2);
+
+  /* Labels */
+  --kt-text: #1d1d1f;
+  --kt-text-muted: rgba(60, 60, 67, 0.6);
+  --kt-text-faint: rgba(60, 60, 67, 0.3);
+
+  /* Separators */
+  --kt-border: rgba(60, 60, 67, 0.12);
+  --kt-border-strong: rgba(60, 60, 67, 0.22);
+
+  /* System colors */
+  --kt-accent: #007aff;
+  --kt-accent-hover: #0066d6;
+  --kt-accent-tint: rgba(0, 122, 255, 0.1);
+  --kt-success: #34c759;
+  --kt-warning: #ff9500;
+  --kt-warning-tint: rgba(255, 149, 0, 0.1);
+  --kt-danger: #ff3b30;
+  --kt-danger-tint: rgba(255, 59, 48, 0.08);
+  --kt-folder: #5ac8fa;
+
+  /* Type (SF Pro on Apple platforms) */
+  --kt-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --kt-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --kt-text-xs: 0.6875rem; /* 11 caption2 */
+  --kt-text-sm: 0.8125rem; /* 13 footnote */
+  --kt-text-base: 0.9375rem; /* 15 subheadline/body-ish */
+  --kt-text-lg: 1.0625rem; /* 17 body/headline */
+  --kt-text-xl: 1.375rem; /* 22 title2 */
+  --kt-text-2xl: 1.75rem; /* 28 title1 */
+
+  /* Spacing (4pt grid) */
+  --kt-space-1: 4px;
+  --kt-space-2: 8px;
+  --kt-space-3: 12px;
+  --kt-space-4: 16px;
+  --kt-space-5: 20px;
+  --kt-space-6: 24px;
+  --kt-space-8: 32px;
+
+  /* Radii */
+  --kt-radius-sm: 6px;
+  --kt-radius-md: 10px;
+  --kt-radius-lg: 14px;
+  --kt-radius-xl: 20px;
+
+  /* Elevation */
+  --kt-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --kt-shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --kt-shadow-popover: 0 10px 38px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+
+  /* Layout */
+  --kt-sidebar-width: 240px;
+  --kt-list-width: 280px;
+  --kt-insights-width: 400px;
+  --kt-toolbar-height: 52px;
+  --kt-control-height: 32px;
+  --kt-touch-target: 44px;
+}

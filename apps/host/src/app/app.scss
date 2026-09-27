@@ -1,0 +1,41 @@
+@use 'tokens' as kt;
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.toolbar {
+  height: kt.$kt-toolbar-height;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  padding: 0 kt.$kt-space-4;
+  background: kt.$kt-surface;
+  border-bottom: 1px solid kt.$kt-border;
+}
+
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: kt.$kt-accent;
+  color: kt.$kt-bg;
+  font-weight: 700;
+  font-size: kt.$kt-text-sm;
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: kt.$kt-text-lg;
+}
+
+.guest-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}

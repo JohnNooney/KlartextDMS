@@ -1,0 +1,89 @@
+{
+  "doc-mietvertrag": {
+    "documentId": "doc-mietvertrag",
+    "schemaVersion": 1,
+    "promptVersion": "klartext-extraction-v1",
+    "model": "gemini-2.5-flash",
+    "documentType": "TENANCY_AGREEMENT",
+    "documentTypeLabel": "Tenancy agreement",
+    "sourceLanguage": "de",
+    "extractionStatus": "COMPLETE",
+    "plainEnglishSummary": "An open-ended rental agreement for a two-room flat in Berlin-Neukölln, starting 1 April 2024. Rent is €890 per month plus €210 in advance service charges. Either side can end it in writing; your notice period is three months.",
+    "keyTakeaways": [
+      {
+        "text": "To move out you must give three months' notice in writing, on paper. Email does not count.",
+        "importance": "CRITICAL",
+        "sourceQuote": "Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.",
+        "page": 3
+      },
+      {
+        "text": "A deposit of €2,670 (three months' cold rent) is due. You may pay it in three instalments.",
+        "importance": "CRITICAL",
+        "sourceQuote": "Der Mieter leistet eine Kaution in Höhe von 2.670 €, zahlbar in drei Raten.",
+        "page": 2
+      },
+      {
+        "text": "Rent is due by the third working day of each month.",
+        "importance": "NORMAL",
+        "sourceQuote": "Die Miete ist spätestens am dritten Werktag eines jeden Monats zu zahlen.",
+        "page": 2
+      },
+      {
+        "text": "Service charges are settled once a year, so you may owe a top-up.",
+        "importance": "NORMAL",
+        "sourceQuote": "Über die Vorauszahlungen wird jährlich abgerechnet.",
+        "page": 2
+      },
+      {
+        "text": "You pay for small repairs up to €100 each, capped at €300 a year.",
+        "importance": "NORMAL",
+        "sourceQuote": "Kleinreparaturen bis zu 100 € im Einzelfall, höchstens 300 € jährlich.",
+        "page": 4
+      }
+    ]
+  },
+  "doc-versicherungsschein": {
+    "documentId": "doc-versicherungsschein",
+    "schemaVersion": 1,
+    "promptVersion": "klartext-extraction-v1",
+    "model": "gemini-2.5-flash",
+    "documentType": "HEALTH_INSURANCE",
+    "documentTypeLabel": "Health insurance notice",
+    "sourceLanguage": "de",
+    "extractionStatus": "COMPLETE",
+    "plainEnglishSummary": "Your health insurer confirms your membership and announces a higher additional contribution from January. Because of the increase you have a special right to switch insurer.",
+    "keyTakeaways": [
+      {
+        "text": "Your contribution rises by 0.4 percentage points from 1 January. You can switch insurer until 31 January.",
+        "importance": "CRITICAL",
+        "sourceQuote": "Sonderkündigungsrecht bis zum 31. Januar",
+        "page": 1
+      },
+      {
+        "text": "Professional teeth cleaning is reimbursed up to €80 a year.",
+        "importance": "NORMAL",
+        "sourceQuote": "Professionelle Zahnreinigung bis zu 80 € jährlich",
+        "page": 2
+      }
+    ]
+  },
+  "doc-finanzamt": {
+    "documentId": "doc-finanzamt",
+    "schemaVersion": 1,
+    "promptVersion": "klartext-extraction-v1",
+    "model": "gemini-2.5-flash",
+    "documentType": "GOVERNMENT_LETTER",
+    "documentTypeLabel": "Tax office letter",
+    "sourceLanguage": "de",
+    "extractionStatus": "COMPLETE",
+    "plainEnglishSummary": "The tax office reminds you to file your 2023 income tax return. No tax is being assessed yet.",
+    "keyTakeaways": [
+      {
+        "text": "File your 2023 tax return by 31 July 2024, or a late-filing fee may be charged.",
+        "importance": "CRITICAL",
+        "sourceQuote": "bis zum 31.07.2024 … Verspätungszuschlag",
+        "page": 1
+      }
+    ]
+  }
+}

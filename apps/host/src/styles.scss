@@ -1,0 +1,21 @@
+@use 'tokens' as kt;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: kt.$kt-font-sans;
+  font-size: kt.$kt-text-base;
+  color: kt.$kt-text;
+  background: kt.$kt-canvas;
+  -webkit-font-smoothing: antialiased;
+}

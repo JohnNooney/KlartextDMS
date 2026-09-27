@@ -4,12 +4,13 @@
 # Firebase build and deployment files
 /firebase-debug.log
 /firebase-debug.*.log
-.firebaserc
 
 # Firebase Hosting
-/firebase.json
 *.cache
 hosting/.cache
+
+# Angular
+.angular/
 
 # Firebase Functions
 /functions/node_modules/

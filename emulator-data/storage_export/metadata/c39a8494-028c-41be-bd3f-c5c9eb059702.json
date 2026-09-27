@@ -1,0 +1,15 @@
+{
+  "name": "users/seed-test-user/documents/doc-mietvertrag.pdf",
+  "bucket": "klartext-b836c.firebasestorage.app",
+  "metageneration": 1,
+  "generation": 1790491020608,
+  "contentType": "application/pdf",
+  "storageClass": "STANDARD",
+  "downloadTokens": [],
+  "etag": "5Pwl721aN49l9JmLjNqci1FULG8",
+  "timeCreated": "2026-09-27T06:37:00.608Z",
+  "updated": "2026-09-27T06:37:00.608Z",
+  "size": 615,
+  "md5Hash": "kP/pRD/Tg3ycAjp9CfwLZg==",
+  "crc32c": "5970100"
+}

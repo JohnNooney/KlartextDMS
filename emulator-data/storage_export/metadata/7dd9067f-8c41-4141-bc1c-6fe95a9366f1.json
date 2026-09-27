@@ -1,0 +1,15 @@
+{
+  "name": "users/seed-test-user/documents/doc-versicherungsschein.pdf",
+  "bucket": "klartext-b836c.firebasestorage.app",
+  "metageneration": 1,
+  "generation": 1790491020648,
+  "contentType": "application/pdf",
+  "storageClass": "STANDARD",
+  "downloadTokens": [],
+  "etag": "suv7YtZ2Dgr0/mDTGk51EnV/1ZE",
+  "timeCreated": "2026-09-27T06:37:00.648Z",
+  "updated": "2026-09-27T06:37:00.648Z",
+  "size": 621,
+  "md5Hash": "quWApwcKduIHb852D7G9Pw==",
+  "crc32c": "2403748781"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "klartext",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n emulators,host,guest -c yellow,blue,magenta \"pnpm run emulators:dev\" \"pnpm --filter @klartext/host start\" \"pnpm --filter @klartext/guest dev\"",
+    "emulators": "firebase emulators:start --import=./emulator-data",
+    "emulators:dev": "firebase emulators:start --only auth,firestore,storage --import=./emulator-data",
+    "seed": "firebase emulators:exec --only auth,firestore,storage --export-on-exit ./emulator-data \"node scripts/seed.mjs\"",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "firebase-admin": "^14.5.0",
+    "firebase-tools": "^15.31.0"
+  }
+}

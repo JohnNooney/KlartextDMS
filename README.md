@@ -22,20 +22,39 @@ Vocabulary (Host, Guest, Document, Extraction, Bus, Envelope, Session) is define
 
 ## Status
 
-Planning. No application code yet.
-
-Design decisions are being worked through a [wayfinder map](https://github.com/JohnNooney/KlartextDMS/issues/1) on this repo's issues: each child ticket resolves one decision, and the map ends in a handoff-ready spec plus phased implementation issues. Resolved research lives under `docs/research/` on `research/*` branches until merged.
+Scaffolded: the pnpm workspace, both app shells, and the emulator harness exist. Feature work proceeds through the phased issues indexed in [`docs/spec.md`](./docs/spec.md); pick from open issues labelled `ready-for-agent` with no open blockers.
 
 ## Repository layout
 
 ```
+apps/host           Angular dashboard — sign-in, library, PDF view, Guest iframe (:4200)
+apps/guest          Vue 3 insights panel rendered in the Host's iframe (:5173)
+packages/theme      shared Apple-style design tokens (CSS vars → SCSS / Tailwind)
+packages/bus-contract  the { v, type, sessionId, payload } Envelope contract
+packages/firebase-config  shared Firebase web config + emulator endpoints
+scripts/            deterministic emulator seed (admin SDK) + fixture PDFs/Extractions
+emulator-data/      committed emulator snapshot loaded via --import
 CONTEXT.md          domain glossary
-docs/agents/        how agents use this repo's issue tracker, labels, and domain docs
-docs/adr/           architecture decision records (created as decisions land)
-docs/research/      research findings feeding the map's decisions
+docs/adr/           architecture decision records
+docs/deployment.md  hosting topology and per-Environment Peer Origins
 ```
 
-The planned workspace (pnpm/npm) adds `apps/host`, `apps/guest`, and shared `packages/` (theme tokens, Bus contract types) once the layout ticket is resolved.
+## Local development
+
+```sh
+pnpm install
+pnpm dev          # Host :4200 + Guest :5173 + Auth/Firestore/Storage emulators (seeded)
+pnpm test         # unit/smoke suites across apps and packages
+pnpm build        # build both apps
+pnpm seed         # regenerate emulator-data/ from scripts/seed.mjs
+pnpm emulators    # full emulator suite incl. Hosting emulator (:5000/:5005)
+```
+
+The emulator suite is seeded with the demo Auth user `test-user@test.com` / `test1234`, the prototype Folder tree, and three fixture Documents. The Guest loads inside the Host's iframe on :4200.
+
+**Node/Angular note:** the workspace pins Node 20 LTS, so the Host uses Angular 21 — the newest major whose toolchain still supports Node 20 (Angular 22 requires ≥22.22).
+
+**macOS port note:** the Hosting emulator's :5000 collides with the AirPlay Receiver. `pnpm dev` doesn't need it (dev uses ng/vite); for `pnpm emulators` or the e2e Hosting flow either disable AirPlay Receiver (System Settings → General → AirDrop & Handoff) or remap the port in `firebase.json`.
 
 ## Working on this repo
 
