@@ -21,6 +21,12 @@ export interface HostConfig {
    * injected from `KLARTEXT_HOST_DEBUG_TOKEN` (see `scripts/write-local-config.mjs`).
    */
   appCheckDebugToken?: string;
+  /**
+   * Sign-in allowlist: emails that may use the app. Absent/empty = open
+   * (dev against the emulators). Production pins the owner's Google email.
+   * Light protection only — the rules are the real boundary.
+   */
+  allowedEmails?: string[];
 }
 
 export const HOST_CONFIG = new InjectionToken<HostConfig>('HOST_CONFIG');

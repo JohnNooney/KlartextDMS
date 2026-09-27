@@ -95,7 +95,7 @@ Each app learns the other's origin differently:
 | dev | `http://localhost:5173` | true | committed `config.json`, overlaid by gitignored `config.local.json` (App Check debug token from `.env`, written by `pnpm start`'s `prestart` hook) |
 | e2e | `http://localhost:5005` | true | e2e variant written by the test run |
 | preview | captured Guest channel URL | false | CI overwrites before Host deploy (including `appCheckDebugToken` from the GitHub secret) |
-| production | `https://klartext-guest.web.app` | false | committed `config.production.json` (add `appCheckSiteKey` when the reCAPTCHA key is provisioned) |
+| production | `https://klartext-guest.web.app` | false | committed `config.production.json` (`appCheckSiteKey` + `allowedEmails` — the sign-in allowlist, mirrored by the rules `isAllowedUser()`) |
 
 The Bus's `targetOrigin` allow-list is populated from these values — still exactly one Peer Origin per app per Environment.
 

@@ -1,5 +1,6 @@
 {
   "guestOrigin": "https://klartext-guest.web.app",
   "useEmulators": false,
-  "appCheckSiteKey": "6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF"
+  "appCheckSiteKey": "6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF",
+  "allowedEmails": ["johnnoon74@gmail.com"]
 }

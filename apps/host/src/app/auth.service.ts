@@ -12,6 +12,7 @@ import {
 } from 'firebase/auth';
 import type { SessionUser } from '@klartext/bus-contract';
 import { FIREBASE_AUTH } from './firebase';
+import { HOST_CONFIG } from './host-config';
 
 /**
  * Host sign-in (issue #10 resolution): Google for humans — popup first,
@@ -22,6 +23,7 @@ import { FIREBASE_AUTH } from './firebase';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly auth = inject(FIREBASE_AUTH);
+  private readonly allowedEmails = inject(HOST_CONFIG).allowedEmails;
   private readonly googleProvider = new GoogleAuthProvider();
 
   /**
@@ -34,16 +36,34 @@ export class AuthService {
   readonly error = signal<string | null>(null);
 
   constructor() {
-    onAuthStateChanged(this.auth, (user) =>
-      this.user.set(user === null ? null : toSessionUser(user)),
-    );
+    onAuthStateChanged(this.auth, (user) => this.applyUser(user));
     // Resolve a signInWithRedirect fallback from the previous page load.
     getRedirectResult(this.auth).then(
       (credential) => {
-        if (credential?.user) this.user.set(toSessionUser(credential.user));
+        if (credential?.user) this.applyUser(credential.user);
       },
       () => this.error.set('Sign-in did not complete. Try again.'),
     );
+  }
+
+  /**
+   * Single funnel for every auth emission: a user outside `allowedEmails`
+   * (when configured) is signed straight back out and told so on the gate.
+   */
+  private applyUser(user: User | null): void {
+    if (user !== null && !this.isAllowed(user.email)) {
+      this.error.set("This account isn't allowed to sign in.");
+      this.user.set(null);
+      void signOut(this.auth);
+      return;
+    }
+    this.user.set(user === null ? null : toSessionUser(user));
+  }
+
+  private isAllowed(email: string | null): boolean {
+    const allowed = this.allowedEmails;
+    if (!allowed || allowed.length === 0) return true;
+    return email !== null && allowed.some((e) => e.toLowerCase() === email.toLowerCase());
   }
 
   async signInWithGoogle(): Promise<void> {

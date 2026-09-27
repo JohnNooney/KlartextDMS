@@ -10,6 +10,7 @@ import {
   signInWithRedirect,
   signOut,
 } from 'firebase/auth';
+import { HOST_CONFIG, type HostConfig } from './host-config';
 
 // Self-contained mock — `importOriginal` doesn't survive the test bundler's
 // hoisting. Only the surface AuthService touches is exported.
@@ -17,6 +18,9 @@ vi.mock('firebase/auth', () => ({
   AuthErrorCodes: {
     POPUP_BLOCKED: 'auth/popup-blocked',
     POPUP_CLOSED_BY_USER: 'auth/popup-closed-by-user',
+    OPERATION_NOT_SUPPORTED: 'auth/operation-not-supported-in-this-environment',
+    WEB_STORAGE_UNSUPPORTED: 'auth/web-storage-unsupported',
+    EXPIRED_POPUP_REQUEST: 'auth/cancelled-popup-request',
   },
   GoogleAuthProvider: class {},
   getRedirectResult: vi.fn(async () => null),
@@ -29,9 +33,15 @@ vi.mock('firebase/auth', () => ({
 
 const authStub = { name: 'auth-stub' };
 
-function createService(): AuthService {
+function createService(config?: Partial<HostConfig>): AuthService {
   TestBed.configureTestingModule({
-    providers: [{ provide: FIREBASE_AUTH, useValue: authStub }],
+    providers: [
+      { provide: FIREBASE_AUTH, useValue: authStub },
+      {
+        provide: HOST_CONFIG,
+        useValue: { guestOrigin: 'http://localhost:5173', useEmulators: true, ...config },
+      },
+    ],
   });
   return TestBed.inject(AuthService);
 }
@@ -126,5 +136,29 @@ describe('AuthService', () => {
     const service = createService();
     await service.signOut();
     expect(signOut).toHaveBeenCalledWith(authStub);
+  });
+
+  describe('allowedEmails', () => {
+    it('lets any signed-in user through when no allowlist is configured', () => {
+      const service = createService();
+      emitUser({ uid: 'u9', displayName: null, email: 'anyone@example.com' });
+      expect(service.user()?.uid).toBe('u9');
+      expect(signOut).not.toHaveBeenCalled();
+    });
+
+    it('signs a non-allowlisted user straight back out with a gate error', () => {
+      const service = createService({ allowedEmails: ['johnnoon74@gmail.com'] });
+      emitUser({ uid: 'u9', displayName: null, email: 'anyone@example.com' });
+      expect(signOut).toHaveBeenCalledWith(authStub);
+      expect(service.user()).toBeNull();
+      expect(service.error()).toBeTruthy();
+    });
+
+    it('lets the allowlisted user through (case-insensitive)', () => {
+      const service = createService({ allowedEmails: ['johnnoon74@gmail.com'] });
+      emitUser({ uid: 'u9', displayName: null, email: 'JohnNoon74@gmail.com' });
+      expect(service.user()?.uid).toBe('u9');
+      expect(signOut).not.toHaveBeenCalled();
+    });
   });
 });
