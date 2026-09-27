@@ -116,3 +116,18 @@ export function isEnvelope(value: unknown): value is Envelope<string, unknown> {
 export function isBusMessage(value: unknown): value is BusMessage {
   return isEnvelope(value) && (MESSAGE_TYPES as readonly string[]).includes(value.type);
 }
+
+/**
+ * Structural check for the `ExtractionError` shape — used by Guest adapters
+ * to decide whether a `runJob` rejection already carries a user-safe error
+ * or needs wrapping as `UNKNOWN`.
+ */
+export function isExtractionError(value: unknown): value is ExtractionError {
+  if (typeof value !== 'object' || value === null) return false;
+  const e = value as Record<string, unknown>;
+  return (
+    typeof e['code'] === 'string' &&
+    typeof e['message'] === 'string' &&
+    typeof e['retryable'] === 'boolean'
+  );
+}

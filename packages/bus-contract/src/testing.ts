@@ -20,6 +20,7 @@ import type {
 } from './conformance.js';
 import {
   isBusMessage,
+  isExtractionError,
   JOB_RESULT_TIMEOUT_MS,
   JOB_START_TIMEOUT_MS,
   SESSION_ACK_TIMEOUT_MS,
@@ -108,16 +109,6 @@ const AI_UNAVAILABLE: ExtractionError = {
   message: 'The document assistant is not responding.',
   retryable: true,
 };
-
-function isExtractionError(value: unknown): value is ExtractionError {
-  if (typeof value !== 'object' || value === null) return false;
-  const e = value as Record<string, unknown>;
-  return (
-    typeof e['code'] === 'string' &&
-    typeof e['message'] === 'string' &&
-    typeof e['retryable'] === 'boolean'
-  );
-}
 
 interface QueuedJob {
   document: JobDocument;

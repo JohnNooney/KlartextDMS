@@ -5,6 +5,11 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  // The Guest's config is build-time env vars (issue #26): read the repo-root
+  // .env so dev picks up KLARTEXT_GUEST_DEBUG_TOKEN; CI injects the same name
+  // for e2e/preview builds. KLARTEXT_HOST_* stays out of the Guest bundle.
+  envDir: fileURLToPath(new URL('../..', import.meta.url)),
+  envPrefix: ['VITE_', 'KLARTEXT_GUEST_'],
   resolve: {
     // Source-level consumption of the shared workspace packages — no build step.
     alias: {
