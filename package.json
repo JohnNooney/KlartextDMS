@@ -12,6 +12,7 @@
     "seed": "firebase emulators:exec --only auth,firestore,storage --export-on-exit ./emulator-data \"node scripts/seed.mjs\"",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
+    "test:integration": "firebase emulators:exec --only auth,firestore,storage \"node scripts/seed.mjs && pnpm -r --if-present test:integration\"",
     "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {

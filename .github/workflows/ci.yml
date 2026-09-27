@@ -1,0 +1,54 @@
+# Reusable gate jobs shared by the PR and merge workflows (issue #23). All three
+# jobs must pass before a preview deploy and before a live deploy. Suites
+# accumulate in place: the bus-contract conformance suite joins `checks` (#24),
+# emulator-backed repository tests and the @firebase/rules-unit-testing suite
+# join `rules+integration` (#27), Playwright replaces the `e2e` placeholder
+# (#34).
+name: CI gates
+
+on:
+  workflow_call:
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # No lint tooling in the workspace yet — `--if-present` no-ops until a
+      # package defines a `lint` script. `typecheck` is the static gate.
+      - run: pnpm -r --if-present lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  rules-integration:
+    name: rules+integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      # Boots the emulators, seeds them, then runs each package's
+      # `test:integration` script (none yet — the emulator smoke test is the
+      # suite until repository tests and the rules suite land).
+      - run: pnpm test:integration
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    env:
+      # App Check debug tokens (#21), needed at build time once the App Check
+      # SDK lands in the apps (#25/#26).
+      KLARTEXT_HOST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_HOST_DEBUG_TOKEN }}
+      KLARTEXT_GUEST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_GUEST_DEBUG_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Placeholder until #34: builds both apps for the Hosting emulator. Then:
+      #   firebase emulators:exec --only auth,firestore,storage,hosting 'pnpm test:e2e'
+      # (Playwright, chromium only, Guest via frameLocator).
+      - run: pnpm build

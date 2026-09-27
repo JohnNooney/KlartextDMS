@@ -120,7 +120,11 @@ The v1 Gemini abuse ceiling is enforced App Check plus, all without backend code
 
 ## CI
 
-Two workflows, replacing the auto-generated single-site skeletons:
+The three gate jobs live in the reusable `.github/workflows/ci.yml` (`workflow_call`), called by both entry workflows so the same checks gate previews and live deploys:
 
-- **On PR** (`firebase-hosting-pull-request.yml`): pnpm install → lint → unit tests → build both apps → Playwright e2e against the emulator suite (`firebase emulators:exec`, using `FIREBASE_SERVICE_ACCOUNT_KLARTEXT_B836C`) → preview deploy: **Guest channel first** (`channelId: pr-<n>`), capture its URL, write it into the Host's `config.json`, then deploy the **Host channel**. The GitHub action posts both preview URLs on the PR.
-- **On merge to main** (`firebase-hosting-merge.yml`): same checks, then `firebase deploy` — both sites' live channels plus `firestore.rules`/`storage.rules`.
+- `checks`: pnpm install → `pnpm -r --if-present lint` (no lint tooling yet — `typecheck` is the static gate) → unit tests.
+- `rules+integration`: `pnpm test:integration` — `firebase emulators:exec` over the seed plus each package's `test:integration`, where emulator-backed repository tests and the `@firebase/rules-unit-testing` suite accumulate.
+- `e2e`: placeholder that builds both apps; #34 swaps in `emulators:exec` + Playwright chromium.
+
+- **On PR** (`firebase-hosting-pull-request.yml`): gates → preview deploy — **Guest channel first** (`channelId: pr-<n>`), capture its URL, write it into the Host's `config.json`, build and deploy the **Host channel**. The deploy action posts each preview URL on the PR.
+- **On merge to main** (`firebase-hosting-merge.yml`): gates → production `config.json` → `firebase deploy` — both sites' live channels plus `firestore.rules`/`storage.rules`.
