@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "RETRY_EXTRACTION",
+  "sessionId": "",
+  "payload": {
+    "documentId": "doc_nebenkosten"
+  }
+}

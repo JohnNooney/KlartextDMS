@@ -12,10 +12,12 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,
+    "resolveJsonModule": true,
     "target": "ES2022",
     "module": "preserve",
     "paths": {
       "@klartext/bus-contract": ["../../packages/bus-contract/src/index.ts"],
+      "@klartext/bus-contract/*": ["../../packages/bus-contract/src/*.ts"],
       "@klartext/firebase-config": ["../../packages/firebase-config/src/index.ts"]
     }
   },

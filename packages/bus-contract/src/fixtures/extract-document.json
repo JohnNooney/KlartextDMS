@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "type": "EXTRACT_DOCUMENT",
+  "sessionId": "",
+  "payload": {
+    "jobId": "job_4d2a1f",
+    "document": {
+      "documentId": "doc_nebenkosten",
+      "documentTitle": "Nebenkostenabrechnung 2023.pdf",
+      "contentType": "application/pdf"
+    },
+    "bytes": "JVBERi0xLjQK"
+  }
+}

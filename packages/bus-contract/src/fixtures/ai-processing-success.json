@@ -1,0 +1,32 @@
+{
+  "v": 1,
+  "type": "AI_PROCESSING_SUCCESS",
+  "sessionId": "",
+  "payload": {
+    "jobId": "job_4d2a1f",
+    "extraction": {
+      "documentId": "doc_nebenkosten",
+      "schemaVersion": 1,
+      "promptVersion": "klartext-extraction-v1",
+      "model": "gemini-2.5-flash",
+      "usage": {
+        "promptTokens": 3011,
+        "candidatesTokens": 240,
+        "totalTokens": 3251
+      },
+      "documentType": "OTHER",
+      "documentTypeLabel": "Service charge statement",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "Your landlord's annual statement of service charges for 2023. Actual costs were 2784 euros against 2520 euros paid in advance, so you owe 264 euros.",
+      "extractionStatus": "COMPLETE",
+      "keyTakeaways": [
+        {
+          "text": "You owe a top-up of 264 euros, payable within 30 days of this letter.",
+          "importance": "CRITICAL",
+          "sourceQuote": "Nachzahlung: 264,00 € – zahlbar innerhalb von 30 Tagen.",
+          "page": 1
+        }
+      ]
+    }
+  }
+}

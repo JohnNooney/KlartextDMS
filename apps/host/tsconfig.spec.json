@@ -4,7 +4,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "rootDir": "./src",
+    // Common root covering apps/ and the path-mapped packages/ sources (pinned for TS6).
+    "rootDir": "../..",
     "types": [
       "vitest/globals"
     ]

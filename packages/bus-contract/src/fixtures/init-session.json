@@ -1,0 +1,50 @@
+{
+  "v": 1,
+  "type": "INIT_SESSION",
+  "sessionId": "sess_7f3a9c2e",
+  "payload": {
+    "sessionId": "sess_7f3a9c2e",
+    "documentId": "doc_mietvertrag",
+    "documentTitle": "Mietvertrag 2024.pdf",
+    "user": {
+      "uid": "user_demo",
+      "displayName": "Ada Example",
+      "email": "ada@example.com"
+    },
+    "authToken": "opaque-firebase-id-token",
+    "extraction": {
+      "documentId": "doc_mietvertrag",
+      "schemaVersion": 1,
+      "promptVersion": "klartext-extraction-v1",
+      "model": "gemini-2.5-flash",
+      "usage": {
+        "promptTokens": 4123,
+        "candidatesTokens": 512,
+        "totalTokens": 4635
+      },
+      "documentType": "TENANCY_AGREEMENT",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "An open-ended rental agreement for a two-room flat in Berlin-Neukoelln, starting 1 April 2024. Rent is 890 euros per month plus 210 euros in advance service charges.",
+      "extractionStatus": "COMPLETE",
+      "keyTakeaways": [
+        {
+          "text": "To move out you must give three months' notice in writing.",
+          "importance": "CRITICAL",
+          "sourceQuote": "Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.",
+          "page": 3
+        },
+        {
+          "text": "Rent is due by the third working day of each month.",
+          "importance": "NORMAL",
+          "sourceQuote": "Die Miete ist spätestens am dritten Werktag eines jeden Monats zu zahlen.",
+          "page": 2
+        }
+      ],
+      "createdAt": {
+        "seconds": 1710500400,
+        "nanoseconds": 0
+      }
+    },
+    "extractionState": "none"
+  }
+}
