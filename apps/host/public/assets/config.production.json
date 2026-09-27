@@ -1,4 +1,5 @@
 {
   "guestOrigin": "https://klartext-guest.web.app",
-  "useEmulators": false
+  "useEmulators": false,
+  "appCheckSiteKey": "6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF"
 }
