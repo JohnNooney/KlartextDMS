@@ -15,6 +15,7 @@
  *                      each app's own Vitest run (issue #13).
  */
 
+export * from './endpoints.js';
 export * from './envelope.js';
 export * from './extraction.js';
 export * from './messages.js';

@@ -49,11 +49,13 @@ jobs:
 
       # guestOrigin feeds both the iframe src and the Bus's origin allow-list —
       # reduce the deployed URL to its bare origin before writing config.json.
+      # Preview channels run the App Check debug provider (issue #21): the
+      # registered debug token rides along in config.json — never in production.
       - name: Point the Host at the Guest preview channel
         env:
           GUEST_CHANNEL_URL: ${{ steps.guest-channel.outputs.details_url }}
         run: >
-          node -e "console.log(JSON.stringify({ guestOrigin: new URL(process.env.GUEST_CHANNEL_URL).origin, useEmulators: false }, null, 2))"
+          node -e "console.log(JSON.stringify({ guestOrigin: new URL(process.env.GUEST_CHANNEL_URL).origin, useEmulators: false, appCheckDebugToken: process.env.KLARTEXT_HOST_DEBUG_TOKEN }, null, 2))"
           > apps/host/public/assets/config.json
       - name: Build the Host
         run: pnpm --filter @klartext/host build

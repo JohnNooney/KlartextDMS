@@ -1,0 +1,121 @@
+@use 'tokens' as kt;
+
+.gate {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: kt.$kt-canvas;
+}
+
+.gate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: kt.$kt-space-4;
+  width: 320px;
+  padding: kt.$kt-space-8;
+  background: kt.$kt-surface;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-xl;
+  box-shadow: kt.$kt-shadow-raised;
+  text-align: center;
+}
+
+.brand-mark {
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: kt.$kt-accent;
+  color: kt.$kt-bg;
+  font-weight: 700;
+  font-size: kt.$kt-text-xl;
+}
+
+.gate-title {
+  margin: 0;
+  font-size: kt.$kt-text-2xl;
+  font-weight: 700;
+}
+
+.gate-subtitle {
+  margin: 0;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+}
+
+.gate-error {
+  margin: 0;
+  padding: kt.$kt-space-2 kt.$kt-space-3;
+  border-radius: kt.$kt-radius-md;
+  background: kt.$kt-danger-tint;
+  color: kt.$kt-danger;
+  font-size: kt.$kt-text-sm;
+}
+
+button {
+  height: kt.$kt-control-height;
+  border: 0;
+  border-radius: kt.$kt-radius-md;
+  font: inherit;
+  font-size: kt.$kt-text-sm;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-google {
+  background: kt.$kt-accent;
+  color: kt.$kt-bg;
+}
+
+.btn-google:hover:not([disabled]) {
+  background: kt.$kt-accent-hover;
+}
+
+.gate-divider {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  color: kt.$kt-text-faint;
+  font-size: kt.$kt-text-xs;
+}
+
+.gate-divider::before,
+.gate-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid kt.$kt-border;
+}
+
+.email-form {
+  display: flex;
+  flex-direction: column;
+  gap: kt.$kt-space-3;
+}
+
+.email-form input {
+  height: kt.$kt-control-height;
+  padding: 0 kt.$kt-space-3;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-md;
+  background: kt.$kt-bg;
+  color: kt.$kt-text;
+  font: inherit;
+  font-size: kt.$kt-text-sm;
+}
+
+.email-form button {
+  background: kt.$kt-fill;
+  color: kt.$kt-text;
+}
+
+.email-form button:hover:not([disabled]) {
+  background: kt.$kt-fill-strong;
+}

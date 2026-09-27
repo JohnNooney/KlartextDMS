@@ -1,0 +1,41 @@
+<div class="gate">
+  <div class="gate-card">
+    <span class="brand-mark">K</span>
+    <h1 class="gate-title">Klartext</h1>
+    <p class="gate-subtitle">Your paperwork, in plain English.</p>
+
+    @if (auth.error(); as error) {
+      <p class="gate-error" role="alert">{{ error }}</p>
+    }
+
+    <button type="button" class="btn-google" [disabled]="pending()" (click)="signInWithGoogle()">
+      Sign in with Google
+    </button>
+
+    @if (showEmailForm) {
+      <div class="gate-divider"><span>dev emulator</span></div>
+      <form
+        class="email-form"
+        (submit)="submitEmail($event, emailInput.value, passwordInput.value)"
+      >
+        <input
+          #emailInput
+          type="email"
+          name="email"
+          autocomplete="email"
+          placeholder="Email"
+          required
+        />
+        <input
+          #passwordInput
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="Password"
+          required
+        />
+        <button type="submit" [disabled]="pending()">Sign in with email</button>
+      </form>
+    }
+  </div>
+</div>

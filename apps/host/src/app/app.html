@@ -1,7 +1,20 @@
-<div class="shell">
-  <header class="toolbar">
-    <span class="brand-mark">K</span>
-    <span class="brand-name">Klartext</span>
-  </header>
-  <iframe class="guest-frame" [src]="guestUrl" title="Klartext insights panel"></iframe>
-</div>
+@if (user() === undefined) {
+  <div class="boot"><span class="spinner" role="status" aria-label="Loading"></span></div>
+} @else if (user(); as user) {
+  <div class="layout">
+    <header class="toolbar">
+      <span class="brand-mark">K</span>
+      <span class="brand-name">Klartext</span>
+      <span class="spacer"></span>
+      <span class="user-name">{{ user.displayName ?? user.email }}</span>
+      <button type="button" class="sign-out" (click)="signOut()">Sign out</button>
+    </header>
+    <div class="body">
+      <aside class="sidebar"></aside>
+      <main class="content"></main>
+    </div>
+    <app-guest-frame />
+  </div>
+} @else {
+  <app-sign-in-gate />
+}

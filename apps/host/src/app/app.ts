@@ -1,19 +1,22 @@
 import { Component, inject } from '@angular/core';
-import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
-import { HOST_CONFIG } from './host-config';
+import { AuthService } from './auth.service';
+import { GuestFrame } from './guest-frame';
+import { SignInGate } from './sign-in-gate';
 
-// Host shell scaffold — sign-in gate, library, and Bus adapter land with the
-// Host shell issue (#25). For now the Guest iframe mounts straight away.
+// The Host app (issue #25): a sign-in gate until Auth resolves, then the app
+// layout — sidebar + main regions — with the Guest iframe mounted once for
+// the session.
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
+  imports: [GuestFrame, SignInGate],
 })
 export class App {
-  protected readonly guestUrl: SafeResourceUrl;
+  protected readonly auth = inject(AuthService);
+  protected readonly user = this.auth.user;
 
-  constructor() {
-    const config = inject(HOST_CONFIG);
-    this.guestUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(config.guestOrigin);
+  protected signOut(): void {
+    void this.auth.signOut();
   }
 }

@@ -2,18 +2,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // User allowlist (#25): the owner's Google email, plus the emulator seed
+    // user pinned to its fixed dev uid — prod can't mint 'seed-test-user',
+    // so the test account can't be forged outside the emulator.
+    function isAllowedUser() {
+      return request.auth.token.email in ['johnnoon74@gmail.com']
+        || (request.auth.uid == 'seed-test-user'
+            && request.auth.token.email == 'test-user@test.com');
+    }
+
     match /users/{uid}/documents/{documentId} {
-      allow read, delete: if request.auth.uid == uid;
-      allow create, update: if request.auth.uid == uid
+      allow read, delete: if request.auth.uid == uid && isAllowedUser();
+      allow create, update: if request.auth.uid == uid && isAllowedUser()
         && request.resource.data.ownerId == uid;
 
       match /extractions/{extractionId} {
-        allow read, write: if request.auth.uid == uid;
+        allow read, write: if request.auth.uid == uid && isAllowedUser();
       }
     }
 
     match /users/{uid}/folders/{folderId} {
-      allow read, write: if request.auth.uid == uid;
+      allow read, write: if request.auth.uid == uid && isAllowedUser();
     }
   }
 }

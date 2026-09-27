@@ -1,0 +1,11 @@
+<!-- Mounted once while signed in and kept hidden until a Document opens the
+     panel (issue #25); the visibility toggle lands with the library view. -->
+<div class="guest-frame-host" hidden>
+  <iframe
+    #frame
+    class="guest-frame"
+    [src]="guestUrl"
+    title="Klartext insights panel"
+    sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads"
+  ></iframe>
+</div>

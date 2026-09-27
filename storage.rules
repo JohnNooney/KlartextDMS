@@ -2,9 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Same allowlist as firestore.rules — keep the two in sync.
+    function isAllowedUser() {
+      return request.auth.token.email in ['johnnoon74@gmail.com']
+        || (request.auth.uid == 'seed-test-user'
+            && request.auth.token.email == 'test-user@test.com');
+    }
+
     match /users/{uid}/documents/{filename} {
-      allow read, delete: if request.auth.uid == uid;
-      allow write: if request.auth.uid == uid
+      allow read, delete: if request.auth.uid == uid && isAllowedUser();
+      allow write: if request.auth.uid == uid && isAllowedUser()
         && filename.matches('.*\\.pdf$')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
