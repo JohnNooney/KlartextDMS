@@ -40,4 +40,4 @@ jobs:
       - name: Deploy Hosting sites, Firestore and Storage rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
-        run: pnpm exec firebase deploy --only "hosting,firestore:rules,storage:rules" --non-interactive
+        run: pnpm exec firebase deploy --only "hosting,firestore:rules,storage" --non-interactive
