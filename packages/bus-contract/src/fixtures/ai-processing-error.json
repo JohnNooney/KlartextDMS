@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "type": "AI_PROCESSING_ERROR",
+  "sessionId": "",
+  "payload": {
+    "jobId": "job_4d2a1f",
+    "error": {
+      "code": "INVALID_EXTRACTION",
+      "message": "The document could not be read as paperwork. Try a clearer scan.",
+      "retryable": true
+    }
+  }
+}
