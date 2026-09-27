@@ -31,6 +31,9 @@ yarn-error.log*
 # Environment files (local configs)
 /.env.*
 
+# Host runtime config overrides (App Check debug token — issue #25)
+apps/host/public/assets/config.local.json
+
 # NODE
 # Logs
 logs

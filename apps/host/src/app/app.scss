@@ -1,6 +1,28 @@
 @use 'tokens' as kt;
 
-.shell {
+.boot {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  background: kt.$kt-canvas;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid kt.$kt-fill;
+  border-top-color: kt.$kt-accent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -34,8 +56,46 @@
   font-size: kt.$kt-text-lg;
 }
 
-.guest-frame {
+.spacer {
   flex: 1;
-  width: 100%;
-  border: 0;
+}
+
+.user-name {
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+}
+
+.sign-out {
+  height: kt.$kt-control-height;
+  padding: 0 kt.$kt-space-3;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-md;
+  background: transparent;
+  color: kt.$kt-text;
+  font: inherit;
+  font-size: kt.$kt-text-sm;
+  cursor: pointer;
+}
+
+.sign-out:hover {
+  background: kt.$kt-fill;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sidebar {
+  width: kt.$kt-sidebar-width;
+  flex-shrink: 0;
+  border-right: 1px solid kt.$kt-border;
+  background: kt.$kt-bg;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  background: kt.$kt-canvas;
 }

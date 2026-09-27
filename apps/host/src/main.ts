@@ -10,6 +10,16 @@ const config = (await fetch('assets/config.json').then((r) => {
   return r.json();
 })) as HostConfig;
 
+// Optional local overrides (gitignored): carries the App Check debug token in
+// dev, written from the .env KLARTEXT_HOST_DEBUG_TOKEN by `pnpm start`. The
+// trailing .catch covers both a missing file and the SPA rewrite answering
+// index.html (HTTP 200, unparseable as JSON) where the file doesn't exist.
+const localConfig = (await fetch('assets/config.local.json')
+  .then((r) => (r.ok ? r.json() : null))
+  .catch(() => null)) as Partial<HostConfig> | null;
+
+Object.assign(config, localConfig);
+
 bootstrapApplication(App, {
   ...appConfig,
   providers: [...appConfig.providers, { provide: HOST_CONFIG, useValue: config }],

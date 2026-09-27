@@ -25,6 +25,7 @@ import {
   SESSION_ACK_TIMEOUT_MS,
 } from './messages.js';
 import { NO_SESSION } from './envelope.js';
+import type { BusEnd, BusMessageEvent, BusMessageListener, BusSink, BusSource } from './endpoints.js';
 import type { ExtractionCandidate } from './extraction.js';
 import type {
   ExtractionError,
@@ -33,29 +34,9 @@ import type {
   Session,
 } from './messages.js';
 
-export interface BusMessageEvent {
-  readonly data: unknown;
-  readonly origin: string;
-  readonly source: BusSink;
-}
-
-export type BusMessageListener = (event: BusMessageEvent) => void;
-
-/** The side an adapter listens on — the `window` it would `addEventListener`. */
-export interface BusSource {
-  addEventListener(type: 'message', listener: BusMessageListener): void;
-  removeEventListener(type: 'message', listener: BusMessageListener): void;
-}
-
-/** The side an adapter posts to — `iframe.contentWindow` / `window.parent`. */
-export interface BusSink {
-  postMessage(data: unknown, targetOrigin: string, transfer?: Transferable[]): void;
-}
-
-export interface BusEnd {
-  readonly source: BusSource;
-  readonly sink: BusSink;
-}
+// The endpoint types live at the contract root (endpoints.ts); re-exported
+// here so existing `@klartext/bus-contract/testing` imports keep working.
+export type { BusEnd, BusMessageEvent, BusMessageListener, BusSink, BusSource };
 
 export interface LinkedBusPair {
   readonly host: BusEnd;

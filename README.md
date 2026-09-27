@@ -50,7 +50,9 @@ pnpm seed         # regenerate emulator-data/ from scripts/seed.mjs
 pnpm emulators    # full emulator suite incl. Hosting emulator (:5000/:5005)
 ```
 
-The emulator suite is seeded with the demo Auth user `test-user@test.com` / `test1234`, the prototype Folder tree, and three fixture Documents. The Guest loads inside the Host's iframe on :4200.
+The emulator suite is seeded with the demo Auth user `test-user@test.com` / `test1234`, the prototype Folder tree, and three fixture Documents. The Guest loads inside the Host's iframe on :4200 — sign in with the seed credentials (the Email/Password form shows only under `useEmulators`).
+
+**App Check debug token:** `pnpm dev` writes `apps/host/public/assets/config.local.json` (gitignored) from the root `.env`'s `KLARTEXT_HOST_DEBUG_TOKEN`, which the Host turns into `self.FIREBASE_APPCHECK_DEBUG_TOKEN` before `initializeAppCheck`. Preview builds get it from the same-named GitHub secret; production never carries it.
 
 **Node/Angular note:** the workspace pins Node 20 LTS, so the Host uses Angular 21 — the newest major whose toolchain still supports Node 20 (Angular 22 requires ≥22.22).
 
