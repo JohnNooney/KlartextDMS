@@ -1,0 +1,15 @@
+# Shared job preamble: pnpm (version from the root packageManager field),
+# Node from .nvmrc with a pnpm store cache, and a frozen-lockfile install.
+name: Setup workspace
+description: Install pnpm, Node (.nvmrc), and workspace dependencies
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile
