@@ -18,6 +18,15 @@ export const firebaseConfig = {
   measurementId: 'G-W91BV8Z2SP',
 } as const;
 
+/**
+ * reCAPTCHA Enterprise site key for App Check — public by design (it rides
+ * in every client bundle), pinned to the exact production Host and Guest
+ * hostnames so preview channels deliberately can't attest and run the debug
+ * provider instead (issue #21). The Host also carries this value in its
+ * committed `assets/config.production.json`; keep the two in step.
+ */
+export const appCheckSiteKey = '6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF';
+
 /** Emulator endpoints — ports per the emulator configuration in issue #9. */
 export const emulatorConfig = {
   host: 'localhost',

@@ -45,6 +45,9 @@ jobs:
       # SDK lands in the apps (#25/#26).
       KLARTEXT_HOST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_HOST_DEBUG_TOKEN }}
       KLARTEXT_GUEST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_GUEST_DEBUG_TOKEN }}
+      # The e2e Environment runs the built apps against the emulators — the
+      # Guest takes the flag as a build-time env var (#26).
+      VITE_USE_FIREBASE_EMULATORS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup

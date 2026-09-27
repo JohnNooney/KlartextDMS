@@ -1,8 +1,8 @@
 // Verifies the shared contract package resolves source-level (no build step)
-// and the exported conformance suite runs inside the Guest's Vitest. Until the
-// real Host/Guest Bus adapters land (app shell tickets), the suite runs
-// against the package's loopback reference adapters; the adapter specs will
-// re-run it against the real implementations.
+// and the exported conformance suite runs inside the Guest's Vitest. The Guest
+// side runs against the real adapter (issue #26); the Host side uses the
+// package's loopback reference — the Host's own Vitest pins the real Host
+// adapter the same way.
 import { describe, expect, it } from 'vitest';
 import {
   BUS_PROTOCOL_VERSION,
@@ -11,10 +11,8 @@ import {
   serializeEnvelope,
 } from '@klartext/bus-contract';
 import { runBusContractConformance } from '@klartext/bus-contract/conformance';
-import {
-  createLoopbackGuestAdapter,
-  createLoopbackHostAdapter,
-} from '@klartext/bus-contract/testing';
+import { createLoopbackHostAdapter } from '@klartext/bus-contract/testing';
+import { createGuestBusAdapter } from './bus/guest-bus.adapter';
 
 describe('bus-contract (source-level import)', () => {
   it('exposes the protocol and golden fixtures', () => {
@@ -32,5 +30,5 @@ describe('bus-contract (source-level import)', () => {
 
 runBusContractConformance({
   createHost: createLoopbackHostAdapter,
-  createGuest: createLoopbackGuestAdapter,
+  createGuest: createGuestBusAdapter,
 });

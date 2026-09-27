@@ -1,13 +1,11 @@
 import { fileURLToPath, URL } from 'node:url';
 import vue from '@vitejs/plugin-vue';
-import { configDefaults, defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 
+// Emulator-backed specs (issue #26): run inside `firebase emulators:exec`
+// via `pnpm test:integration`, which supplies the live Auth emulator.
 export default defineConfig({
   plugins: [vue()],
-  // Keep parity with vite.config.ts's env exposure for spec code paths that
-  // read import.meta.env.
-  envDir: fileURLToPath(new URL('../..', import.meta.url)),
-  envPrefix: ['VITE_', 'KLARTEXT_GUEST_'],
   resolve: {
     alias: {
       // Most specific first: a bare-specifier alias also prefix-matches subpaths.
@@ -27,10 +25,6 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.spec.ts'],
-    // Emulator-backed specs run under `firebase emulators:exec` via
-    // `pnpm test:integration` (vitest.integration.config.ts) — no emulator
-    // is up during a plain `pnpm test`.
-    exclude: [...configDefaults.exclude, 'src/**/*.integration.spec.ts'],
+    include: ['src/**/*.integration.spec.ts'],
   },
 });
