@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, InjectionToken, signal } from '@angular/core';
 import {
   AuthErrorCodes,
   getRedirectResult,
@@ -8,11 +8,45 @@ import {
   signInWithPopup,
   signInWithRedirect,
   signOut,
+  type Auth,
+  type AuthProvider,
+  type Unsubscribe,
   type User,
+  type UserCredential,
 } from 'firebase/auth';
 import type { SessionUser } from '@klartext/bus-contract';
 import { FIREBASE_AUTH } from './firebase';
 import { HOST_CONFIG } from './host-config';
+
+/**
+ * The `firebase/auth` function surface the service calls, behind DI so specs
+ * substitute fakes instead of `vi.mock` — module mocks can't reliably
+ * intercept imports that the unit-test bundler places in shared chunks.
+ */
+export interface AuthActions {
+  onAuthStateChanged(auth: Auth, next: (user: User | null) => void): Unsubscribe;
+  getRedirectResult(auth: Auth): Promise<UserCredential | null>;
+  signInWithEmailAndPassword(
+    auth: Auth,
+    email: string,
+    password: string,
+  ): Promise<UserCredential>;
+  signInWithPopup(auth: Auth, provider: AuthProvider): Promise<UserCredential>;
+  signInWithRedirect(auth: Auth, provider: AuthProvider): Promise<never>;
+  signOut(auth: Auth): Promise<void>;
+}
+
+export const AUTH_ACTIONS = new InjectionToken<AuthActions>('AUTH_ACTIONS', {
+  providedIn: 'root',
+  factory: () => ({
+    onAuthStateChanged,
+    getRedirectResult,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+    signInWithRedirect,
+    signOut,
+  }),
+});
 
 /**
  * Host sign-in (issue #10 resolution): Google for humans — popup first,
@@ -23,6 +57,7 @@ import { HOST_CONFIG } from './host-config';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly auth = inject(FIREBASE_AUTH);
+  private readonly actions = inject(AUTH_ACTIONS);
   private readonly allowedEmails = inject(HOST_CONFIG).allowedEmails;
   private readonly googleProvider = new GoogleAuthProvider();
 
@@ -36,9 +71,9 @@ export class AuthService {
   readonly error = signal<string | null>(null);
 
   constructor() {
-    onAuthStateChanged(this.auth, (user) => this.applyUser(user));
+    this.actions.onAuthStateChanged(this.auth, (user) => this.applyUser(user));
     // Resolve a signInWithRedirect fallback from the previous page load.
-    getRedirectResult(this.auth).then(
+    this.actions.getRedirectResult(this.auth).then(
       (credential) => {
         if (credential?.user) this.applyUser(credential.user);
       },
@@ -54,7 +89,7 @@ export class AuthService {
     if (user !== null && !this.isAllowed(user.email)) {
       this.error.set("This account isn't allowed to sign in.");
       this.user.set(null);
-      void signOut(this.auth);
+      void this.actions.signOut(this.auth);
       return;
     }
     this.user.set(user === null ? null : toSessionUser(user));
@@ -69,12 +104,12 @@ export class AuthService {
   async signInWithGoogle(): Promise<void> {
     this.error.set(null);
     try {
-      await signInWithPopup(this.auth, this.googleProvider);
+      await this.actions.signInWithPopup(this.auth, this.googleProvider);
     } catch (err) {
       // Popup blocked or an environment that can't pop — fall through to the
       // redirect flow. A user-closed popup is a cancel, not a failure.
       if (isRedirectFallback(err)) {
-        await signInWithRedirect(this.auth, this.googleProvider);
+        await this.actions.signInWithRedirect(this.auth, this.googleProvider);
         return;
       }
       if (!isUserCancel(err)) {
@@ -86,7 +121,7 @@ export class AuthService {
   async signInWithEmail(email: string, password: string): Promise<void> {
     this.error.set(null);
     try {
-      await signInWithEmailAndPassword(this.auth, email, password);
+      await this.actions.signInWithEmailAndPassword(this.auth, email, password);
     } catch {
       this.error.set('Wrong email or password.');
     }
@@ -94,7 +129,7 @@ export class AuthService {
 
   async signOut(): Promise<void> {
     this.error.set(null);
-    await signOut(this.auth);
+    await this.actions.signOut(this.auth);
   }
 }
 

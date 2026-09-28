@@ -1,6 +1,6 @@
-<!-- Mounted once while signed in and kept hidden until a Document opens the
-     panel (issue #25); the visibility toggle lands with the library view. -->
-<div class="guest-frame-host" hidden>
+<!-- Mounted once while signed in and kept mounted hidden for background
+     Extraction Jobs (issues #16, #25); displays while a Document is open. -->
+<div class="guest-frame-host" [hidden]="docOpen() === null">
   <iframe
     #frame
     class="guest-frame"

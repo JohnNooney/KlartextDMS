@@ -21,7 +21,7 @@ export interface UploadOptions {
   /** Destination Folder; `null`/omitted is root ("Documents"). */
   folderId?: string | null;
   /** Per-upload progress, as a 0–1 fraction of the bytes. */
-  onProgress?: (fraction: number) => void;
+  onProgress?: (documentId: string, fraction: number) => void;
 }
 
 export interface UploadHandle {
@@ -41,11 +41,31 @@ export class UploadCancelledError extends Error {
 
 export class UploadPipeline {
   private readonly live = new Map<string, DocumentUpload>();
+  /**
+   * The `File` behind each in-session upload (issue #16): a `failed` Document
+   * can be retried through ⋮ → Retry upload only while the session holds the
+   * handle — after a reload, drop-to-retry is the only path.
+   */
+  private readonly heldFiles = new Map<string, File>();
 
   constructor(private readonly documents: DocumentRepository) {}
 
   isUploading(documentId: string): boolean {
     return this.live.has(documentId);
+  }
+
+  /**
+   * ⋮ → Cancel upload on an `uploading` tile (issue #16): aborts the live
+   * Storage task — its `result` rejects `storage/canceled` and the pipeline
+   * scrubs metadata plus partial bytes. No-op when nothing is in flight.
+   */
+  cancel(documentId: string): void {
+    this.live.get(documentId)?.cancel();
+  }
+
+  /** The session's File for a `failed` Document, or `null` (Remove only). */
+  fileFor(documentId: string): File | null {
+    return this.heldFiles.get(documentId) ?? null;
   }
 
   async upload(file: File, options: UploadOptions = {}): Promise<UploadHandle> {
@@ -89,6 +109,7 @@ export class UploadPipeline {
       return; // Metadata already gone — a prior teardown finished the stages.
     }
     await this.documents.delete(documentId);
+    this.heldFiles.delete(documentId);
   }
 
   /**
@@ -106,11 +127,12 @@ export class UploadPipeline {
   }
 
   private run(documentId: string, file: File, options: UploadOptions): UploadHandle {
+    this.heldFiles.set(documentId, file);
     const task = this.documents.uploadBytes(
       documentId,
       file,
       (bytesTransferred, totalBytes) =>
-        options.onProgress?.(totalBytes > 0 ? bytesTransferred / totalBytes : 1),
+        options.onProgress?.(documentId, totalBytes > 0 ? bytesTransferred / totalBytes : 1),
     );
     this.live.set(documentId, task);
     return {
@@ -125,6 +147,7 @@ export class UploadPipeline {
 
   private async markReady(documentId: string): Promise<void> {
     this.live.delete(documentId);
+    this.heldFiles.delete(documentId);
     await this.documents.setStatus(documentId, 'ready');
   }
 
@@ -133,6 +156,7 @@ export class UploadPipeline {
     if (isStorageError(err, 'canceled')) {
       // Cancel (issue #16): the Document never existed — scrub metadata and
       // partial bytes.
+      this.heldFiles.delete(documentId);
       await this.documents.delete(documentId);
       throw new UploadCancelledError(documentId);
     }

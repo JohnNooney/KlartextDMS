@@ -11,6 +11,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -36,10 +37,24 @@ export interface DocumentUpload {
 export interface DocumentRepository {
   /** Every Document in the owner's library, upload order first. */
   list(): Promise<DocumentRecord[]>;
+  /**
+   * The live library feed (issue #28): invokes `listener` with the full
+   * ordered list on every Firestore snapshot, so tiles appear the moment
+   * `uploading` metadata lands and live-update with every transition.
+   * Returns the unsubscribe function.
+   */
+  watch(listener: (documents: DocumentRecord[]) => void): () => void;
   /** Writes `uploading` metadata — the metadata-first machine's first step. */
   create(input: NewDocument): Promise<DocumentRecord>;
   /** The stored PDF bytes. */
   getBytes(documentId: string): Promise<ArrayBuffer>;
+  /**
+   * Edits the renamable label only (issue #16): `originalFilename` is
+   * immutable provenance.
+   */
+  rename(documentId: string, title: string): Promise<void>;
+  /** Files the Document into a Folder (`null` = root, "Documents"). */
+  setFolder(documentId: string, folderId: string | null): Promise<void>;
   /**
    * Tears the Document down in the decided order — bytes → Extraction →
    * metadata (#9/#16) — leaving no trace. Idempotent, so an interrupted
@@ -80,6 +95,12 @@ export class FirestoreDocumentRepository implements DocumentRepository {
     return snap.docs.map((d) => d.data() as DocumentRecord);
   }
 
+  watch(listener: (documents: DocumentRecord[]) => void): () => void {
+    return onSnapshot(query(this.documents, orderBy('createdAt')), (snap) =>
+      listener(snap.docs.map((d) => d.data() as DocumentRecord)),
+    );
+  }
+
   async create(input: NewDocument): Promise<DocumentRecord> {
     const ref = doc(this.documents);
     const record = {
@@ -103,6 +124,14 @@ export class FirestoreDocumentRepository implements DocumentRepository {
   /** Marks a machine transition; bumps `updatedAt`. */
   async setStatus(documentId: string, status: DocumentStatus): Promise<void> {
     await updateDoc(this.metadataRef(documentId), { status, updatedAt: serverTimestamp() });
+  }
+
+  async rename(documentId: string, title: string): Promise<void> {
+    await updateDoc(this.metadataRef(documentId), { title, updatedAt: serverTimestamp() });
+  }
+
+  async setFolder(documentId: string, folderId: string | null): Promise<void> {
+    await updateDoc(this.metadataRef(documentId), { folderId, updatedAt: serverTimestamp() });
   }
 
   async getBytes(documentId: string): Promise<ArrayBuffer> {

@@ -1,0 +1,22 @@
+<button type="button" class="backdrop" (click)="closed.emit()" aria-label="Close"></button>
+<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="move-title">
+  <header class="dialog-head">
+    <h2 id="move-title">Move “{{ doc().title }}”</h2>
+    <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+    </button>
+  </header>
+
+  <label class="field-inline">
+    <span>Move to</span>
+    <!-- Placeholder destination control — the Folder-tree picker lands with #33. -->
+    <select data-testid="destination" disabled>
+      <option>Documents</option>
+    </select>
+  </label>
+
+  <footer class="dialog-foot">
+    <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="moved.emit(null)">Move</button>
+  </footer>
+</div>

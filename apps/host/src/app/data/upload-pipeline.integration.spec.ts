@@ -71,8 +71,12 @@ describe('UploadPipeline (emulator)', () => {
   it('runs concurrent uploads, each with per-upload progress', async () => {
     const progressA: number[] = [];
     const progressB: number[] = [];
-    const a = await pipeline.upload(pdfFile('erste.pdf'), { onProgress: (f) => progressA.push(f) });
-    const b = await pipeline.upload(pdfFile('zweite.pdf'), { onProgress: (f) => progressB.push(f) });
+    const a = await pipeline.upload(pdfFile('erste.pdf'), {
+      onProgress: (_id, f) => progressA.push(f),
+    });
+    const b = await pipeline.upload(pdfFile('zweite.pdf'), {
+      onProgress: (_id, f) => progressB.push(f),
+    });
     created.push(a.documentId, b.documentId);
     await Promise.all([a.completion, b.completion]);
 
