@@ -18,12 +18,19 @@ export interface GuestConfig {
    * dev/e2e/preview builds only; never in production (issue #21).
    */
   appCheckDebugToken?: string;
+  /**
+   * Serve Extractions from the seeded fixtures instead of calling Gemini
+   * (issue #30). Opt-in only — dev defaults to the real model so a genuine
+   * Gemini round-trip stays one flag away; e2e builds set `true`.
+   */
+  fakeAiProvider: boolean;
 }
 
 /** The slice of `import.meta.env` the Guest reads — injectable for tests. */
 export interface GuestEnv {
   DEV: boolean;
   VITE_USE_FIREBASE_EMULATORS?: string;
+  VITE_FAKE_AI_PROVIDER?: string;
   KLARTEXT_GUEST_DEBUG_TOKEN?: string;
 }
 
@@ -32,6 +39,7 @@ export function loadGuestConfig(env: GuestEnv): GuestConfig {
   return {
     useEmulators: emulators === undefined || emulators === '' ? env.DEV : emulators === 'true',
     appCheckDebugToken: env.KLARTEXT_GUEST_DEBUG_TOKEN || undefined,
+    fakeAiProvider: env.VITE_FAKE_AI_PROVIDER === 'true',
   };
 }
 

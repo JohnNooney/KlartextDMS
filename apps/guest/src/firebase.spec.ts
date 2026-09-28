@@ -7,6 +7,7 @@ import type { GuestConfig } from './guest-config';
 const BASE: GuestConfig = {
   useEmulators: true,
   appCheckDebugToken: 'debug-token-1',
+  fakeAiProvider: false,
 };
 
 describe('initGuestFirebase', () => {

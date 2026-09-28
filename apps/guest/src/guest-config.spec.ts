@@ -25,6 +25,19 @@ describe('loadGuestConfig', () => {
       loadGuestConfig({ DEV: true, KLARTEXT_GUEST_DEBUG_TOKEN: 'tok-1' }).appCheckDebugToken,
     ).toBe('tok-1');
   });
+
+  it('keeps the fake AI provider opt-in only, including in dev', () => {
+    expect(loadGuestConfig({ DEV: true }).fakeAiProvider).toBe(false);
+    expect(loadGuestConfig({ DEV: true, VITE_FAKE_AI_PROVIDER: 'false' }).fakeAiProvider).toBe(
+      false,
+    );
+    expect(loadGuestConfig({ DEV: true, VITE_FAKE_AI_PROVIDER: 'true' }).fakeAiProvider).toBe(
+      true,
+    );
+    expect(loadGuestConfig({ DEV: false, VITE_FAKE_AI_PROVIDER: 'true' }).fakeAiProvider).toBe(
+      true,
+    );
+  });
 });
 
 describe('referrerPeerOrigin', () => {

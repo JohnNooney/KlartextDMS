@@ -19,6 +19,7 @@ describe('Guest anonymous sign-in (emulator)', () => {
       // rejects on the bogus token and Auth proceeds without one (emulators
       // don't enforce App Check).
       appCheckDebugToken: 'integration-fake-token',
+      fakeAiProvider: false,
     });
     try {
       const adapter = { mount: vi.fn() };

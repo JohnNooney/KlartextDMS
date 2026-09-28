@@ -46,8 +46,10 @@ jobs:
       KLARTEXT_HOST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_HOST_DEBUG_TOKEN }}
       KLARTEXT_GUEST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_GUEST_DEBUG_TOKEN }}
       # The e2e Environment runs the built apps against the emulators — the
-      # Guest takes the flag as a build-time env var (#26).
+      # Guest takes the flag as a build-time env var (#26) — and stubs Gemini
+      # with the seeded fixture Extractions (#30: deterministic, offline, free).
       VITE_USE_FIREBASE_EMULATORS: 'true'
+      VITE_FAKE_AI_PROVIDER: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
