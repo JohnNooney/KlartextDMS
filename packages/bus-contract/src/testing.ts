@@ -216,6 +216,11 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
     switch (msg.type) {
       case 'GUEST_READY': {
         guestReady = true;
+        // A fresh sessionId per send (issue #31): a late SESSION_ACK from the
+        // old Guest instance must never satisfy the resent Session's watchdog.
+        if (currentSession) {
+          currentSession = { ...currentSession, sessionId: `sess_${++sessionSeq}` };
+        }
         sendSession();
         if (activeJob !== null) {
           // Re-issue the in-flight job under a fresh jobId; stale results are discarded.

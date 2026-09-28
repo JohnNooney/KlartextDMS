@@ -380,6 +380,9 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       guest.mount(); // iframe reloaded: GUEST_READY re-announced
       const sessions = envelopesOf(wireToGuest, 'INIT_SESSION');
       expect(sessions.at(-1)).toMatchObject({ payload: expect.objectContaining({ documentId: session.documentId }) });
+      // A fresh sessionId per send — a stale SESSION_ACK must never satisfy
+      // the resent Session's watchdog.
+      expect(sessions.at(-1)!.sessionId).not.toBe(sessions.at(-2)!.sessionId);
       const jobs = envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT');
       const reissued = jobs.at(-1)!.payload as ExtractDocumentPayload;
       expect(reissued.jobId).not.toBe(firstJobId);

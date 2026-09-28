@@ -20,7 +20,14 @@ import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
 import type { HostBusProbe } from './host-bus.adapter';
 
-type JobState = 'queued' | 'running';
+/**
+ * Runtime job state — `queued`/`running` come from the Bus, `failed` is set
+ * the moment the outcome arrives so the open Session flips straight to the
+ * retry affordance instead of flickering `none` until the failure record's
+ * snapshot lands. `failed` also counts as "handled" for the auto-enqueue
+ * rule — a failure is never requeued without an explicit retry.
+ */
+type JobState = 'queued' | 'running' | 'failed';
 
 /** What the panel is presumed to show — resends only on a real change. */
 interface SentSession {
@@ -106,7 +113,7 @@ export class ExtractionFlow implements HostBusProbe {
   }
 
   jobFailedFor(_jobId: string, document: JobDocument, error: ExtractionError): void {
-    this.clearJobState(document.documentId);
+    this.setJobState(document.documentId, 'failed');
     void this.recordFailure(document.documentId, error);
     if (this.open.docId() !== document.documentId) {
       const title = this.docById(document.documentId)?.title ?? document.documentTitle;
@@ -121,7 +128,9 @@ export class ExtractionFlow implements HostBusProbe {
    */
   retryRequested(documentId: string): boolean {
     const doc = this.docById(documentId);
-    if (doc && doc.status === 'ready') void this.retry(doc);
+    // A queued/running job needs no second enqueue — the retry is a no-op.
+    const inFlight = ['queued', 'running'].includes(this.jobStates().get(documentId) ?? '');
+    if (doc && doc.status === 'ready' && !inFlight) void this.retry(doc);
     return true;
   }
 
@@ -207,7 +216,7 @@ export class ExtractionFlow implements HostBusProbe {
       // nothing is recorded, so the next load re-queues the Document.
       this.clearJobState(documentId);
       console.warn('[extraction] could not persist Extraction for', documentId, err);
-      this.toasts.show({ tone: 'error', title: "Couldn't save the analysis", body: 'Try again.' });
+      this.toasts.show({ tone: 'error', title: "Couldn't save the Extraction", body: 'Try again.' });
     }
   }
 

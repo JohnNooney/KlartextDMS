@@ -179,6 +179,21 @@ describe('HostBus adapter — app-side probe hooks (issue #31)', () => {
     );
   });
 
+  it('resends the Session under a fresh sessionId on GUEST_READY', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.openSession({ ...goldenFixtureMessages.INIT_SESSION.payload, sessionId: 'sess-first' });
+
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+
+    const sessions = (sink.postMessage as ReturnType<typeof vi.fn>).mock.calls
+      .map(([data]) => data as { type: string; sessionId: string })
+      .filter((d) => d.type === 'INIT_SESSION');
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0]!.sessionId).toBe('sess-first');
+    expect(sessions[1]!.sessionId).not.toBe('sess-first');
+  });
+
   it('lets the app own the re-enqueue when retryRequested accepts', () => {
     const { source, sink, probe, adapter } = setup();
     source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });

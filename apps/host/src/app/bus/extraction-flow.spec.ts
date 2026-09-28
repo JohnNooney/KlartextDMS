@@ -420,6 +420,21 @@ describe('ExtractionFlow — Extraction Job orchestration (issue #31)', () => {
     });
   });
 
+  it('ignores a retry while that Document\'s job is in flight', async () => {
+    const { repository, bus, flow, tick } = setup();
+    const doc = await repository.seed({ status: 'ready' });
+    tick();
+    await flush();
+    expect(bus.requestExtraction).toHaveBeenCalledTimes(1);
+
+    expect(flow.retryRequested(doc.id)).toBe(true);
+    await flush();
+    tick();
+    await flush();
+
+    expect(bus.requestExtraction).toHaveBeenCalledTimes(1);
+  });
+
   it('accepts a retry for an unknown Document without re-queuing', async () => {
     const { bus, flow, tick } = setup();
     tick();
