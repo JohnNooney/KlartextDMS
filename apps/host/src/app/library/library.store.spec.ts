@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ExtractionJobs } from '../bus/extraction-jobs';
 import type { DocumentRecord, DocumentStatus, NewDocument } from '../data/document';
 import type { DocumentRepository, DocumentUpload } from '../data/document-repository';
-import { DOCUMENT_REPOSITORY } from '../data/providers';
+import type { FolderRepository } from '../data/folder-repository';
+import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
 import { UploadPipeline } from '../data/upload-pipeline';
 import { OpenDocument } from '../open-document';
 import { ToastService } from '../toasts/toast.service';
@@ -172,14 +175,34 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
+const fakeFolderRepository = {
+  watch: vi.fn((emit: (folders: never[]) => void) => {
+    emit([]);
+    return () => {};
+  }),
+} as unknown as FolderRepository;
+
+/**
+ * OpenDocument navigates on open/close (issue #29); the Router is a pure
+ * recording stub here — route↔signal sync is covered in open-document.spec.
+ */
+const fakeRouter = {
+  events: NEVER,
+  routerState: { snapshot: { root: { firstChild: null } } },
+  navigate: vi.fn(async () => true),
+};
+
 function setup() {
   const repository = new FakeDocumentRepository();
   const jobs = { cancelJobsFor: vi.fn() };
+  fakeRouter.navigate.mockClear();
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
+      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
       { provide: ExtractionJobs, useValue: jobs },
+      { provide: Router, useValue: fakeRouter },
       LibraryStore,
     ],
   });
@@ -338,12 +361,12 @@ describe('LibraryStore', () => {
     const { store, repository, jobs, toasts, open } = setup();
     const id = await repository.seed('ready');
     store.open(id);
-    expect(open.id()).toBe(id);
+    expect(open.docId()).toBe(id);
 
     await store.confirmDelete(id);
 
     expect(jobs.cancelJobsFor).toHaveBeenCalledWith(id);
-    expect(open.id()).toBeNull();
+    expect(open.docId()).toBeNull();
     expect(repository.records.has(id)).toBe(false);
     expect(toasts.toasts().map((t) => t.title)).toContain('Deleted seed');
   });
@@ -371,13 +394,13 @@ describe('LibraryStore', () => {
     await until(store, (d) => d.length === 2);
 
     store.open(uploadingId);
-    expect(open.id()).toBeNull();
+    expect(open.docId()).toBeNull();
     store.open(readyId);
-    expect(open.id()).toBe(readyId);
+    expect(open.docId()).toBe(readyId);
 
     await repository.delete(readyId);
     await until(store, (d) => d.length === 1);
-    expect(open.id()).toBeNull();
+    expect(open.docId()).toBeNull();
   });
 
   it('startup reconciliation: orphaned uploading → failed, deleting re-runs', async () => {
@@ -408,8 +431,10 @@ function setupLate(repository: FakeDocumentRepository) {
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
+      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
       { provide: ExtractionJobs, useValue: jobs },
+      { provide: Router, useValue: fakeRouter },
       LibraryStore,
     ],
   });

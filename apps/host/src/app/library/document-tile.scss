@@ -203,3 +203,34 @@
   background: kt.$kt-border;
   margin: 4px 8px;
 }
+
+// ---------- Mobile (≤768px): tiles become list rows (issue #29) ----------
+@media (max-width: 768px) {
+  :host {
+    flex-direction: row;
+    align-items: center;
+    gap: kt.$kt-space-3;
+    padding: kt.$kt-space-2 kt.$kt-space-3;
+    text-align: left;
+    border-radius: kt.$kt-radius-md;
+  }
+
+  .tile-thumb {
+    height: 32px;
+    align-items: center;
+
+    .doc-thumb {
+      width: 26px;
+      height: 32px;
+    }
+  }
+
+  .tile-name {
+    flex: 1;
+    -webkit-line-clamp: 1;
+  }
+
+  .tile-meta {
+    margin-left: auto;
+  }
+}

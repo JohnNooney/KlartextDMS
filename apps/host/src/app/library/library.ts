@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
+import { Reader } from '../reader/reader';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
 import { MoveDialog } from './move-dialog';
@@ -16,20 +17,19 @@ type DialogState =
   | null;
 
 /**
- * The Files-style Document library (issue #28): tile grid + toolbar over the
- * live Firestore feed, drop-to-upload on the grid, the per-state ⋮ menus, and
- * the four dialogs. Ships flat — the Folder tree and tree pickers land with
- * the Folders issue (#33).
+ * The Files-style Document library (issues #28, #29): tile grid + toolbar over
+ * the live Firestore feed, drop-to-upload on the grid, the per-state ⋮ menus,
+ * and the four dialogs. The URL's Folder filters the grid; the Folder tree UI
+ * itself lands with the Folders issue (#33).
  *
- * While a Document is open, this renders the reader shell: the pdf.js viewer
- * lands in the pane with the open-Document issue (#29); the insights slot is
- * where the Guest iframe displays.
+ * While a Document is open, this renders the `app-reader` split view: the
+ * pdf.js viewer left, the Guest insights panel right (ADR 0002).
  */
 @Component({
   selector: 'app-library',
   templateUrl: './library.html',
   styleUrl: './library.scss',
-  imports: [DocumentTile, UploadDialog, RenameDialog, MoveDialog, DeleteDialog],
+  imports: [DocumentTile, Reader, UploadDialog, RenameDialog, MoveDialog, DeleteDialog],
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
   providers: provideDocumentData(),

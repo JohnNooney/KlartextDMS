@@ -1,27 +1,17 @@
 @if (store.openDoc(); as openDoc) {
-  <!-- Reader shell: the pdf.js viewer mounts in .pdf-pane with the
-       open-Document issue (#29); the Guest iframe displays over the
-       .insights-slot while a Document is open (issue #16). -->
-  <div class="reader">
-    <header class="reader-toolbar">
-      <button type="button" class="back-btn" (click)="store.close()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
-        <span>Documents</span>
-      </button>
-      <h1 class="reader-title">{{ openDoc.title }}</h1>
-    </header>
-    <div class="split">
-      <div class="pdf-pane"></div>
-      <div class="insights-slot" aria-label="Insights panel"></div>
-    </div>
-  </div>
+  <!-- Open-Document view (issue #29): the Guest iframe displays over the
+       reader's .insights-slot while a Document is open (issue #16). -->
+  <app-reader [doc]="openDoc" />
 } @else {
   <header class="library-toolbar">
     <h1 class="library-title">Documents</h1>
     <div class="toolbar-actions">
-      <button type="button" class="btn btn-primary" (click)="openUpload()">
+      <button type="button" class="btn btn-primary btn-upload" (click)="openUpload()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
-        Upload
+        <span class="btn-upload-label">Upload</span>
+      </button>
+      <button type="button" class="btn-add" (click)="openUpload()" aria-label="Upload document">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
       </button>
     </div>
   </header>
@@ -33,9 +23,9 @@
     (dragleave)="onGridDragLeave($event)"
     (drop)="onGridDrop($event)"
   >
-    @if (store.documents() === null) {
+    @if (store.visible() === null) {
       <div class="library-loading"><span class="spinner" role="status" aria-label="Loading"></span></div>
-    } @else if (store.documents()!.length === 0) {
+    } @else if (store.visible()!.length === 0) {
       <div class="empty">
         <svg width="64" height="51" viewBox="0 0 52 42" fill="none" aria-hidden="true">
           <path d="M2 6a4 4 0 0 1 4-4h11.3a4 4 0 0 1 3 1.4L23 6.5h23a4 4 0 0 1 4 4V36a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#8ed1fc"/>
@@ -50,9 +40,9 @@
         </button>
       </div>
     } @else {
-      <p class="meta-line">{{ store.documents()!.length }} documents</p>
+      <p class="meta-line">{{ store.visible()!.length }} documents</p>
       <div class="grid">
-        @for (doc of store.documents()!; track doc.id) {
+        @for (doc of store.visible()!; track doc.id) {
           <app-document-tile
             [doc]="doc"
             [progress]="store.progress().get(doc.id) ?? null"

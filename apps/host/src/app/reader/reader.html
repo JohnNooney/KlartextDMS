@@ -1,0 +1,81 @@
+<div class="reader">
+  <header class="reader-toolbar">
+    <button
+      type="button"
+      class="back-btn"
+      (click)="back()"
+      [attr.aria-label]="'Back to ' + parentLabel()"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+      <span class="back-label">{{ parentLabel() }}</span>
+    </button>
+
+    <div class="menu-anchor path-title">
+      <button
+        type="button"
+        class="path-title-btn"
+        (click)="pathMenuOpen.set(!pathMenuOpen())"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="pathMenuOpen()"
+        title="Show where this is"
+      >
+        <span class="title-doc">{{ doc().title }}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"/></svg>
+      </button>
+      @if (pathMenuOpen()) {
+        <button type="button" class="menu-shield" (click)="pathMenuOpen.set(false)" aria-hidden="true" tabindex="-1"></button>
+        <div class="menu path-menu" role="menu" aria-label="Location of this document">
+          <div class="menu-item is-current" aria-current="page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h7L19 9v11.5h-12.5zM13.5 3.5V9H19"/></svg>
+            <span class="title-doc">{{ doc().title }}</span>
+          </div>
+          @for (folder of pathMenuItems(); track folder.id) {
+            <button type="button" class="menu-item" role="menuitem" (click)="openFolder(folder.id)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
+              <span>{{ folder.name }}</span>
+            </button>
+          }
+          <button type="button" class="menu-item" role="menuitem" (click)="openFolder(null)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5h17l-1.6 9A2 2 0 0 1 16.9 20H7.1a2 2 0 0 1-2-1.5zM6 9.5V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3.5"/></svg>
+            <span>Documents</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="toolbar-actions">
+      @if (stepper(); as stepper) {
+        @if (stepper.total > 1) {
+          <div class="stepper">
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="openSibling(stepper.prev)"
+              [disabled]="!stepper.prev"
+              aria-label="Previous document"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+            </button>
+            <span class="stepper-label" aria-live="polite">{{ stepper.index + 1 }} of {{ stepper.total }}</span>
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="openSibling(stepper.next)"
+              [disabled]="!stepper.next"
+              aria-label="Next document"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+            </button>
+          </div>
+        }
+      }
+    </div>
+  </header>
+
+  <div class="split">
+    <div class="pdf-pane">
+      <app-pdf-viewer [doc]="doc()" />
+    </div>
+    <div class="insights-slot" aria-label="Insights panel"></div>
+  </div>
+</div>

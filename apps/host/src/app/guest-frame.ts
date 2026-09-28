@@ -5,6 +5,7 @@ import {
   ElementRef,
   inject,
   NgZone,
+  signal,
   viewChild,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
@@ -36,7 +37,9 @@ export class GuestFrame {
 
   protected readonly guestUrl: SafeResourceUrl;
   /** Whether a Document is open — the frame displays only then (#28). */
-  protected readonly docOpen = inject(OpenDocument).id;
+  protected readonly docOpen = inject(OpenDocument).docId;
+  /** Mobile bottom sheet: half-height by default, expandable to full (#29). */
+  protected readonly sheetFull = signal(false);
 
   constructor() {
     const config = inject(HOST_CONFIG);

@@ -92,6 +92,15 @@
   flex-shrink: 0;
   border-right: 1px solid kt.$kt-border;
   background: kt.$kt-bg;
+
+  // Collapses while a Document is open; absent entirely on mobile (push nav).
+  &[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .content {

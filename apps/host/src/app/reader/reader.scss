@@ -1,0 +1,245 @@
+@use 'tokens' as kt;
+
+:host {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reader {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reader-toolbar {
+  min-height: kt.$kt-toolbar-height;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  padding: 0 kt.$kt-space-3 0 kt.$kt-space-4;
+  // Keeps the stepper clear of the fixed Guest insights lane on the right.
+  margin-right: kt.$kt-insights-width;
+  border-bottom: 1px solid kt.$kt-border;
+  flex-shrink: 0;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 kt.$kt-space-2 0 0;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-base;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: kt.$kt-accent-tint;
+  }
+}
+
+// The Document title doubles as the path menu's anchor (issue #29).
+.path-title {
+  position: relative;
+  min-width: 0;
+}
+
+.path-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  max-width: 100%;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+
+  svg {
+    color: kt.$kt-text-muted;
+    flex-shrink: 0;
+  }
+}
+
+.title-doc {
+  font-size: kt.$kt-text-base;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.menu-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: kt.$kt-radius-md;
+  box-shadow: kt.$kt-shadow-popover;
+  z-index: 40;
+  text-align: left;
+  animation: kt-menu-pop 0.12s ease;
+}
+
+@keyframes kt-menu-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: kt.$kt-text-sm;
+  font-weight: 400;
+  white-space: nowrap;
+  text-align: left;
+  color: kt.$kt-text;
+
+  svg {
+    opacity: 0.75;
+    flex-shrink: 0;
+  }
+
+  &.is-current {
+    font-weight: 500;
+    cursor: default;
+  }
+}
+
+button.menu-item {
+  cursor: pointer;
+
+  &:hover {
+    background: kt.$kt-accent;
+    color: #fff;
+
+    svg {
+      opacity: 1;
+    }
+  }
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  flex-shrink: 0;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.icon-btn {
+  width: kt.$kt-control-height;
+  height: kt.$kt-control-height;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  color: kt.$kt-text;
+  display: grid;
+  place-items: center;
+
+  &:hover:not(:disabled) {
+    background: kt.$kt-fill;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.stepper-label {
+  min-width: 44px;
+  text-align: center;
+  font-size: kt.$kt-text-sm;
+  color: kt.$kt-text-muted;
+  font-variant-numeric: tabular-nums;
+}
+
+.split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.pdf-pane {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #ececf0;
+}
+
+// Reserves the right-hand lane the visible Guest frame overlays.
+.insights-slot {
+  width: kt.$kt-insights-width;
+  flex-shrink: 0;
+  border-left: 1px solid kt.$kt-border;
+}
+
+// ---------- Mobile (≤768px): push navigation ----------
+@media (max-width: 768px) {
+  .reader-toolbar {
+    padding: 0 kt.$kt-space-2;
+    gap: kt.$kt-space-1;
+    margin-right: 0;
+  }
+
+  .back-btn .back-label {
+    display: none;
+  }
+
+  .title-doc {
+    font-size: kt.$kt-text-lg;
+  }
+
+  // The stepper is a desktop affordance; mobile navigation is push-based.
+  .stepper {
+    display: none;
+  }
+
+  // The insights lane becomes the Guest's bottom sheet — no slot needed.
+  .insights-slot {
+    display: none;
+  }
+}

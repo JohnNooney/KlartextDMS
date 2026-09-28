@@ -23,3 +23,49 @@
   height: 100%;
   border: 0;
 }
+
+// The sheet toggle is a mobile-only affordance.
+.sheet-toggle {
+  display: none;
+}
+
+// ---------- Mobile (≤768px): half-height bottom sheet, expandable (#29) ----------
+@media (max-width: 768px) {
+  .guest-frame-host {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: 50%;
+    border-left: 0;
+    border-top: 1px solid kt.$kt-border;
+    border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
+    transition: height 0.2s ease;
+
+    &.is-full {
+      height: 100%;
+      border-radius: 0;
+    }
+  }
+
+  .sheet-toggle {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 22px;
+    border: 0;
+    border-radius: 999px;
+    background: kt.$kt-fill;
+    color: kt.$kt-text-muted;
+    z-index: 2;
+  }
+
+  .guest-frame {
+    border-radius: inherit;
+  }
+}

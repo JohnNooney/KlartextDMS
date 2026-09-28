@@ -3,6 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
+import { DOCUMENT_REPOSITORY } from '../data/providers';
+import { OpenDocument } from '../open-document';
+import { PDF_ENGINE } from '../reader/pdf-engine';
 import { Library } from './library';
 import { LibraryStore } from './library.store';
 
@@ -25,9 +28,13 @@ function record(status: DocumentStatus, overrides: Partial<DocumentRecord> = {})
 
 class FakeStore {
   readonly documents = signal<DocumentRecord[] | null>([]);
+  readonly folders = signal<never[]>([]);
+  readonly visible = signal<DocumentRecord[] | null>([]);
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
   readonly openDoc = signal<DocumentRecord | null>(null);
+  folderById = vi.fn(() => undefined);
+  ancestryOf = vi.fn(() => []);
   uploadFiles = vi.fn();
   cancelUpload = vi.fn();
   canRetryUpload = vi.fn(() => false);
@@ -43,16 +50,46 @@ class FakeStore {
   close = vi.fn();
 }
 
+class FakeOpenDocument {
+  readonly docId = signal<string | null>(null);
+  readonly folderId = signal<string | null>(null);
+  open = vi.fn();
+  openFolder = vi.fn();
+  close = vi.fn();
+}
+
+const fakePdfEngine = {
+  load: vi.fn(async () => ({
+    numPages: 1,
+    page: async () => ({ width: 100, height: 100, render: async () => {} }),
+    destroy: () => {},
+  })),
+};
+
+const fakeRepository = { getBytes: vi.fn(async () => new ArrayBuffer(4)) };
+
 async function setup() {
   const store = new FakeStore();
-  await TestBed.configureTestingModule({ imports: [Library] })
+  const openDocument = new FakeOpenDocument();
+  Object.assign(URL, {
+    createObjectURL: vi.fn(() => 'blob:fake'),
+    revokeObjectURL: vi.fn(),
+  });
+  await TestBed.configureTestingModule({
+    imports: [Library],
+    providers: [
+      { provide: OpenDocument, useValue: openDocument },
+      { provide: PDF_ENGINE, useValue: fakePdfEngine },
+      { provide: DOCUMENT_REPOSITORY, useValue: fakeRepository },
+    ],
+  })
     .overrideComponent(Library, {
       set: { providers: [{ provide: LibraryStore, useValue: store }] },
     })
     .compileComponents();
   const fixture = TestBed.createComponent(Library);
   fixture.detectChanges();
-  return { fixture, store, el: fixture.nativeElement as HTMLElement };
+  return { fixture, store, openDocument, el: fixture.nativeElement as HTMLElement };
 }
 
 function dropFiles(el: Element, files: File[]): void {
@@ -87,6 +124,7 @@ describe('Library', () => {
   it('shows a spinner until the first snapshot lands', async () => {
     const { fixture, store, el } = await setup();
     store.documents.set(null);
+    store.visible.set(null);
     fixture.detectChanges();
     expect(el.querySelector('[role="status"]')).toBeTruthy();
     expect(el.textContent).not.toContain('No documents yet');
@@ -94,7 +132,9 @@ describe('Library', () => {
 
   it('renders a tile per Document', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready'), record('failed', { id: 'doc-2', title: 'Scan' })]);
+    const docs = [record('ready'), record('failed', { id: 'doc-2', title: 'Scan' })];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     expect(el.querySelectorAll('app-document-tile')).toHaveLength(2);
     expect(el.querySelector('.meta-line')?.textContent).toContain('2 documents');
@@ -119,7 +159,9 @@ describe('Library', () => {
 
   it('files dropped on the grid upload into the library', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready')]);
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     const file = new File([new Uint8Array(4)], 'a.pdf', { type: 'application/pdf' });
 
@@ -129,7 +171,9 @@ describe('Library', () => {
 
   it('⋮ → Rename opens the dialog; saving renames via the store', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready')]);
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     tileAction(fixture, el.querySelector('app-document-tile')!, 'Rename');
 
@@ -147,7 +191,9 @@ describe('Library', () => {
 
   it('⋮ → Delete confirms with the decided copy, then tears down via the store', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready')]);
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     tileAction(fixture, el.querySelector('app-document-tile')!, 'Delete');
 
@@ -163,7 +209,9 @@ describe('Library', () => {
 
   it('⋮ → Move to… opens the placeholder destination and moves via the store', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready')]);
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     tileAction(fixture, el.querySelector('app-document-tile')!, 'Move to…');
 
@@ -177,10 +225,12 @@ describe('Library', () => {
 
   it('routes tile actions to the store and drop-to-retry to retryWithFile', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([
+    const docs = [
       record('failed', { id: 'doc-2', title: 'Scan' }),
       record('uploading', { id: 'doc-3', title: 'Incoming' }),
-    ]);
+    ];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
 
     const tiles = el.querySelectorAll('app-document-tile');
@@ -195,25 +245,31 @@ describe('Library', () => {
     expect(store.cancelUpload).toHaveBeenCalledWith('doc-3');
   });
 
-  it('an open Document swaps to the reader placeholder with a way back', async () => {
-    const { fixture, store, el } = await setup();
+  it('an open Document swaps to the reader with a way back', async () => {
+    const { fixture, store, openDocument, el } = await setup();
     const doc = record('ready');
     store.documents.set([doc]);
+    store.visible.set([doc]);
     store.openDoc.set(doc);
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    expect(el.querySelector('.reader')).toBeTruthy();
-    expect(el.querySelector('.reader-title')?.textContent).toContain('Mietvertrag 2024');
+    expect(el.querySelector('app-reader .reader')).toBeTruthy();
+    expect(el.querySelector('.title-doc')?.textContent).toContain('Mietvertrag 2024');
+    expect(el.querySelector('app-pdf-viewer')).toBeTruthy();
     expect(el.querySelector('.insights-slot')).toBeTruthy();
     expect(el.querySelector('.grid')).toBeNull();
 
     (el.querySelector('.back-btn') as HTMLButtonElement).click();
-    expect(store.close).toHaveBeenCalled();
+    expect(openDocument.close).toHaveBeenCalledWith(null);
   });
 
   it('clicking a ready tile opens the Document', async () => {
     const { fixture, store, el } = await setup();
-    store.documents.set([record('ready')]);
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
     fixture.detectChanges();
     (el.querySelector('app-document-tile') as HTMLElement).click();
     expect(store.open).toHaveBeenCalledWith('doc-1');
