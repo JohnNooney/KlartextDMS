@@ -14,7 +14,8 @@ import { createExtractionJobRunner, EXTRACTION_MODEL } from './run-extraction-jo
  * anonymous sign-in, real `generateContent` against the seeded Finanzamt PDF.
  * Skipped unless VERIFY_GEMINI is set, since it costs ~$0.004 per run.
  *
- *   VERIFY_GEMINI=1 pnpm vitest run src/extraction/gemini-live.spec.ts
+ *   VERIFY_GEMINI=1 pnpm --filter @klartext/guest exec vitest run src/extraction/gemini-live.spec.ts
+ * (or `cd apps/guest && VERIFY_GEMINI=1 pnpm vitest run src/extraction/gemini-live.spec.ts`)
  *
  * Prerequisites:
  * - `KLARTEXT_GUEST_DEBUG_TOKEN` in the repo-root `.env`, registered in the

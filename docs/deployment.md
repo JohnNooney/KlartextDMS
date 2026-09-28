@@ -126,7 +126,7 @@ gcloud services enable generativelanguage.googleapis.com --project=klartext-b836
 
 (The Vertex/Agent Platform backend would instead need `aiplatform.googleapis.com`; not used.)
 
-The opt-in live check `VERIFY_GEMINI=1 pnpm --filter @klartext/guest vitest run src/extraction/gemini-live.spec.ts` exercises the real round-trip (debug-token exchange → anonymous sign-in → `generateContent`) against a seeded fixture PDF; skipped by default since each run costs ~$0.004.
+The opt-in live check `VERIFY_GEMINI=1 pnpm --filter @klartext/guest exec vitest run src/extraction/gemini-live.spec.ts` exercises the real round-trip (debug-token exchange → anonymous sign-in → `generateContent`) against a seeded fixture PDF; skipped by default since each run costs ~$0.004.
 
 ## Storage bucket CORS
 
