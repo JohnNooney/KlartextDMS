@@ -1,3 +1,23 @@
+@use 'tokens' as kt;
+
+// Overlays the insights lane the reader reserves (issue #28). Hidden via the
+// `hidden` attribute while no Document is open — the iframe stays mounted.
+.guest-frame-host {
+  position: fixed;
+  top: kt.$kt-toolbar-height;
+  right: 0;
+  bottom: 0;
+  width: kt.$kt-insights-width;
+  background: kt.$kt-surface;
+  border-left: 1px solid kt.$kt-border;
+  box-shadow: kt.$kt-shadow-panel;
+  z-index: 20;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
 .guest-frame {
   width: 100%;
   height: 100%;

@@ -26,6 +26,10 @@ class FakeDocumentRepository implements DocumentRepository {
     return [...this.records.values()];
   }
 
+  watch(): () => void {
+    return () => undefined;
+  }
+
   async create(input: NewDocument): Promise<DocumentRecord> {
     const id = `doc-${++this.seq}`;
     const record: DocumentRecord = {
@@ -55,6 +59,18 @@ class FakeDocumentRepository implements DocumentRepository {
     const record = this.records.get(documentId);
     if (!record) throw notFound();
     this.records.set(documentId, { ...record, status });
+  }
+
+  async rename(documentId: string, title: string): Promise<void> {
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, { ...record, title });
+  }
+
+  async setFolder(documentId: string, folderId: string | null): Promise<void> {
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, { ...record, folderId });
   }
 
   uploadBytes(
@@ -170,7 +186,7 @@ describe('UploadPipeline (issue #27 state machine)', () => {
     const handle = await pipeline.upload(pdfFile(), { onProgress });
     await handle.completion;
 
-    expect(onProgress).toHaveBeenCalledWith(1);
+    expect(onProgress).toHaveBeenCalledWith(handle.documentId, 1);
   });
 
   it('runs uploads concurrently, each with its own progress', async () => {
@@ -191,8 +207,8 @@ describe('UploadPipeline (issue #27 state machine)', () => {
 
     expect(documents.records.get(a.documentId)?.status).toBe('ready');
     expect(documents.records.get(b.documentId)?.status).toBe('ready');
-    expect(progressA).toHaveBeenCalledWith(1);
-    expect(progressB).toHaveBeenCalledWith(1);
+    expect(progressA).toHaveBeenCalledWith(a.documentId, 1);
+    expect(progressB).toHaveBeenCalledWith(b.documentId, 1);
   });
 
   it('marks a failed upload failed — metadata retained for retry', async () => {
@@ -229,6 +245,34 @@ describe('UploadPipeline (issue #27 state machine)', () => {
 
     expect(documents.calls).toContain(`status:${documentId}:uploading`);
     expect(documents.records.get(documentId)?.status).toBe('ready');
+  });
+
+  it('holds the File for retry while a Document sits failed; releases it once ready', async () => {
+    const documents = new FakeDocumentRepository();
+    const { pipeline, documentId } = await uploadFailedDocument(documents);
+    const held = pipeline.fileFor(documentId);
+    expect(held?.name).toBe('rechnung.pdf');
+
+    const retried = await pipeline.retryUpload(documentId, held!);
+    await retried.completion;
+    expect(pipeline.fileFor(documentId)).toBeNull();
+  });
+
+  it('releases the File when the upload is cancelled or the Document deleted', async () => {
+    const documents = new FakeDocumentRepository();
+    documents.gated = true;
+    const pipeline = new UploadPipeline(documents);
+    const handle = await pipeline.upload(pdfFile());
+    handle.cancel();
+    await expect(handle.completion).rejects.toThrow(UploadCancelledError);
+    expect(pipeline.fileFor(handle.documentId)).toBeNull();
+
+    documents.nextUploadFailure = new Error('storage down');
+    const failed = await pipeline.upload(pdfFile());
+    await expect(failed.completion).rejects.toThrow('storage down');
+    expect(pipeline.fileFor(failed.documentId)).not.toBeNull();
+    await pipeline.delete(failed.documentId);
+    expect(pipeline.fileFor(failed.documentId)).toBeNull();
   });
 
   it('validates the retried file through the same input boundary', async () => {

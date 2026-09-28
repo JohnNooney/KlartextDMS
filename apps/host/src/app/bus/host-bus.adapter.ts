@@ -219,6 +219,19 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
       queue.push({ document, bytes });
       pumpQueue();
     },
+    cancelJobs(documentId: string): void {
+      knownDocuments.delete(documentId);
+      for (let i = queue.length - 1; i >= 0; i--) {
+        if (queue[i]!.document.documentId === documentId) queue.splice(i, 1);
+      }
+      if (activeJob && activeJob.document.documentId === documentId) {
+        // Dropping the active job orphans its jobId: a late result no longer
+        // matches and is discarded. The queue advances to the next Document.
+        clearTimeout(activeJob.watchdog);
+        activeJob = null;
+        pumpQueue();
+      }
+    },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);
       if (sessionAckTimer !== null) clearTimeout(sessionAckTimer);

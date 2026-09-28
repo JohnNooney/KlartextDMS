@@ -3,6 +3,7 @@
 // the committed rules, as the signed-in owner, per the #9 repository boundary.
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { DocumentRecord } from './document';
 import { FirestoreDocumentRepository } from './document-repository';
 import { emulatorHost } from './testing';
 
@@ -98,6 +99,59 @@ describe('FirestoreDocumentRepository (emulator)', () => {
     expect(listed.find((d) => d.id === record.id)?.status).toBe('ready');
   });
 
+  it('rename edits the title only — originalFilename is immutable provenance', async () => {
+    const record = await create({
+      title: 'vertrag',
+      originalFilename: 'vertrag.pdf',
+      sizeBytes: 4,
+      folderId: null,
+    });
+
+    await repo.rename(record.id, 'Mietvertrag 2024');
+
+    const listed = await repo.list();
+    const renamed = listed.find((d) => d.id === record.id);
+    expect(renamed?.title).toBe('Mietvertrag 2024');
+    expect(renamed?.originalFilename).toBe('vertrag.pdf');
+  });
+
+  it('setFolder re-files the Document', async () => {
+    const record = await create({
+      title: 'Rechnung',
+      originalFilename: 'rechnung.pdf',
+      sizeBytes: 4,
+      folderId: null,
+    });
+
+    await repo.setFolder(record.id, 'wohnung');
+
+    const listed = await repo.list();
+    expect(listed.find((d) => d.id === record.id)?.folderId).toBe('wohnung');
+  });
+
+  it('watch emits the live library on every metadata change until unsubscribed', async () => {
+    const emissions: DocumentRecord[][] = [];
+    const unwatch = repo.watch((documents) => emissions.push(documents));
+    try {
+      const record = await create({
+        title: 'Mahnung',
+        originalFilename: 'mahnung.pdf',
+        sizeBytes: 4,
+        folderId: null,
+      });
+      await waitFor(() =>
+        emissions.some((docs) => docs.some((d) => d.id === record.id && d.status === 'uploading')),
+      );
+
+      await repo.setStatus(record.id, 'ready');
+      await waitFor(() =>
+        emissions.some((docs) => docs.some((d) => d.id === record.id && d.status === 'ready')),
+      );
+    } finally {
+      unwatch();
+    }
+  });
+
   it('deletes bytes → Extraction → metadata, and re-runs to completion (retryable)', async () => {
     const host = await emulatorHost();
     const spy = new OrderingSpyRepository(host.firestore, host.storage, host.uid);
@@ -137,6 +191,15 @@ describe('FirestoreDocumentRepository (emulator)', () => {
 
 function pdfBlob(): Blob {
   return new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46])], { type: 'application/pdf' });
+}
+
+/** Polls a condition against emulator-driven snapshot timing. */
+async function waitFor(condition: () => boolean): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error('waitFor timed out');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 /** Records the real teardown order by spying the protected stage methods. */

@@ -7,7 +7,13 @@ import { App } from './app';
 import { AuthService } from './auth.service';
 import { HOST_BUS_ADAPTER_FACTORY, type HostBusContext } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
+import type { DocumentRepository } from './data/document-repository';
+import { DOCUMENT_REPOSITORY } from './data/providers';
+import { UploadPipeline } from './data/upload-pipeline';
 import { HOST_CONFIG } from './host-config';
+import { Library } from './library/library';
+import { LibraryStore } from './library/library.store';
+import { OpenDocument } from './open-document';
 
 const USER: SessionUser = { uid: 'u1', displayName: 'Test User', email: 'test-user@test.com' };
 
@@ -26,14 +32,42 @@ const eventsSpy: HostBusEvents = {
   jobFailed: vi.fn(),
 };
 
+// Library's scoped data providers hit Firebase — swap them for fakes; the
+// store itself stays real so the shell still exercises the live-listener path.
+const fakeRepository = {
+  watch: vi.fn((emit: (docs: never[]) => void) => {
+    emit([]);
+    return () => {};
+  }),
+} as unknown as DocumentRepository;
+
+const fakePipeline = {
+  upload: vi.fn(),
+  retryUpload: vi.fn(),
+  cancel: vi.fn(),
+  fileFor: vi.fn(() => null),
+  delete: vi.fn(),
+  reconcile: vi.fn(async () => {}),
+} as unknown as UploadPipeline;
+
 async function setup(options: { useEmulators?: boolean } = {}) {
   const auth = new FakeAuth();
   const contexts: HostBusContext[] = [];
   const adapter: HostAdapter = {
     openSession: vi.fn(),
     requestExtraction: vi.fn(),
+    cancelJobs: vi.fn(),
     dispose: vi.fn(),
   };
+  TestBed.overrideComponent(Library, {
+    set: {
+      providers: [
+        { provide: DOCUMENT_REPOSITORY, useValue: fakeRepository },
+        { provide: UploadPipeline, useValue: fakePipeline },
+        LibraryStore,
+      ],
+    },
+  });
   await TestBed.configureTestingModule({
     imports: [App],
     providers: [
@@ -92,6 +126,37 @@ describe('App', () => {
     expect(iframe).toBeTruthy();
     expect(iframe!.src).toContain('http://localhost:5173');
     expect(iframe!.closest('[hidden]')).toBeTruthy();
+  });
+
+  it('mounts the Document library inside the content region', async () => {
+    const { fixture, auth } = await setup();
+    auth.user.set(USER);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.content app-library')).toBeTruthy();
+    expect(el.querySelector('app-toast-outlet')).toBeTruthy();
+  });
+
+  it('displays the Guest iframe while a Document is open, hidden otherwise', async () => {
+    const { fixture, auth } = await setup();
+    auth.user.set(USER);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const host = el.querySelector('.guest-frame-host') as HTMLElement;
+    expect(host.hidden).toBe(true);
+
+    const openDoc = TestBed.inject(OpenDocument);
+    openDoc.open('doc-1');
+    fixture.detectChanges();
+    expect(host.hidden).toBe(false);
+    expect(el.querySelector('iframe')).toBeTruthy();
+
+    openDoc.close();
+    fixture.detectChanges();
+    expect(host.hidden).toBe(true);
   });
 
   it('keeps the iframe mounted while signed in and unmounts it on sign-out', async () => {

@@ -46,6 +46,12 @@ export interface HostAdapter {
   openSession(session: Session): void;
   /** Enqueue an Extraction Job for a Document whose bytes the Host holds. */
   requestExtraction(document: JobDocument, bytes: ArrayBuffer): void;
+  /**
+   * Drop every queued or in-flight Extraction Job for a Document being
+   * deleted (issue #16): queued entries never dispatch, a late result for the
+   * in-flight job is discarded, and RETRY_EXTRACTION no longer re-queues it.
+   */
+  cancelJobs(documentId: string): void;
   dispose(): void;
 }
 
@@ -285,6 +291,62 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       const dispatched = envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT');
       expect(dispatched).toHaveLength(2);
       expect((dispatched[1]!.payload as ExtractDocumentPayload).document.documentId).toBe('doc-b');
+    });
+
+    it('cancelJobs drops a queued job for the Document — it never dispatches', async () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.requestExtraction(document, new ArrayBuffer(1));
+      host.requestExtraction({ ...document, documentId: 'doc-b' }, new ArrayBuffer(1));
+      expect(envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT')).toHaveLength(1);
+
+      host.cancelJobs('doc-b');
+      jobDeferreds[0]!.resolve(extraction);
+      await flush();
+      expect(envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT')).toHaveLength(1);
+    });
+
+    it('cancelJobs drops the in-flight job: late results discarded, the queue advances', async () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.requestExtraction(document, new ArrayBuffer(1));
+      host.requestExtraction({ ...document, documentId: 'doc-b' }, new ArrayBuffer(1));
+      const firstJobId = (
+        envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT')[0]!.payload as ExtractDocumentPayload
+      ).jobId;
+
+      host.cancelJobs(document.documentId);
+      const dispatched = envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT');
+      expect(dispatched).toHaveLength(2);
+      expect((dispatched[1]!.payload as ExtractDocumentPayload).document.documentId).toBe(
+        'doc-b',
+      );
+
+      // A late result for the cancelled jobId is discarded.
+      injectToHost({
+        v: 1,
+        type: 'AI_PROCESSING_SUCCESS',
+        sessionId: '',
+        payload: { jobId: firstJobId, extraction },
+      });
+      await flush();
+      expect(hostProbe.jobSucceeded).not.toHaveBeenCalled();
+    });
+
+    it('cancelJobs forgets the Document: RETRY_EXTRACTION no longer re-queues it', async () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.requestExtraction(document, new ArrayBuffer(1));
+      host.cancelJobs(document.documentId);
+      await flush();
+
+      guest.requestRetry(document.documentId);
+      expect(envelopesOf(wireToHost, 'RETRY_EXTRACTION')).toHaveLength(1);
+      await flush();
+      expect(envelopesOf(wireToGuest, 'EXTRACT_DOCUMENT')).toHaveLength(1);
     });
 
     it('forwards RETRY_EXTRACTION as a fresh Extraction Job for the Document', async () => {

@@ -1,0 +1,172 @@
+@use 'tokens' as kt;
+
+:host {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: kt.$kt-bg;
+  border-radius: kt.$kt-radius-lg;
+  box-shadow: kt.$kt-shadow-panel;
+  overflow: hidden;
+}
+
+.library-toolbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  padding: 0 kt.$kt-space-4 0 kt.$kt-space-5;
+  flex-shrink: 0;
+}
+
+.library-title {
+  margin: 0;
+  font-size: kt.$kt-text-xl;
+  font-weight: 700;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  flex-shrink: 0;
+}
+
+.library-drop {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 kt.$kt-space-5 96px;
+  border: 1.5px dashed transparent;
+  border-radius: kt.$kt-radius-lg;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &.is-drop {
+    border-color: kt.$kt-accent;
+    background: kt.$kt-accent-tint;
+  }
+}
+
+.library-loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+  }
+}
+
+.meta-line {
+  margin: 0 0 0 6px;
+  font-size: kt.$kt-text-sm;
+  color: kt.$kt-text-muted;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+  gap: kt.$kt-space-2;
+  margin-top: kt.$kt-space-4;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+
+  p {
+    margin: 0;
+  }
+}
+
+.empty-title {
+  color: kt.$kt-text;
+  font-weight: 600;
+  font-size: kt.$kt-text-base;
+  margin-top: kt.$kt-space-2;
+}
+
+.empty-hint {
+  font-size: kt.$kt-text-xs;
+}
+
+.empty .btn {
+  margin-top: kt.$kt-space-3;
+}
+
+// ---------- Reader shell (viewer lands with the open-Document issue) ----------
+.reader {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reader-toolbar {
+  min-height: kt.$kt-toolbar-height;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  padding: 0 kt.$kt-space-3 0 kt.$kt-space-4;
+  border-bottom: 1px solid kt.$kt-border;
+  flex-shrink: 0;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 kt.$kt-space-2 0 0;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-base;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    background: kt.$kt-accent-tint;
+  }
+}
+
+.reader-title {
+  margin: 0;
+  font-size: kt.$kt-text-base;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.pdf-pane {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  background: #ececf0;
+}
+
+// Reserves the right-hand lane the visible Guest frame overlays.
+.insights-slot {
+  width: kt.$kt-insights-width;
+  flex-shrink: 0;
+  border-left: 1px solid kt.$kt-border;
+}
