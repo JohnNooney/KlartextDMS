@@ -6,7 +6,9 @@ import aiProcessingStarted from './fixtures/ai-processing-started.json';
 import aiProcessingSuccess from './fixtures/ai-processing-success.json';
 import aiProcessingError from './fixtures/ai-processing-error.json';
 import retryExtraction from './fixtures/retry-extraction.json';
+import extractionsJson from './fixtures/extractions.json';
 import type { BusMessage, MessageType } from './messages.js';
+import type { ExtractionCandidate } from './extraction.js';
 import { deserializeEnvelope } from './serialize.js';
 
 /**
@@ -35,3 +37,13 @@ export const goldenFixtureMessages = Object.fromEntries(
     deserializeEnvelope(JSON.stringify(json)),
   ]),
 ) as unknown as { [T in MessageType]: Extract<BusMessage, { type: T }> };
+
+/**
+ * The seeded fixture Extractions, keyed by documentId (issues #9, #30).
+ * `scripts/seed.mjs` persists this same file into the emulator and the
+ * Guest's fake AI provider serves it byte-for-byte; the Guest validates each
+ * candidate against the #8 rules before returning it, so the cast stays
+ * honest.
+ */
+export const seededExtractionFixtures =
+  extractionsJson as unknown as Record<string, ExtractionCandidate>;

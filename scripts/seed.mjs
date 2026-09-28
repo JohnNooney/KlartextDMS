@@ -4,8 +4,8 @@
  * Creates the demo Auth user, the prototype Folder tree, and three fixture
  * Documents — two with a stored Extraction, one without to exercise first-time
  * processing. Ids are stable so the fake AI provider and e2e tests can key off
- * them; fixture Extractions in ./fixtures/extractions.json are what the Guest's
- * fake provider returns.
+ * them; fixture Extractions in packages/bus-contract/src/fixtures/extractions.json
+ * are what the Guest's fake provider returns (issue #30).
  *
  * Run via `pnpm seed` (firebase emulators:exec … --export-on-exit), which
  * refreshes the committed `emulator-data/` snapshot that
@@ -52,7 +52,15 @@ const FOLDERS = [
 const fixture = (name) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)));
 
-const extractionFixtures = JSON.parse(fixture('extractions.json').toString('utf8'));
+// The canonical copy lives in bus-contract — the Guest's fake provider imports
+// it from the package; the seeder reads the same file so both stay in step.
+const extractionFixtures = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL('../packages/bus-contract/src/fixtures/extractions.json', import.meta.url),
+    ),
+  ).toString('utf8'),
+);
 
 // Three fixture Documents spread across nested Folders and the root, matching
 // the prototype library. `hasExtraction` controls whether a stored Extraction is

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import type { SchemaRequest } from 'firebase/ai';
-import type { ExtractionContent } from '@klartext/bus-contract';
+import type {
+  DocumentType,
+  ExtractionContent,
+  ExtractionStatus,
+  TakeawayImportance,
+} from '@klartext/bus-contract';
 
 /**
  * The Extraction contract's runtime half (issue #8). `extractionResponseSchema`
@@ -18,26 +23,38 @@ import type { ExtractionContent } from '@klartext/bus-contract';
  * Model-emitted `null`s normalize to absent — shape fixups, not semantic
  * coercion; nothing else is repaired silently.
  */
+// One literal list per enum feeds both the wire schema and the Zod validator;
+// the `satisfies` pins them to the contract's union types so drift fails here.
+const DOCUMENT_TYPES = [
+  'TENANCY_AGREEMENT',
+  'HEALTH_INSURANCE',
+  'EMPLOYMENT_CONTRACT',
+  'INTERNET_OR_PHONE',
+  'GOVERNMENT_LETTER',
+  'OTHER',
+] as const satisfies readonly DocumentType[];
+
+const EXTRACTION_STATUSES = [
+  'COMPLETE',
+  'INSUFFICIENT_CONTENT',
+  'UNSUPPORTED_DOCUMENT',
+] as const satisfies readonly ExtractionStatus[];
+
+const TAKEAWAY_IMPORTANCES = ['NORMAL', 'CRITICAL'] as const satisfies readonly TakeawayImportance[];
+
 export const extractionResponseSchema: SchemaRequest = {
   type: 'object',
   properties: {
     documentType: {
       type: 'string',
-      enum: [
-        'TENANCY_AGREEMENT',
-        'HEALTH_INSURANCE',
-        'EMPLOYMENT_CONTRACT',
-        'INTERNET_OR_PHONE',
-        'GOVERNMENT_LETTER',
-        'OTHER',
-      ],
+      enum: [...DOCUMENT_TYPES],
     },
     documentTypeLabel: { type: 'string', nullable: true },
     sourceLanguage: { type: 'string' },
     plainEnglishSummary: { type: 'string' },
     extractionStatus: {
       type: 'string',
-      enum: ['COMPLETE', 'INSUFFICIENT_CONTENT', 'UNSUPPORTED_DOCUMENT'],
+      enum: [...EXTRACTION_STATUSES],
     },
     statusExplanation: { type: 'string', nullable: true },
     keyTakeaways: {
@@ -48,7 +65,7 @@ export const extractionResponseSchema: SchemaRequest = {
         type: 'object',
         properties: {
           text: { type: 'string' },
-          importance: { type: 'string', enum: ['NORMAL', 'CRITICAL'] },
+          importance: { type: 'string', enum: [...TAKEAWAY_IMPORTANCES] },
           sourceQuote: { type: 'string' },
           page: { type: 'integer', minimum: 1, nullable: true },
         },
@@ -82,7 +99,7 @@ const optionalString = z
 
 const keyTakeawaySchema = z.object({
   text: z.string().min(1),
-  importance: z.enum(['NORMAL', 'CRITICAL']),
+  importance: z.enum(TAKEAWAY_IMPORTANCES),
   sourceQuote: z.string().min(1).max(500),
   page: z
     .number()
@@ -94,20 +111,13 @@ const keyTakeawaySchema = z.object({
 
 export const extractionContentSchema = z
   .object({
-    documentType: z.enum([
-      'TENANCY_AGREEMENT',
-      'HEALTH_INSURANCE',
-      'EMPLOYMENT_CONTRACT',
-      'INTERNET_OR_PHONE',
-      'GOVERNMENT_LETTER',
-      'OTHER',
-    ]),
+    documentType: z.enum(DOCUMENT_TYPES),
     documentTypeLabel: optionalString,
     sourceLanguage: z.string().refine(isBcp47, 'sourceLanguage must be a BCP 47 tag'),
     plainEnglishSummary: z
       .string()
       .refine((s) => wordCount(s) <= 200, 'plainEnglishSummary exceeds 200 words'),
-    extractionStatus: z.enum(['COMPLETE', 'INSUFFICIENT_CONTENT', 'UNSUPPORTED_DOCUMENT']),
+    extractionStatus: z.enum(EXTRACTION_STATUSES),
     statusExplanation: optionalString,
     keyTakeaways: z.array(keyTakeawaySchema).min(0).max(12),
   })

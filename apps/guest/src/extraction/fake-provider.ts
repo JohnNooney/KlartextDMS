@@ -1,6 +1,5 @@
-import { goldenFixtureMessages } from '@klartext/bus-contract';
-import type { ExtractionCandidate, ExtractionError } from '@klartext/bus-contract';
-import extractionFixtures from '../../../../scripts/fixtures/extractions.json';
+import { goldenFixtureMessages, seededExtractionFixtures } from '@klartext/bus-contract';
+import type { ExtractionError } from '@klartext/bus-contract';
 import { validateExtractionContent } from './extraction-schema';
 import type { ExtractionProvider } from './extraction-provider';
 
@@ -11,7 +10,6 @@ import type { ExtractionProvider } from './extraction-provider';
  * Gemini (there is no AI Logic emulator). Documents outside the seed set get
  * the golden Bus fixture's Extraction re-stamped with their documentId.
  */
-const SEEDED = extractionFixtures as unknown as Record<string, ExtractionCandidate>;
 
 const INVALID_FIXTURE: ExtractionError = {
   code: 'INVALID_EXTRACTION',
@@ -22,7 +20,7 @@ const INVALID_FIXTURE: ExtractionError = {
 export function createFakeExtractionProvider(): ExtractionProvider {
   return {
     extract(document) {
-      const fixture = SEEDED[document.documentId] ?? {
+      const fixture = seededExtractionFixtures[document.documentId] ?? {
         ...goldenFixtureMessages.AI_PROCESSING_SUCCESS.payload.extraction,
         documentId: document.documentId,
       };
