@@ -6,8 +6,11 @@
     "outDir": "./out-tsc/spec",
     // Common root covering apps/ and the path-mapped packages/ sources (pinned for TS6).
     "rootDir": "../..",
+    // `node`: the rules integration spec reads the committed rules files
+    // (issue #27); `vitest/globals` for the suite itself.
     "types": [
-      "vitest/globals"
+      "vitest/globals",
+      "node"
     ]
   },
   "include": [
