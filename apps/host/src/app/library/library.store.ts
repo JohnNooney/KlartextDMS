@@ -2,7 +2,8 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { ExtractionJobs } from '../bus/extraction-jobs';
 import type { DocumentRecord } from '../data/document';
 import { InvalidDocumentFileError } from '../data/document-input';
-import { DOCUMENT_REPOSITORY } from '../data/providers';
+import { folderAncestry, type FolderRecord } from '../data/folder';
+import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
 import { UploadCancelledError, UploadPipeline, type UploadHandle } from '../data/upload-pipeline';
 import { OpenDocument } from '../open-document';
 import { ToastService } from '../toasts/toast.service';
@@ -17,6 +18,7 @@ import { ToastService } from '../toasts/toast.service';
 @Injectable()
 export class LibraryStore {
   private readonly repository = inject(DOCUMENT_REPOSITORY);
+  private readonly folderRepository = inject(FOLDER_REPOSITORY);
   private readonly pipeline = inject(UploadPipeline);
   private readonly toasts = inject(ToastService);
   private readonly jobs = inject(ExtractionJobs);
@@ -24,25 +26,50 @@ export class LibraryStore {
 
   /** The live library feed; `null` until the first snapshot lands. */
   readonly documents = signal<DocumentRecord[] | null>(null);
+  /** The live Folder feed (issue #29); `null` until the first snapshot lands. */
+  readonly folders = signal<FolderRecord[] | null>(null);
   /** Per-Document upload progress (0–1) while a task is in flight. */
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   /** Documents whose delete failed — the ⋮ menu offers **Retry delete**. */
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
   /** The open Document record — only while the open id resolves to `ready`. */
   readonly openDoc = computed(() => {
-    const doc = this.docById(this.openDocument.id());
+    const doc = this.docById(this.openDocument.docId());
     return doc?.status === 'ready' ? doc : null;
+  });
+  /** The Documents filed in the Folder the URL browses (issue #29). */
+  readonly visible = computed(() => {
+    const folderId = this.openDocument.folderId();
+    return this.documents()?.filter((d) => d.folderId === folderId) ?? null;
   });
 
   private reconciled = false;
 
   constructor() {
-    const unwatch = this.repository.watch((documents) => this.onSnapshot(documents));
-    inject(DestroyRef).onDestroy(unwatch);
+    const unwatchDocuments = this.repository.watch((documents) => this.onSnapshot(documents));
+    const unwatchFolders = this.folderRepository.watch((folders) => this.folders.set(folders));
+    inject(DestroyRef).onDestroy(() => {
+      unwatchDocuments();
+      unwatchFolders();
+    });
+  }
+
+  /** The Folder record behind an id, for labels and the path menu (#29). */
+  folderById(folderId: string | null): FolderRecord | undefined {
+    if (folderId === null) return undefined;
+    return this.folders()?.find((f) => f.id === folderId);
+  }
+
+  /** Root-first ancestry for a Folder (path menu, ADR 0005 adjacency walk). */
+  ancestryOf(folderId: string | null): FolderRecord[] {
+    return folderAncestry(this.folders() ?? [], folderId);
   }
 
   /** Files picked in the upload dialog or dropped on the grid (#16). */
-  uploadFiles(files: Iterable<File>, folderId: string | null = null): void {
+  uploadFiles(
+    files: Iterable<File>,
+    folderId: string | null = this.openDocument.folderId(),
+  ): void {
     for (const file of files) void this.startUpload(file, folderId);
   }
 
@@ -116,7 +143,7 @@ export class LibraryStore {
    * offers **Retry delete**.
    */
   async confirmDelete(documentId: string): Promise<void> {
-    if (this.openDocument.id() === documentId) this.openDocument.close();
+    if (this.openDocument.docId() === documentId) this.close();
     await this.delete(documentId);
   }
 
@@ -125,9 +152,10 @@ export class LibraryStore {
     await this.delete(documentId);
   }
 
-  /** Opens a Document for reading — `ready` tiles only (issue #16). */
+  /** Opens a Document for reading — `ready` tiles only (issues #16, #29). */
   open(documentId: string): void {
-    if (this.docById(documentId)?.status === 'ready') this.openDocument.open(documentId);
+    const doc = this.docById(documentId);
+    if (doc?.status === 'ready') this.openDocument.open(doc);
   }
 
   close(): void {
@@ -205,9 +233,9 @@ export class LibraryStore {
   private onSnapshot(documents: DocumentRecord[]): void {
     this.documents.set(documents);
     // The open Document vanished or left `ready` — navigate back (#16).
-    const openId = this.openDocument.id();
+    const openId = this.openDocument.docId();
     if (openId !== null && !documents.some((d) => d.id === openId && d.status === 'ready')) {
-      this.openDocument.close();
+      this.close();
     }
     if (!this.reconciled) {
       this.reconciled = true;

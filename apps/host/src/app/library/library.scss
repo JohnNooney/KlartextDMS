@@ -105,68 +105,37 @@
   margin-top: kt.$kt-space-3;
 }
 
-// ---------- Reader shell (viewer lands with the open-Document issue) ----------
-.reader {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.reader-toolbar {
-  min-height: kt.$kt-toolbar-height;
-  display: flex;
-  align-items: center;
-  gap: kt.$kt-space-3;
-  padding: 0 kt.$kt-space-3 0 kt.$kt-space-4;
-  border-bottom: 1px solid kt.$kt-border;
-  flex-shrink: 0;
-}
-
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 32px;
-  padding: 0 kt.$kt-space-2 0 0;
+// ---------- Mobile (≤768px): push navigation, large title, + add, rows ----------
+.btn-add {
+  display: none;
+  width: kt.$kt-touch-target;
+  height: kt.$kt-touch-target;
   border: 0;
-  border-radius: kt.$kt-radius-sm;
-  background: transparent;
+  border-radius: 50%;
+  background: kt.$kt-accent-tint;
   color: kt.$kt-accent;
-  font-size: kt.$kt-text-base;
-  white-space: nowrap;
-  flex-shrink: 0;
+  place-items: center;
+}
 
-  &:hover {
-    background: kt.$kt-accent-tint;
+@media (max-width: 768px) {
+  .library-title {
+    font-size: kt.$kt-text-2xl;
   }
-}
 
-.reader-title {
-  margin: 0;
-  font-size: kt.$kt-text-base;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
+  .btn-upload {
+    display: none;
+  }
 
-.split {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
+  .btn-add {
+    display: grid;
+  }
 
-.pdf-pane {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  background: #ececf0;
-}
+  // Tiles become list rows (issue #29 mobile navigation).
+  .grid {
+    grid-template-columns: 1fr;
+  }
 
-// Reserves the right-hand lane the visible Guest frame overlays.
-.insights-slot {
-  width: kt.$kt-insights-width;
-  flex-shrink: 0;
-  border-left: 1px solid kt.$kt-border;
+  .library-drop {
+    padding: 0 kt.$kt-space-3 96px;
+  }
 }

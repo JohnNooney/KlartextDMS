@@ -1,6 +1,16 @@
 <!-- Mounted once while signed in and kept mounted hidden for background
-     Extraction Jobs (issues #16, #25); displays while a Document is open. -->
-<div class="guest-frame-host" [hidden]="docOpen() === null">
+     Extraction Jobs (issues #16, #25); displays while a Document is open —
+     right-hand lane on desktop, a half-height bottom sheet on mobile (#29). -->
+<div class="guest-frame-host" [hidden]="docOpen() === null" [class.is-full]="sheetFull()">
+  <button
+    type="button"
+    class="sheet-toggle"
+    (click)="sheetFull.set(!sheetFull())"
+    [attr.aria-expanded]="sheetFull()"
+    [attr.aria-label]="sheetFull() ? 'Collapse insights panel' : 'Expand insights panel'"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="sheetFull() ? 'm6 14.5 6-6 6 6' : 'm6 9.5 6 6 6-6'"/></svg>
+  </button>
   <iframe
     #frame
     class="guest-frame"

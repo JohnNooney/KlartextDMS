@@ -1,14 +1,17 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import type { SessionUser } from '@klartext/bus-contract';
 import type { HostAdapter } from '@klartext/bus-contract/conformance';
 import { App } from './app';
+import { routes } from './app.routes';
 import { AuthService } from './auth.service';
 import { HOST_BUS_ADAPTER_FACTORY, type HostBusContext } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
 import type { DocumentRepository } from './data/document-repository';
-import { DOCUMENT_REPOSITORY } from './data/providers';
+import type { FolderRepository } from './data/folder-repository';
+import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from './data/providers';
 import { UploadPipeline } from './data/upload-pipeline';
 import { HOST_CONFIG } from './host-config';
 import { Library } from './library/library';
@@ -41,6 +44,13 @@ const fakeRepository = {
   }),
 } as unknown as DocumentRepository;
 
+const fakeFolderRepository = {
+  watch: vi.fn((emit: (folders: never[]) => void) => {
+    emit([]);
+    return () => {};
+  }),
+} as unknown as FolderRepository;
+
 const fakePipeline = {
   upload: vi.fn(),
   retryUpload: vi.fn(),
@@ -63,6 +73,7 @@ async function setup(options: { useEmulators?: boolean } = {}) {
     set: {
       providers: [
         { provide: DOCUMENT_REPOSITORY, useValue: fakeRepository },
+        { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
         { provide: UploadPipeline, useValue: fakePipeline },
         LibraryStore,
       ],
@@ -78,6 +89,7 @@ async function setup(options: { useEmulators?: boolean } = {}) {
           useEmulators: options.useEmulators ?? true,
         },
       },
+      provideRouter(routes),
       { provide: AuthService, useValue: auth },
       { provide: HostBusEvents, useValue: eventsSpy },
       {
@@ -89,6 +101,8 @@ async function setup(options: { useEmulators?: boolean } = {}) {
       },
     ],
   }).compileComponents();
+  // Bootstrap-only in production — TestBed must kick the initial navigation.
+  TestBed.inject(Router).initialNavigation();
   const fixture = TestBed.createComponent(App);
   return { fixture, auth, adapter, contexts };
 }
@@ -149,7 +163,7 @@ describe('App', () => {
     expect(host.hidden).toBe(true);
 
     const openDoc = TestBed.inject(OpenDocument);
-    openDoc.open('doc-1');
+    openDoc.open({ id: 'doc-1', folderId: null });
     fixture.detectChanges();
     expect(host.hidden).toBe(false);
     expect(el.querySelector('iframe')).toBeTruthy();

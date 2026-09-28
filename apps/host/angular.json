@@ -32,6 +32,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "/assets/"
               }
             ],
             "styles": [
@@ -78,7 +83,9 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "exclude": ["src/**/*.integration.spec.ts"]
+            "exclude": [
+              "src/**/*.integration.spec.ts"
+            ]
           }
         }
       }
