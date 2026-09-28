@@ -6,6 +6,7 @@
 // repo-root .env (dev) or CI secrets (e2e/preview); never production.
 interface ImportMetaEnv {
   readonly VITE_USE_FIREBASE_EMULATORS?: string;
+  readonly VITE_FAKE_AI_PROVIDER?: string;
   readonly KLARTEXT_GUEST_DEBUG_TOKEN?: string;
 }
 

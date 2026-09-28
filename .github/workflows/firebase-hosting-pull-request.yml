@@ -30,6 +30,10 @@ jobs:
       # App Check SDK lands (#25/#26). Never set on production builds.
       KLARTEXT_HOST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_HOST_DEBUG_TOKEN }}
       KLARTEXT_GUEST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_GUEST_DEBUG_TOKEN }}
+      # Previews serve seeded fixture Extractions (#30): deterministic review
+      # UX, and no public Gemini path — the baked debug token would otherwise
+      # let anyone who loads a preview burn the project's AI quota.
+      VITE_FAKE_AI_PROVIDER: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
