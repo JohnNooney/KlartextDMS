@@ -103,7 +103,7 @@ The Bus's `targetOrigin` allow-list is populated from these values — still exa
 
 Decided in [App Check enforcement and Gemini abuse limits](https://github.com/JohnNooney/KlartextDMS/issues/21).
 
-Enforcement is `Enforced` on Firestore, Storage, and AI Logic — flipped on when the App Check SDK first lands in a deployable build, so previews and production run identical enforcement (AI Logic is auto-enforced on registration; there are no pre-App-Check clients to protect). Replay protection stays `Unenforced`; the reused-token metric in the console is the tripwire.
+Enforcement is `Enforced` on Firestore, Storage, and AI Logic — flipped on when the App Check SDK first lands in a deployable build, so previews and production run identical enforcement (AI Logic is auto-enforced on registration; there are no pre-App-Check clients to protect). Replay protection is `Enforced` on the AI Logic service (`firebaseml`), so the Guest requests a **limited-use** App Check token per call (`useLimitedUseAppCheckTokens: true` in `getAI`) — a regular exchanged token is rejected by `firebasevertexai` with 401 "token is invalid". Debug tokens still work: the SDK adds `limited_use` to the debug exchange.
 
 Both apps call `initializeAppCheck` in every Environment; only the provider varies:
 
@@ -117,6 +117,14 @@ Both apps call `initializeAppCheck` in every Environment; only the provider vari
 The debug token is the only secret-ish value in the client config tree: never committed, never baked into production builds.
 
 The v1 Gemini abuse ceiling is enforced App Check plus, all without backend code: the AI Logic per-user quota lowered to ~10 Generate Content requests/min (default 100), a project-level cap of ~500 requests/day set as a quota override in the Cloud console, and billing alerts at €5/€25. A hard auto-shutdown would need a budget-automation Cloud Function — excluded by the no-backend constraint.
+
+The Vertex backend also needs `aiplatform.googleapis.com` (Agent Platform API) enabled — the console's AI Logic "Get started" enabled `firebasevertexai.googleapis.com` but not the platform API, and calls fail 403 `SERVICE_DISABLED` until it is:
+
+```bash
+gcloud services enable aiplatform.googleapis.com --project=klartext-b836c
+```
+
+The opt-in live check `VERIFY_GEMINI=1 pnpm --filter @klartext/guest vitest run src/extraction/gemini-live.spec.ts` exercises the real round-trip (debug-token exchange → anonymous sign-in → `generateContent`) against a seeded fixture PDF; skipped by default since each run costs ~$0.004.
 
 ## Storage bucket CORS
 

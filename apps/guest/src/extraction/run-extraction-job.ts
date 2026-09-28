@@ -18,7 +18,13 @@ export const EXTRACTION_MODEL = 'gemini-2.5-flash';
  */
 function createExtractionProvider(config: GuestConfig, app: FirebaseApp): ExtractionProvider {
   if (config.fakeAiProvider) return createFakeExtractionProvider();
-  const ai = getAI(app, { backend: new VertexAIBackend() });
+  // The project enforces App Check replay protection on Vertex AI in
+  // Firebase (firebaseml) — regular tokens are rejected, so every request
+  // needs a limited-use token. Valid also when protection is off.
+  const ai = getAI(app, {
+    backend: new VertexAIBackend(),
+    useLimitedUseAppCheckTokens: true,
+  });
   const model = getGenerativeModel(ai, {
     model: EXTRACTION_MODEL,
     generationConfig: {
