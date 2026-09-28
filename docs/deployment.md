@@ -118,6 +118,17 @@ The debug token is the only secret-ish value in the client config tree: never co
 
 The v1 Gemini abuse ceiling is enforced App Check plus, all without backend code: the AI Logic per-user quota lowered to ~10 Generate Content requests/min (default 100), a project-level cap of ~500 requests/day set as a quota override in the Cloud console, and billing alerts at €5/€25. A hard auto-shutdown would need a budget-automation Cloud Function — excluded by the no-backend constraint.
 
+## Storage bucket CORS
+
+`getBytes`/`uploadBytesResumable` are browser calls to `firebasestorage.googleapis.com`, so the real bucket needs a CORS policy for every origin that loads or uploads a PDF — preview channels and production; the emulator ignores CORS, which is why nothing surfaces in dev or e2e. Preview hostnames are hashed per PR, so `storage.cors.json` uses `origin: ["*"]` (CORS is not the access boundary — Storage rules and App Check are). The `X-Goog-Upload-*` response headers must be exposed or resumable uploads break.
+
+One-time per bucket (no Firebase CLI equivalent):
+
+```bash
+gcloud storage buckets update gs://klartext-b836c.firebasestorage.app \
+  --cors-file=storage.cors.json
+```
+
 ## CI
 
 The three gate jobs live in the reusable `.github/workflows/ci.yml` (`workflow_call`), called by both entry workflows so the same checks gate previews and live deploys:
