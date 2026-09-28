@@ -2,17 +2,20 @@ import { inject, InjectionToken, type Provider } from '@angular/core';
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 import { emulatorConfig, firebaseConfig } from '@klartext/firebase-config';
 import { HOST_CONFIG } from './host-config';
 
 /**
- * Host-side Firebase wiring (issue #25): the shared web-app config from
- * `@klartext/firebase-config`, App Check, and Auth — the only Firebase
- * services the Host touches in this issue; Firestore/Storage connect with
- * the document repositories (#27).
+ * Host-side Firebase wiring (issues #25, #27): the shared web-app config from
+ * `@klartext/firebase-config`, App Check, Auth, and the Firestore/Storage
+ * instances behind the Host-only document repositories (#27).
  */
 export const FIREBASE_APP = new InjectionToken<FirebaseApp>('FIREBASE_APP');
 export const FIREBASE_AUTH = new InjectionToken<Auth>('FIREBASE_AUTH');
+export const FIREBASE_FIRESTORE = new InjectionToken<Firestore>('FIREBASE_FIRESTORE');
+export const FIREBASE_STORAGE = new InjectionToken<FirebaseStorage>('FIREBASE_STORAGE');
 
 declare global {
   // Firebase App Check reads the debug-mode flag off the global object; when
@@ -62,6 +65,36 @@ export function provideKlartextFirebase(): Provider[] {
           );
         }
         return auth;
+      },
+    },
+    {
+      provide: FIREBASE_FIRESTORE,
+      useFactory: () => {
+        const config = inject(HOST_CONFIG);
+        const firestore = getFirestore(inject(FIREBASE_APP));
+        if (config.useEmulators) {
+          connectFirestoreEmulator(
+            firestore,
+            emulatorConfig.host,
+            emulatorConfig.firestore.port,
+          );
+        }
+        return firestore;
+      },
+    },
+    {
+      provide: FIREBASE_STORAGE,
+      useFactory: () => {
+        const config = inject(HOST_CONFIG);
+        const storage = getStorage(inject(FIREBASE_APP));
+        if (config.useEmulators) {
+          connectStorageEmulator(
+            storage,
+            emulatorConfig.host,
+            emulatorConfig.storage.port,
+          );
+        }
+        return storage;
       },
     },
   ];
