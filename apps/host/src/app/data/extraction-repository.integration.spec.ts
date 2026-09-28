@@ -58,6 +58,32 @@ describe('FirestoreExtractionRepository (emulator)', () => {
     expect(stored?.createdAt.seconds).toBeGreaterThan(0);
   });
 
+  it('persists a candidate whose optional fields arrived as explicit undefined', async () => {
+    // The Guest's schema validation emits documentTypeLabel / statusExplanation /
+    // takeaway page as own-undefined properties; postMessage preserves them and
+    // Firestore would reject the write (issue #31).
+    const withUndefined = {
+      ...candidate(documentId),
+      documentTypeLabel: undefined,
+      statusExplanation: undefined,
+      keyTakeaways: [
+        {
+          text: 'Notice period is three months.',
+          importance: 'NORMAL' as const,
+          sourceQuote: 'Die Kündigungsfrist beträgt drei Monate.',
+          page: undefined,
+        },
+      ],
+    };
+    await extractions.save(documentId, withUndefined);
+
+    const stored = await extractions.get(documentId);
+    expect(stored).toMatchObject({ documentId, extractionStatus: 'COMPLETE' });
+    expect('documentTypeLabel' in stored!).toBe(false);
+    expect('statusExplanation' in stored!).toBe(false);
+    expect('page' in stored!.keyTakeaways[0]!).toBe(false);
+  });
+
   it('replaces the stored Extraction on re-save — one per Document', async () => {
     const first = candidate(documentId);
     await extractions.save(documentId, first);

@@ -29,8 +29,27 @@ export class FirestoreExtractionRepository implements ExtractionRepository {
 
   async save(documentId: string, extraction: ExtractionCandidate): Promise<void> {
     await setDoc(extractionRef(this.firestore, this.ownerId, documentId), {
-      ...extraction,
+      ...dropUndefined(extraction),
       createdAt: serverTimestamp(),
     });
   }
+}
+
+/**
+ * Firestore rejects explicit `undefined` field values — and the Guest's
+ * schema validation emits optional contract fields (`documentTypeLabel`,
+ * `statusExplanation`, takeaway `page`) as own-`undefined` properties, which
+ * `postMessage`'s structured clone preserves. Absent and `undefined` mean
+ * the same thing on the wire; drop them at the persistence boundary.
+ */
+function dropUndefined<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(dropUndefined) as T;
+  if (value !== null && typeof value === 'object' && value.constructor === Object) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, dropUndefined(v)]),
+    ) as T;
+  }
+  return value;
 }
