@@ -118,11 +118,13 @@ The debug token is the only secret-ish value in the client config tree: never co
 
 The v1 Gemini abuse ceiling is enforced App Check plus, all without backend code: the AI Logic per-user quota lowered to ~10 Generate Content requests/min (default 100), a project-level cap of ~500 requests/day set as a quota override in the Cloud console, and billing alerts at €5/€25. A hard auto-shutdown would need a budget-automation Cloud Function — excluded by the no-backend constraint.
 
-The Vertex backend also needs `aiplatform.googleapis.com` (Agent Platform API) enabled — the console's AI Logic "Get started" enabled `firebasevertexai.googleapis.com` but not the platform API, and calls fail 403 `SERVICE_DISABLED` until it is:
+The Guest uses the **Gemini Developer API** backend (`GoogleAIBackend`, revised ADR 0007) for its free tier — calls still pass through `firebasevertexai.googleapis.com` plus the matching platform API, which the console's "Get started" may not enable; calls then fail 403 `SERVICE_DISABLED`. Developer API backend needs `generativelanguage.googleapis.com`:
 
 ```bash
-gcloud services enable aiplatform.googleapis.com --project=klartext-b836c
+gcloud services enable generativelanguage.googleapis.com --project=klartext-b836c
 ```
+
+(The Vertex/Agent Platform backend would instead need `aiplatform.googleapis.com`; not used.)
 
 The opt-in live check `VERIFY_GEMINI=1 pnpm --filter @klartext/guest vitest run src/extraction/gemini-live.spec.ts` exercises the real round-trip (debug-token exchange → anonymous sign-in → `generateContent`) against a seeded fixture PDF; skipped by default since each run costs ~$0.004.
 

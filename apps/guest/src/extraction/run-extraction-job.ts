@@ -1,5 +1,5 @@
 import type { FirebaseApp } from 'firebase/app';
-import { VertexAIBackend, getAI, getGenerativeModel } from 'firebase/ai';
+import { GoogleAIBackend, getAI, getGenerativeModel } from 'firebase/ai';
 import type { ExtractDocumentPayload, ExtractionCandidate } from '@klartext/bus-contract';
 import type { GuestConfig } from '../guest-config';
 import type { ExtractionProvider } from './extraction-provider';
@@ -8,21 +8,21 @@ import { createFakeExtractionProvider } from './fake-provider';
 import { createGeminiExtractionProvider } from './gemini-provider';
 
 /** The model behind prompt v1; fixtures record it in their `model` field. */
-export const EXTRACTION_MODEL = 'gemini-2.5-flash';
+export const EXTRACTION_MODEL = 'gemini-3.8-flash';
 
 /**
  * Provider selection (issue #30): the deterministic fixture provider when the
- * build-time flag is set, otherwise Gemini via Firebase AI Logic on the Vertex
- * backend's defaults (`VertexAIBackend` is the SDK name for what the console
- * now calls the Agent Platform Gemini API — same backend, ADR 0007).
+ * build-time flag is set, otherwise Gemini via Firebase AI Logic on the
+ * Gemini Developer API backend (`GoogleAIBackend` — free tier, revised from
+ * the Vertex backend in ADR 0007).
  */
 function createExtractionProvider(config: GuestConfig, app: FirebaseApp): ExtractionProvider {
   if (config.fakeAiProvider) return createFakeExtractionProvider();
-  // The project enforces App Check replay protection on Vertex AI in
-  // Firebase (firebaseml) — regular tokens are rejected, so every request
-  // needs a limited-use token. Valid also when protection is off.
+  // The project enforces App Check replay protection on AI Logic
+  // (firebaseml) — regular tokens are rejected, so every request needs a
+  // limited-use token. Valid also when protection is off.
   const ai = getAI(app, {
-    backend: new VertexAIBackend(),
+    backend: new GoogleAIBackend(),
     useLimitedUseAppCheckTokens: true,
   });
   const model = getGenerativeModel(ai, {

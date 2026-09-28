@@ -14,7 +14,7 @@ import { EXTRACTION_PROMPT, EXTRACTION_PROMPT_VERSION } from './prompt';
  * `GenerativeModel.generateContent` surface — no network, no Firebase app.
  */
 
-const MODEL_ID = 'gemini-2.5-flash';
+const MODEL_ID = 'gemini-3.8-flash';
 
 const DOCUMENT: JobDocument = {
   documentId: 'doc-finanzamt',

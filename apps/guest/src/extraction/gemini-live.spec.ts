@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { ExtractDocumentPayload } from '@klartext/bus-contract';
 import { initGuestFirebase } from '../firebase';
 import { validateExtractionContent } from './extraction-schema';
-import { createExtractionJobRunner } from './run-extraction-job';
+import { createExtractionJobRunner, EXTRACTION_MODEL } from './run-extraction-job';
 
 /**
  * Opt-in live check — the issue #30 acceptance criterion "a real Gemini
@@ -57,7 +57,7 @@ describe.runIf(RUN)('live Gemini round-trip', () => {
       expect(candidate.documentId).toBe('doc-finanzamt');
       expect(candidate.schemaVersion).toBe(1);
       expect(candidate.promptVersion).toBe('klartext-extraction-v1');
-      expect(candidate.model).toBe('gemini-2.5-flash');
+      expect(candidate.model).toBe(EXTRACTION_MODEL);
       console.log(
         `[live] ${candidate.extractionStatus} — ${candidate.documentType}, ` +
           `${candidate.keyTakeaways.length} takeaways, ` +
