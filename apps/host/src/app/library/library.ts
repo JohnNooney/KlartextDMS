@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
 import { Reader } from '../reader/reader';
@@ -32,11 +33,17 @@ type DialogState =
   imports: [DocumentTile, Reader, UploadDialog, RenameDialog, MoveDialog, DeleteDialog],
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
-  providers: provideDocumentData(),
+  providers: [...provideDocumentData(), ExtractionFlow],
 })
 export class Library {
   protected readonly store = inject(LibraryStore);
   protected readonly dialog = signal<DialogState>(null);
+
+  constructor() {
+    // Instantiating starts Session flow + Extraction Job orchestration for
+    // the signed-in session (issue #31); it self-attaches to the Bus.
+    inject(ExtractionFlow);
+  }
   protected readonly dropHover = signal(false);
 
   protected openUpload(): void {

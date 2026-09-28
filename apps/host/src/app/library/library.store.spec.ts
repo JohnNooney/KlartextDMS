@@ -2,8 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ExtractionJobs } from '../bus/extraction-jobs';
-import type { DocumentRecord, DocumentStatus, NewDocument } from '../data/document';
+import { HostBus } from '../bus/host-bus';
+import type {
+  DocumentRecord,
+  DocumentStatus,
+  ExtractionFailure,
+  NewDocument,
+} from '../data/document';
 import type { DocumentRepository, DocumentUpload } from '../data/document-repository';
 import type { FolderRepository } from '../data/folder-repository';
 import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
@@ -86,6 +91,21 @@ class FakeDocumentRepository implements DocumentRepository {
     const record = this.records.get(documentId);
     if (!record) throw notFound();
     this.records.set(documentId, { ...record, folderId });
+    this.emit();
+  }
+
+  async setExtractionFailure(
+    documentId: string,
+    failure: Omit<ExtractionFailure, 'failedAt'> | null,
+  ): Promise<void> {
+    this.calls.push(`extraction-failure:${documentId}`);
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, {
+      ...record,
+      extractionFailure:
+        failure === null ? null : { ...failure, failedAt: { seconds: 1, nanoseconds: 0 } },
+    });
     this.emit();
   }
 
@@ -201,7 +221,7 @@ function setup() {
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
       { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
-      { provide: ExtractionJobs, useValue: jobs },
+      { provide: HostBus, useValue: jobs },
       { provide: Router, useValue: fakeRouter },
       LibraryStore,
     ],
@@ -433,7 +453,7 @@ function setupLate(repository: FakeDocumentRepository) {
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
       { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
-      { provide: ExtractionJobs, useValue: jobs },
+      { provide: HostBus, useValue: jobs },
       { provide: Router, useValue: fakeRouter },
       LibraryStore,
     ],

@@ -71,4 +71,40 @@ describe('ExtractionPanel', () => {
       expect(wrapper.text()).not.toContain('Needs your attention');
     },
   );
+
+  // Explicit re-run (issue #15): ⋯ → "Re-analyze document" — hidden on
+  // non-COMPLETE statuses, disabled while a job is queued/running.
+
+  it('offers "Re-analyze document" from the header menu and emits reanalyze', async () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, documentTitle: 'Mietvertrag 2024.pdf' },
+    });
+    await wrapper.find('button[aria-label="More actions"]').trigger('click');
+    const item = wrapper.findAll('button').find((b) => b.text() === 'Re-analyze document');
+    expect(item).toBeDefined();
+    await item!.trigger('click');
+    expect(wrapper.emitted('reanalyze')).toHaveLength(1);
+  });
+
+  it.each(['INSUFFICIENT_CONTENT', 'UNSUPPORTED_DOCUMENT'] as const)(
+    'hides the re-analyze affordance for %s',
+    (extractionStatus) => {
+      const wrapper = mount(ExtractionPanel, {
+        props: {
+          extraction: record({ extractionStatus, statusExplanation: 'x', keyTakeaways: [] }),
+          documentTitle: 'scan.pdf',
+        },
+      });
+      expect(wrapper.find('button[aria-label="More actions"]').exists()).toBe(false);
+    },
+  );
+
+  it.each(['queued', 'running'] as const)('disables re-analyze while %s', async (state) => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, documentTitle: 'x.pdf', extractionState: state },
+    });
+    await wrapper.find('button[aria-label="More actions"]').trigger('click');
+    const item = wrapper.findAll('button').find((b) => b.text() === 'Re-analyze document');
+    expect(item!.attributes('disabled')).toBeDefined();
+  });
 });

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DocumentRecord, DocumentStatus, NewDocument } from './document';
+import type {
+  DocumentRecord,
+  DocumentStatus,
+  ExtractionFailure,
+  NewDocument,
+} from './document';
 import type { DocumentRepository, DocumentUpload } from './document-repository';
 import { UploadCancelledError, UploadPipeline } from './upload-pipeline';
 
@@ -59,6 +64,20 @@ class FakeDocumentRepository implements DocumentRepository {
     const record = this.records.get(documentId);
     if (!record) throw notFound();
     this.records.set(documentId, { ...record, status });
+  }
+
+  async setExtractionFailure(
+    documentId: string,
+    failure: Omit<ExtractionFailure, 'failedAt'> | null,
+  ): Promise<void> {
+    this.calls.push(`extraction-failure:${documentId}`);
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, {
+      ...record,
+      extractionFailure:
+        failure === null ? null : { ...failure, failedAt: { seconds: 1, nanoseconds: 0 } },
+    });
   }
 
   async rename(documentId: string, title: string): Promise<void> {

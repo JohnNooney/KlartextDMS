@@ -22,7 +22,13 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { deleteObject, getBytes, ref, uploadBytesResumable, type FirebaseStorage } from 'firebase/storage';
-import { MAX_DOCUMENT_BYTES, type DocumentRecord, type DocumentStatus, type NewDocument } from './document';
+import {
+  MAX_DOCUMENT_BYTES,
+  type DocumentRecord,
+  type DocumentStatus,
+  type ExtractionFailure,
+  type NewDocument,
+} from './document';
 import { extractionRef } from './paths';
 
 /**
@@ -63,6 +69,15 @@ export interface DocumentRepository {
   delete(documentId: string): Promise<void>;
   /** Marks a machine transition (`ready`, `failed`, `deleting`, …). */
   setStatus(documentId: string, status: DocumentStatus): Promise<void>;
+  /**
+   * Records or clears the Extraction Job failure on the Document (issue #31):
+   * a recorded failure is never auto-requeued; retry writes `null` to clear.
+   * `failedAt` is the server's clock, like the other record timestamps.
+   */
+  setExtractionFailure(
+    documentId: string,
+    failure: Omit<ExtractionFailure, 'failedAt'> | null,
+  ): Promise<void>;
   /** Starts the abortable Storage upload of the Document's bytes. */
   uploadBytes(
     documentId: string,
@@ -112,6 +127,7 @@ export class FirestoreDocumentRepository implements DocumentRepository {
       sizeBytes: input.sizeBytes,
       storagePath: this.storagePath(ref.id),
       status: 'uploading' as const,
+      extractionFailure: null,
       folderId: input.folderId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -124,6 +140,17 @@ export class FirestoreDocumentRepository implements DocumentRepository {
   /** Marks a machine transition; bumps `updatedAt`. */
   async setStatus(documentId: string, status: DocumentStatus): Promise<void> {
     await updateDoc(this.metadataRef(documentId), { status, updatedAt: serverTimestamp() });
+  }
+
+  /** Records/clears the Extraction Job failure; bumps `updatedAt`. */
+  async setExtractionFailure(
+    documentId: string,
+    failure: Omit<ExtractionFailure, 'failedAt'> | null,
+  ): Promise<void> {
+    await updateDoc(this.metadataRef(documentId), {
+      extractionFailure: failure === null ? null : { ...failure, failedAt: serverTimestamp() },
+      updatedAt: serverTimestamp(),
+    });
   }
 
   async rename(documentId: string, title: string): Promise<void> {

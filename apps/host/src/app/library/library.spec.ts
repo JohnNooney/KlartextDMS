@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
+import { ExtractionFlow } from '../bus/extraction-flow';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { OpenDocument } from '../open-document';
 import { PDF_ENGINE } from '../reader/pdf-engine';
@@ -84,7 +85,12 @@ async function setup() {
     ],
   })
     .overrideComponent(Library, {
-      set: { providers: [{ provide: LibraryStore, useValue: store }] },
+      set: {
+        providers: [
+          { provide: LibraryStore, useValue: store },
+          { provide: ExtractionFlow, useValue: {} },
+        ],
+      },
     })
     .compileComponents();
   const fixture = TestBed.createComponent(Library);

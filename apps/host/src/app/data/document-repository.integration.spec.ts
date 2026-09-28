@@ -129,6 +129,32 @@ describe('FirestoreDocumentRepository (emulator)', () => {
     expect(listed.find((d) => d.id === record.id)?.folderId).toBe('wohnung');
   });
 
+  it('records and clears the Extraction Job failure (issue #31)', async () => {
+    const record = await create({
+      title: 'Versicherung',
+      originalFilename: 'versicherung.pdf',
+      sizeBytes: 4,
+      folderId: null,
+    });
+    expect(record.extractionFailure).toBeNull();
+
+    const failure = {
+      code: 'AI_UNAVAILABLE' as const,
+      message: 'The document assistant is not responding.',
+      retryable: true,
+    };
+    await repo.setExtractionFailure(record.id, failure);
+    const recorded = (await repo.list()).find((d) => d.id === record.id)?.extractionFailure;
+    expect(recorded).toMatchObject(failure);
+    // Server timestamps, not client clocks.
+    expect(recorded?.failedAt.seconds).toBeGreaterThan(0);
+
+    await repo.setExtractionFailure(record.id, null);
+    expect(
+      (await repo.list()).find((d) => d.id === record.id)?.extractionFailure,
+    ).toBeNull();
+  });
+
   it('watch emits the live library on every metadata change until unsubscribed', async () => {
     const emissions: DocumentRecord[][] = [];
     const unwatch = repo.watch((documents) => emissions.push(documents));

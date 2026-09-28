@@ -5,6 +5,7 @@ import {
   NO_SESSION,
   SESSION_ACK_TIMEOUT_MS,
   isBusMessage,
+  isExtractionCandidate,
 } from '@klartext/bus-contract';
 import type {
   BusMessageEvent,
@@ -22,11 +23,20 @@ import type {
 
 /**
  * How the Host learns Bus outcomes. `HostProbe` is the conformance-suite
- * surface; `onGuestReady` is the app-side observability hook (issue #25) —
- * the resend/re-issue itself is handled inside the adapter.
+ * surface; the optional hooks are the app-side observability seams (issue #31):
+ * `jobStarted`/`jobFailedFor` carry the job's Document (which the `HostProbe`
+ * signatures don't), and `retryRequested` lets the app own the re-enqueue —
+ * it fetches fresh bytes and clears the failure record, work the adapter
+ * can't do. Returning `true` suppresses the adapter's own job-table re-queue.
  */
 export interface HostBusProbe extends HostProbe {
   onGuestReady?(): void;
+  /** STARTED acked a dispatched job — it now runs under the result watchdog. */
+  jobStarted?(jobId: string, document: JobDocument): void;
+  /** Fired alongside `HostProbe.jobFailed` with the job's Document. */
+  jobFailedFor?(jobId: string, document: JobDocument, error: ExtractionError): void;
+  /** RETRY_EXTRACTION arrived; return `true` when the app owns the re-enqueue. */
+  retryRequested?(documentId: string): boolean;
 }
 
 export interface HostBusContext extends Omit<HostAdapterContext, 'probe'> {
@@ -44,6 +54,12 @@ export const HOST_BUS_ADAPTER_FACTORY = new InjectionToken<HostBusAdapterFactory
 const AI_UNAVAILABLE: ExtractionError = {
   code: 'AI_UNAVAILABLE',
   message: 'The document assistant is not responding.',
+  retryable: true,
+};
+
+const INVALID_EXTRACTION: ExtractionError = {
+  code: 'INVALID_EXTRACTION',
+  message: 'The document could not be analyzed.',
   retryable: true,
 };
 
@@ -124,6 +140,7 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
     clearTimeout(job.watchdog);
     if (error) {
       ctx.probe.jobFailed(job.jobId, error);
+      ctx.probe.jobFailedFor?.(job.jobId, job.document, error);
     } else {
       ctx.probe.jobSucceeded(job.jobId, extraction!);
       // If the finished job is for the open Document, resend INIT_SESSION so
@@ -176,13 +193,23 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
           activeJob.acknowledged = true;
           clearTimeout(activeJob.watchdog);
           activeJob.watchdog = setTimeout(() => settleJob(AI_UNAVAILABLE), JOB_RESULT_TIMEOUT_MS);
+          ctx.probe.jobStarted?.(jobId, activeJob.document);
         }
         break;
       }
       case 'AI_PROCESSING_SUCCESS': {
         const { jobId, extraction } = msg.payload;
         if (activeJob && activeJob.acknowledged && jobId === activeJob.jobId) {
-          settleJob(null, extraction);
+          // The Host validates before persisting (issue #31, #15): a partial,
+          // schema-invalid, or foreign-Document Extraction is a job failure,
+          // never a stored record or a displayed Session.
+          settleJob(
+            isExtractionCandidate(extraction) &&
+              extraction.documentId === activeJob.document.documentId
+              ? null
+              : INVALID_EXTRACTION,
+            extraction,
+          );
         }
         break;
       }
@@ -195,6 +222,9 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
       }
       case 'RETRY_EXTRACTION': {
         const { documentId } = msg.payload;
+        // The app may own the re-enqueue (clears the failure record, refetches
+        // bytes — also the only path for a Document this session never queued).
+        if (ctx.probe.retryRequested?.(documentId)) break;
         const known = knownDocuments.get(documentId);
         if (known) {
           queue.push(known);

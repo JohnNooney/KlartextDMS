@@ -1,5 +1,4 @@
 import { Routes, UrlSegment, type UrlMatchResult } from '@angular/router';
-import { Library } from './library/library';
 
 /** The URL segment standing in for the root Folder ("Documents"). */
 export const ROOT_FOLDER_SEGMENT = 'root';
@@ -35,8 +34,10 @@ export function libraryUrl(segments: UrlSegment[]): UrlMatchResult | null {
   return null;
 }
 
+// `loadComponent` keeps the data layer out of this file's import graph —
+// a static edge here completes the providers ↔ library import cycle.
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'folder/root' },
-  { matcher: libraryUrl, component: Library },
+  { matcher: libraryUrl, loadComponent: () => import('./library/library').then((m) => m.Library) },
   { path: '**', redirectTo: 'folder/root' },
 ];

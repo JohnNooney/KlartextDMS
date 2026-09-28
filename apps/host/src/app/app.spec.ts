@@ -9,6 +9,7 @@ import { routes } from './app.routes';
 import { AuthService } from './auth.service';
 import { HOST_BUS_ADAPTER_FACTORY, type HostBusContext } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
+import { ExtractionFlow } from './bus/extraction-flow';
 import type { DocumentRepository } from './data/document-repository';
 import type { FolderRepository } from './data/folder-repository';
 import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from './data/providers';
@@ -28,12 +29,12 @@ class FakeAuth {
   signOut = vi.fn(async () => this.user.set(null));
 }
 
-const eventsSpy: HostBusEvents = {
+const eventsSpy = {
   onGuestReady: vi.fn(),
   sessionFailed: vi.fn(),
   jobSucceeded: vi.fn(),
   jobFailed: vi.fn(),
-};
+} satisfies Partial<HostBusEvents>;
 
 // Library's scoped data providers hit Firebase — swap them for fakes; the
 // store itself stays real so the shell still exercises the live-listener path.
@@ -75,6 +76,7 @@ async function setup(options: { useEmulators?: boolean } = {}) {
         { provide: DOCUMENT_REPOSITORY, useValue: fakeRepository },
         { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
         { provide: UploadPipeline, useValue: fakePipeline },
+        { provide: ExtractionFlow, useValue: {} },
         LibraryStore,
       ],
     },

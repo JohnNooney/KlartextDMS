@@ -10,9 +10,9 @@ import {
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import type { HostAdapter } from '@klartext/bus-contract/conformance';
-import { ExtractionJobs } from './bus/extraction-jobs';
 import { HOST_BUS_ADAPTER_FACTORY } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
+import { HostBus } from './bus/host-bus';
 import { windowBusSource } from './bus/window-bus';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
@@ -23,8 +23,8 @@ import { OpenDocument } from './open-document';
  * (issue #25); it displays only while a Document is open (issue #16). Its
  * `contentWindow` is the Bus sink; `window` is the source. Message listening
  * runs outside the Angular zone so Bus traffic doesn't trigger change
- * detection. The live adapter is exposed to the app as `ExtractionJobs` so
- * the library can cancel a deleted Document's queued/running jobs.
+ * detection. The live adapter is exposed to the app as `HostBus` so Sessions
+ * and Extraction Jobs flow without components owning Bus wiring.
  */
 @Component({
   selector: 'app-guest-frame',
@@ -45,7 +45,7 @@ export class GuestFrame {
     const config = inject(HOST_CONFIG);
     const zone = inject(NgZone);
     const events = inject(HostBusEvents);
-    const jobs = inject(ExtractionJobs);
+    const bus = inject(HostBus);
     const createAdapter = inject(HOST_BUS_ADAPTER_FACTORY);
     this.guestUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(config.guestOrigin);
 
@@ -59,12 +59,12 @@ export class GuestFrame {
           peerOrigin: config.guestOrigin,
           probe: events,
         });
-        jobs.attach(this.adapter);
+        bus.attach(this.adapter);
       });
     });
 
     inject(DestroyRef).onDestroy(() => {
-      if (this.adapter) jobs.detach(this.adapter);
+      if (this.adapter) bus.detach(this.adapter);
       this.adapter?.dispose();
       this.adapter = null;
     });
