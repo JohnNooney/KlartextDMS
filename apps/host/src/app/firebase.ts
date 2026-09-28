@@ -1,6 +1,10 @@
 import { inject, InjectionToken, type Provider } from '@angular/core';
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import {
+  CustomProvider,
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
@@ -38,7 +42,10 @@ export function provideKlartextFirebase(): Provider[] {
         const app = initializeApp(firebaseConfig);
         // Unconditional in every Environment (issue #21) — only the provider
         // outcome varies: debug flag set → debug exchange; otherwise
-        // reCAPTCHA Enterprise with the hostname-pinned site key.
+        // reCAPTCHA Enterprise with the hostname-pinned site key. In debug
+        // mode the SDK never consults the provider but still runs its
+        // `initialize()` — a CustomProvider keeps reCAPTCHA's script (and its
+        // missing-sitekey render error on dev) out of debug builds.
         if (!config.useEmulators && !config.appCheckSiteKey && !config.appCheckDebugToken) {
           console.warn(
             '[app-check] no reCAPTCHA site key and no debug token — ' +
@@ -46,7 +53,12 @@ export function provideKlartextFirebase(): Provider[] {
           );
         }
         initializeAppCheck(app, {
-          provider: new ReCaptchaEnterpriseProvider(config.appCheckSiteKey ?? ''),
+          provider: config.appCheckDebugToken
+            ? new CustomProvider({
+                getToken: () =>
+                  Promise.reject(new Error('debug mode never asks the provider')),
+              })
+            : new ReCaptchaEnterpriseProvider(config.appCheckSiteKey ?? ''),
           isTokenAutoRefreshEnabled: true,
         });
         return app;

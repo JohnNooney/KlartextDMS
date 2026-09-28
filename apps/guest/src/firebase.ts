@@ -1,5 +1,9 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import {
+  CustomProvider,
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
 import { appCheckSiteKey, emulatorConfig, firebaseConfig } from '@klartext/firebase-config';
 import type { GuestAdapter } from '@klartext/bus-contract/conformance';
@@ -32,9 +36,18 @@ export function initGuestFirebase(config: GuestConfig): GuestFirebase {
   const app = initializeApp(firebaseConfig);
   // Unconditional in every Environment — only the provider outcome varies:
   // debug flag set → debug exchange; otherwise reCAPTCHA Enterprise with the
-  // project's site key, pinned to the exact prod hostnames (issue #21).
+  // project's site key, pinned to the exact prod hostnames (issue #21). In
+  // debug mode the SDK exchanges the debug token directly and never consults
+  // the provider — but it still runs `provider.initialize()`, which eagerly
+  // loads reCAPTCHA (and errors on the empty dev site key). A CustomProvider
+  // whose getToken can never fire keeps that script out of dev/preview.
   initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+    provider: config.appCheckDebugToken
+      ? new CustomProvider({
+          getToken: () =>
+            Promise.reject(new Error('debug mode never asks the provider')),
+        })
+      : new ReCaptchaEnterpriseProvider(appCheckSiteKey),
     isTokenAutoRefreshEnabled: true,
   });
   const auth = getAuth(app);
