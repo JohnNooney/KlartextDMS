@@ -10,7 +10,8 @@ import type {
   NewDocument,
 } from '../data/document';
 import type { DocumentRepository, DocumentUpload } from '../data/document-repository';
-import type { FolderRepository } from '../data/folder-repository';
+import type { FolderRecord } from '../data/folder';
+import type { FolderPatch, FolderRepository, NewFolder } from '../data/folder-repository';
 import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
 import { UploadPipeline } from '../data/upload-pipeline';
 import { OpenDocument } from '../open-document';
@@ -195,12 +196,72 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
-const fakeFolderRepository = {
-  watch: vi.fn((emit: (folders: never[]) => void) => {
-    emit([]);
-    return () => {};
-  }),
-} as unknown as FolderRepository;
+/** Snapshot-emitting Folder repository double — every mutation pushes the full list. */
+class FakeFolderRepository implements FolderRepository {
+  readonly records = new Map<string, FolderRecord>();
+  readonly calls: string[] = [];
+  /** Folder ids whose `delete` rejects once. */
+  failDeleteOf = new Set<string>();
+
+  private seq = 0;
+  private readonly listeners = new Set<(folders: FolderRecord[]) => void>();
+
+  private emit(): void {
+    const folders = [...this.records.values()];
+    for (const listener of this.listeners) listener(folders);
+  }
+
+  watch(listener: (folders: FolderRecord[]) => void): () => void {
+    this.listeners.add(listener);
+    listener([...this.records.values()]);
+    return () => this.listeners.delete(listener);
+  }
+
+  async list(): Promise<FolderRecord[]> {
+    return [...this.records.values()];
+  }
+
+  async create(input: NewFolder): Promise<FolderRecord> {
+    const id = `folder-${++this.seq}`;
+    const record: FolderRecord = {
+      id,
+      name: input.name,
+      parentId: input.parentId,
+      status: 'ready',
+      ...(input.description ? { description: input.description } : {}),
+      ...(input.keywords ? { keywords: input.keywords } : {}),
+      createdAt: { seconds: 1, nanoseconds: 0 },
+      updatedAt: { seconds: 1, nanoseconds: 0 },
+    };
+    this.records.set(id, record);
+    this.calls.push(`create:${id}`);
+    this.emit();
+    return record;
+  }
+
+  async update(folderId: string, patch: FolderPatch): Promise<void> {
+    this.calls.push(`update:${folderId}:${JSON.stringify(patch)}`);
+    const record = this.records.get(folderId);
+    if (!record) throw notFound();
+    this.records.set(folderId, { ...record, ...patch });
+    this.emit();
+  }
+
+  async delete(folderId: string): Promise<void> {
+    this.calls.push(`delete:${folderId}`);
+    if (this.failDeleteOf.delete(folderId)) throw new Error('folder delete failed');
+    this.records.delete(folderId);
+    this.emit();
+  }
+
+  /** Seeds a Folder synchronously-ish (before the store is created). */
+  async seed(name: string, parentId: string | null = null, status: 'ready' | 'deleting' = 'ready') {
+    const record = await this.create({ name, parentId });
+    if (status !== 'ready') await this.update(record.id, { status });
+    this.calls.length = 0;
+    return record.id;
+  }
+}
 
 /**
  * OpenDocument navigates on open/close (issue #29); the Router is a pure
@@ -214,12 +275,13 @@ const fakeRouter = {
 
 function setup() {
   const repository = new FakeDocumentRepository();
+  const folderRepository = new FakeFolderRepository();
   const jobs = { cancelJobsFor: vi.fn() };
   fakeRouter.navigate.mockClear();
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
-      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
+      { provide: FOLDER_REPOSITORY, useValue: folderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
       { provide: HostBus, useValue: jobs },
       { provide: Router, useValue: fakeRouter },
@@ -228,6 +290,7 @@ function setup() {
   });
   return {
     repository,
+    folderRepository,
     jobs,
     store: TestBed.inject(LibraryStore),
     toasts: TestBed.inject(ToastService),
@@ -443,15 +506,207 @@ describe('LibraryStore', () => {
     await until(store, () => store.failedDeletes().has(stuck));
     expect(repository.records.get(stuck)?.status).toBe('deleting');
   });
+
+  describe('Folders (issue #33)', () => {
+    async function untilFolders(store: LibraryStore, predicate: (f: FolderRecord[]) => boolean) {
+      for (let i = 0; i < 100; i++) {
+        const folders = store.folders();
+        if (folders && predicate(folders)) return folders;
+        await flush();
+      }
+      throw new Error('store did not reach expected folder state');
+    }
+
+    it('creates a Folder under the browsed Folder with optional annotations', async () => {
+      const { store, folderRepository, open } = setup();
+      const parent = await folderRepository.seed('Wohnung');
+      await untilFolders(store, (f) => f.length === 1);
+      open.folderId.set(parent);
+
+      const created = await store.createFolder({
+        name: '  Miete ',
+        description: 'Rent',
+        keywords: ['miete'],
+      });
+
+      expect(created).toBe(true);
+      const record = [...folderRepository.records.values()].find((f) => f.name === 'Miete');
+      expect(record).toMatchObject({ parentId: parent, description: 'Rent', keywords: ['miete'] });
+    });
+
+    it('refuses a sibling name that exists case-insensitively, but allows it elsewhere', async () => {
+      const { store, folderRepository } = setup();
+      const wohnung = await folderRepository.seed('Wohnung');
+      await folderRepository.seed('Steuer', wohnung);
+      await untilFolders(store, (f) => f.length === 2);
+
+      expect(store.nameTaken(null, ' WOHNUNG ')).toBe(true);
+      expect(await store.createFolder({ name: 'wohnung' })).toBe(false);
+      expect(folderRepository.calls).toEqual([]);
+      expect(await store.createFolder({ name: 'Steuer' })).toBe(true);
+    });
+
+    it('renames trimmed, refusing blank and duplicate names', async () => {
+      const { store, folderRepository } = setup();
+      const a = await folderRepository.seed('Alpha');
+      await folderRepository.seed('Beta');
+      await untilFolders(store, (f) => f.length === 2);
+
+      expect(await store.renameFolder(a, '  ')).toBe(false);
+      expect(await store.renameFolder(a, 'beta')).toBe(false);
+      expect(await store.renameFolder(a, ' Alpha ')).toBe(true);
+      expect(await store.renameFolder(a, 'Gamma')).toBe(true);
+      expect(folderRepository.records.get(a)?.name).toBe('Gamma');
+    });
+
+    it('moves a Folder but rejects itself and descendants as targets', async () => {
+      const { store, folderRepository, toasts } = setup();
+      const a = await folderRepository.seed('A');
+      const b = await folderRepository.seed('B', a);
+      const c = await folderRepository.seed('C');
+      await untilFolders(store, (f) => f.length === 3);
+
+      expect(await store.moveFolder(a, b)).toBe(false);
+      expect(await store.moveFolder(a, a)).toBe(false);
+      expect(folderRepository.records.get(a)?.parentId).toBeNull();
+      expect(toasts.toasts()[0]).toMatchObject({ tone: 'error', title: 'Move failed' });
+
+      expect(await store.moveFolder(c, b)).toBe(true);
+      expect(folderRepository.records.get(c)?.parentId).toBe(b);
+    });
+
+    it('rejects a move that collides with a sibling name at the target', async () => {
+      const { store, folderRepository } = setup();
+      const a = await folderRepository.seed('A');
+      await folderRepository.seed('Steuer', a);
+      const other = await folderRepository.seed('steuer');
+      await untilFolders(store, (f) => f.length === 3);
+
+      expect(await store.moveFolder(other, a)).toBe(false);
+      expect(folderRepository.records.get(other)?.parentId).toBeNull();
+    });
+
+    async function seedDoc(repository: FakeDocumentRepository, folderId: string | null) {
+      const record = await repository.create({
+        title: `doc-in-${folderId}`,
+        originalFilename: 'x.pdf',
+        sizeBytes: 4,
+        folderId,
+      });
+      await repository.setStatus(record.id, 'ready');
+      return record.id;
+    }
+
+    /** a → b → c, with one Document in a and one in c. */
+    async function seedTree(repository: FakeDocumentRepository, folders: FakeFolderRepository) {
+      const a = await folders.seed('A');
+      const b = await folders.seed('B', a);
+      const c = await folders.seed('C', b);
+      const docA = await seedDoc(repository, a);
+      const docC = await seedDoc(repository, c);
+      return { a, b, c, docA, docC };
+    }
+
+    it('recursive delete cancels jobs, tears Documents down, then Folders deepest-first', async () => {
+      const { store, repository, folderRepository, jobs, toasts } = setup();
+      const { a, b, c, docA, docC } = await seedTree(repository, folderRepository);
+      await untilFolders(store, (f) => f.length === 3);
+      const docsLeftWhenFolderDeleted: number[] = [];
+      const realDelete = folderRepository.delete.bind(folderRepository);
+      folderRepository.delete = async (id) => {
+        docsLeftWhenFolderDeleted.push(repository.records.size);
+        await realDelete(id);
+      };
+
+      await store.deleteFolder(a);
+
+      expect(jobs.cancelJobsFor).toHaveBeenCalledWith(docA);
+      expect(jobs.cancelJobsFor).toHaveBeenCalledWith(docC);
+      expect(repository.records.size).toBe(0);
+      expect(folderRepository.records.size).toBe(0);
+      expect(folderRepository.calls.filter((call) => call.startsWith('delete:'))).toEqual([
+        `delete:${c}`,
+        `delete:${b}`,
+        `delete:${a}`,
+      ]);
+      expect(folderRepository.calls[0]).toBe(`update:${a}:{"status":"deleting"}`);
+      expect(docsLeftWhenFolderDeleted).toEqual([0, 0, 0]);
+      expect(toasts.toasts().map((t) => t.title)).toContain('Deleted A');
+    });
+
+    it('navigates back with a toast when the open Document is inside the deleted tree', async () => {
+      const { store, repository, folderRepository, open } = setup();
+      const { a, docC } = await seedTree(repository, folderRepository);
+      const parent = await folderRepository.seed('Parent');
+      await folderRepository.update(a, { parentId: parent });
+      await until(store, (d) => d.length === 2);
+      await untilFolders(store, (f) => f.length === 4);
+      store.open(docC);
+      expect(open.docId()).toBe(docC);
+
+      await store.deleteFolder(a);
+
+      expect(open.docId()).toBeNull();
+      expect(open.folderId()).toBe(parent);
+    });
+
+    it('a failed teardown leaves the Folder deleting; retry completes it', async () => {
+      const { store, repository, folderRepository, toasts } = setup();
+      const { a, docC } = await seedTree(repository, folderRepository);
+      await untilFolders(store, (f) => f.length === 3);
+      repository.failNextDelete = true;
+
+      await store.deleteFolder(a);
+
+      expect(folderRepository.records.get(a)?.status).toBe('deleting');
+      expect(store.failedFolderDeletes().has(a)).toBe(true);
+      expect(toasts.toasts().some((t) => t.tone === 'error')).toBe(true);
+
+      await store.retryFolderDelete(a);
+
+      expect(folderRepository.records.size).toBe(0);
+      expect(repository.records.has(docC)).toBe(false);
+      expect(store.failedFolderDeletes().has(a)).toBe(false);
+    });
+
+    it('startup reconcile re-runs a Folder left deleting, including its contents', async () => {
+      const repository = new FakeDocumentRepository();
+      const folderRepository = new FakeFolderRepository();
+      const a = await folderRepository.seed('A', null, 'deleting');
+      const b = await folderRepository.seed('B', a);
+      await seedDoc(repository, b);
+
+      const { store } = setupLate(repository, folderRepository);
+
+      for (let i = 0; i < 100 && folderRepository.records.size > 0; i++) await flush();
+      expect(folderRepository.records.size).toBe(0);
+      expect(repository.records.size).toBe(0);
+      expect(store.failedFolderDeletes().size).toBe(0);
+    });
+
+    it('a startup reconcile that still fails offers Retry delete', async () => {
+      const repository = new FakeDocumentRepository();
+      const folderRepository = new FakeFolderRepository();
+      const a = await folderRepository.seed('A', null, 'deleting');
+      await seedDoc(repository, a);
+      repository.failNextDelete = true;
+
+      const { store } = setupLate(repository, folderRepository);
+
+      for (let i = 0; i < 100 && !store.failedFolderDeletes().has(a); i++) await flush();
+      expect(store.failedFolderDeletes().has(a)).toBe(true);
+      expect(folderRepository.records.get(a)?.status).toBe('deleting');
+    });
+  });
 });
 
 /** A store bound to a pre-seeded repository — for startup-state tests. */
-function setupLate(repository: FakeDocumentRepository) {
+function setupLate(repository: FakeDocumentRepository, folderRepository = new FakeFolderRepository()) {
   const jobs = { cancelJobsFor: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
-      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
+      { provide: FOLDER_REPOSITORY, useValue: folderRepository },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
       { provide: HostBus, useValue: jobs },
       { provide: Router, useValue: fakeRouter },
@@ -460,6 +715,7 @@ function setupLate(repository: FakeDocumentRepository) {
   });
   return {
     repository,
+    folderRepository,
     jobs,
     store: TestBed.inject(LibraryStore),
     toasts: TestBed.inject(ToastService),

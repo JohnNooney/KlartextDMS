@@ -137,7 +137,6 @@ describe('App', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const iframe = el.querySelector('iframe');
-    expect(el.querySelector('.sidebar')).toBeTruthy();
     expect(el.querySelector('.content')).toBeTruthy();
     expect(iframe).toBeTruthy();
     expect(iframe!.src).toContain('http://localhost:5173');

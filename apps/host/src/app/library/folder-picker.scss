@@ -1,0 +1,40 @@
+@use 'tokens' as kt;
+
+.picker {
+  list-style: none;
+  margin: 0;
+  padding: kt.$kt-space-1;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-md;
+}
+
+.picker-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  text-align: left;
+  font-size: kt.$kt-text-sm;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: kt.$kt-fill;
+  }
+
+  &.is-selected {
+    background: kt.$kt-accent-tint;
+    color: kt.$kt-accent;
+    font-weight: 600;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

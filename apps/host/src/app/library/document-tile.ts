@@ -1,6 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type { DocumentRecord } from '../data/document';
+import { setDragItem } from './folder-drag';
 
 /** The ⋮ menu verbs a tile can emit; the library maps them to store calls. */
 export type TileAction =
@@ -44,6 +45,8 @@ interface MenuItem {
     '[class.is-drop-target]': 'dropHover()',
     '[attr.role]': "openable() ? 'button' : null",
     '[attr.tabindex]': 'openable() ? 0 : null',
+    '[attr.draggable]': "openable() ? 'true' : null",
+    '(dragstart)': 'onDragStart($event)',
     '(click)': 'onTileClick()',
     '(keydown.enter)': 'onTileClick()',
     '(dragover)': 'onDragOver($event)',
@@ -112,6 +115,10 @@ export class DocumentTile {
           : [];
     }
   });
+
+  protected onDragStart(event: DragEvent): void {
+    if (this.openable()) setDragItem(event, { kind: 'document', id: this.doc().id });
+  }
 
   protected onTileClick(): void {
     if (this.openable() && !this.menuOpen()) this.opened.emit();

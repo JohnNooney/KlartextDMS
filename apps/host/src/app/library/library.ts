@@ -1,10 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
+import type { FolderRecord } from '../data/folder';
+import { OpenDocument } from '../open-document';
 import { Reader } from '../reader/reader';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
+import { FolderDeleteDialog } from './folder-delete-dialog';
+import { isItemDrag, type DragItem } from './folder-drag';
+import { FolderNameDialog, type FolderNameResult } from './folder-name-dialog';
+import { FolderTile, type FolderTileAction } from './folder-tile';
+import { FolderTree } from './folder-tree';
 import { MoveDialog } from './move-dialog';
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
@@ -15,13 +22,17 @@ type DialogState =
   | { kind: 'rename'; doc: DocumentRecord }
   | { kind: 'move'; doc: DocumentRecord }
   | { kind: 'delete'; doc: DocumentRecord }
+  | { kind: 'new-folder' }
+  | { kind: 'rename-folder'; folder: FolderRecord }
+  | { kind: 'move-folder'; folder: FolderRecord }
+  | { kind: 'delete-folder'; folder: FolderRecord }
   | null;
 
 /**
  * The Files-style Document library (issues #28, #29): tile grid + toolbar over
  * the live Firestore feed, drop-to-upload on the grid, the per-state ⋮ menus,
- * and the four dialogs. The URL's Folder filters the grid; the Folder tree UI
- * itself lands with the Folders issue (#33).
+ * the dialogs, and (issue #33) the sidebar Folder tree, Folder tiles and
+ * drag-to-file. The URL's Folder filters the grid.
  *
  * While a Document is open, this renders the `app-reader` split view: the
  * pdf.js viewer left, the Guest insights panel right (ADR 0002).
@@ -30,7 +41,18 @@ type DialogState =
   selector: 'app-library',
   templateUrl: './library.html',
   styleUrl: './library.scss',
-  imports: [DocumentTile, Reader, UploadDialog, RenameDialog, MoveDialog, DeleteDialog],
+  imports: [
+    DocumentTile,
+    FolderTile,
+    FolderTree,
+    Reader,
+    UploadDialog,
+    RenameDialog,
+    MoveDialog,
+    DeleteDialog,
+    FolderNameDialog,
+    FolderDeleteDialog,
+  ],
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
   providers: [...provideDocumentData(), ExtractionFlow],
@@ -44,14 +66,57 @@ export class Library {
   protected readonly flow = inject(ExtractionFlow);
 
   protected readonly dropHover = signal(false);
+  protected readonly openDocument = inject(OpenDocument);
+  protected readonly title = computed(
+    () => this.store.folderById(this.openDocument.folderId())?.name ?? 'Documents',
+  );
 
   protected openUpload(): void {
     this.dialog.set({ kind: 'upload' });
   }
 
-  protected onPicked(files: File[]): void {
+  protected onPicked(picked: { files: File[]; folderId: string | null }): void {
     this.dialog.set(null);
-    this.store.uploadFiles(files);
+    this.store.uploadFiles(picked.files, picked.folderId);
+  }
+
+  protected onFolderAction(folder: FolderRecord, action: FolderTileAction): void {
+    switch (action) {
+      case 'rename':
+        this.dialog.set({ kind: 'rename-folder', folder });
+        break;
+      case 'move':
+        this.dialog.set({ kind: 'move-folder', folder });
+        break;
+      case 'delete':
+        this.dialog.set({ kind: 'delete-folder', folder });
+        break;
+      case 'retry-delete':
+        void this.store.retryFolderDelete(folder.id);
+        break;
+    }
+  }
+
+  protected openFolder(folderId: string | null): void {
+    this.openDocument.openFolder(folderId);
+  }
+
+  protected onItemDropped(item: DragItem, targetId: string | null): void {
+    void this.store.dropItem(item, targetId);
+  }
+
+  protected newFolderTaken = (name: string): boolean =>
+    this.store.nameTaken(this.openDocument.folderId(), name);
+
+  protected renameTaken(folder: FolderRecord): (name: string) => boolean {
+    return (name) => this.store.nameTaken(folder.parentId, name, folder.id);
+  }
+
+  protected onFolderNamed(result: FolderNameResult): void {
+    const state = this.dialog();
+    this.closeDialog();
+    if (state?.kind === 'new-folder') void this.store.createFolder(result);
+    else if (state?.kind === 'rename-folder') void this.store.renameFolder(state.folder.id, result.name);
   }
 
   protected onTileAction(doc: DocumentRecord, action: TileAction): void {
@@ -95,10 +160,13 @@ export class Library {
   protected onGridDrop(event: DragEvent): void {
     event.preventDefault();
     this.dropHover.set(false);
+    if (!event.dataTransfer?.files.length) return;
     this.store.uploadFiles(event.dataTransfer?.files ?? []);
   }
 
   protected onGridDragOver(event: DragEvent): void {
+    // In-app item drags (Folder/Document tiles) aren't uploads.
+    if (isItemDrag(event)) return;
     event.preventDefault();
     this.dropHover.set(true);
   }

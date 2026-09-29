@@ -87,22 +87,6 @@
   min-height: 0;
 }
 
-.sidebar {
-  width: kt.$kt-sidebar-width;
-  flex-shrink: 0;
-  border-right: 1px solid kt.$kt-border;
-  background: kt.$kt-bg;
-
-  // Collapses while a Document is open; absent entirely on mobile (push nav).
-  &[hidden] {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-}
-
 .content {
   flex: 1;
   min-width: 0;

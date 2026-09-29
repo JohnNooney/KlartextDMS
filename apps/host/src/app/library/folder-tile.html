@@ -1,0 +1,50 @@
+@if (menuItems().length > 0) {
+  <button
+    type="button"
+    class="tile-more"
+    (click)="toggleMenu($event)"
+    [attr.aria-label]="'More actions for ' + folder().name"
+    aria-haspopup="menu"
+    [attr.aria-expanded]="menuOpen()"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18" cy="12" r="1.3" fill="currentColor"/></svg>
+  </button>
+}
+
+<span class="tile-thumb">
+  <svg width="56" height="46" viewBox="0 0 52 42" fill="none" aria-hidden="true">
+    <path d="M2 6a4 4 0 0 1 4-4h11.3a4 4 0 0 1 3 1.4L23 6.5h23a4 4 0 0 1 4 4V36a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#8ed1fc"/>
+    <path d="M2 13a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v23a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#5ac8fa"/>
+  </svg>
+</span>
+
+<span class="tile-name" lang="de">{{ folder().name }}</span>
+
+@if (folder().status === 'deleting') {
+  <span class="tile-meta">
+    <span class="spinner" aria-hidden="true"></span>
+    Deleting…
+  </span>
+} @else {
+  <span class="tile-meta" data-testid="folder-count">{{ summary() }}</span>
+}
+
+@if (menuOpen()) {
+  <button type="button" class="menu-shield" (click)="menuOpen.set(false)" aria-hidden="true" tabindex="-1"></button>
+  <div class="menu" role="menu">
+    @for (item of menuItems(); track item.action) {
+      @if (item.separated) {
+        <div class="menu-sep"></div>
+      }
+      <button
+        type="button"
+        class="menu-item"
+        [class.is-destructive]="item.destructive"
+        role="menuitem"
+        (click)="pick(item, $event)"
+      >
+        <span>{{ item.label }}</span>
+      </button>
+    }
+  </div>
+}
