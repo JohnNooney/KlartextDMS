@@ -1,6 +1,7 @@
-import { devices, expect, test, type Locator } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
 import {
   browseRoot,
+  expectInsideViewport,
   expectNoHorizontalOverflow,
   SEED_USER,
   seededPdf,
@@ -49,19 +50,12 @@ test('a long-titled Document row ellipsizes and never side-scrolls', async () =>
   expect(await name.evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
   expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
 
-  // Date, chip, and ⋮ stay entirely inside the screen edge (a bounding box
-  // strictly within the viewport — mere intersection isn't enough); the ⋮
-  // still opens its menu.
-  const expectInsideViewport = async (locator: Locator) => {
-    const box = await locator.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(page().viewportSize()!.width);
-  };
-  await expectInsideViewport(row.locator('.tile-meta'));
-  await expectInsideViewport(row.locator('.tile-chip'));
+  // Date, chip, and ⋮ stay entirely inside the screen edge; the ⋮ still
+  // opens its menu.
+  await expectInsideViewport(page(), row.locator('.tile-meta'));
+  await expectInsideViewport(page(), row.locator('.tile-chip'));
   const more = page().getByRole('button', { name: `More actions for ${title}`, exact: true });
-  await expectInsideViewport(more);
+  await expectInsideViewport(page(), more);
   await more.tap();
   await expect(page().getByRole('menuitem', { name: 'Rename' })).toBeVisible();
   await expectNoHorizontalOverflow(page());

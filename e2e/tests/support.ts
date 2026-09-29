@@ -103,6 +103,18 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(offenders).toEqual([]);
 }
 
+/**
+ * The companion mobile check (issues #47/#48): an element that must be
+ * on-screen fits inside the viewport's left and right edges — a bounding
+ * box fully within them, not merely intersecting.
+ */
+export async function expectInsideViewport(page: Page, locator: Locator): Promise<void> {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+}
+
 /** A tile in the library grid by its visible name. */
 export const tile = (page: Page, name: string): Locator =>
   page.locator('app-document-tile, app-folder-tile').filter({
