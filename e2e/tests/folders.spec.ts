@@ -4,6 +4,7 @@ import {
   createFolder,
   seededPdf,
   signedInPage,
+  toast,
   tile,
   tileAction,
   unique,
@@ -50,7 +51,7 @@ test('deleting a Folder removes everything inside it', async () => {
   await createFolder(page(), inner);
   await tile(page(), inner).click();
   await uploadViaDialog(page(), [{ name: `${doc}.pdf`, buffer: seededPdf('brief-finanzamt.pdf') }]);
-  await expect(page().getByRole('status').filter({ hasText: `Uploaded ${doc}.pdf` })).toBeVisible();
+  await expect(toast(page(), `Uploaded ${doc}.pdf`)).toBeVisible();
 
   await browseRoot(page());
   await expect(tile(page(), outer).getByTestId('folder-count')).toHaveText('1 document in 1 folder');
@@ -59,7 +60,7 @@ test('deleting a Folder removes everything inside it', async () => {
   await expect(confirm.getByTestId('folder-delete-contents')).toContainText('1 document in 1 folder');
   await confirm.getByRole('button', { name: 'Delete' }).click();
 
-  await expect(page().getByRole('status').filter({ hasText: `Deleted ${outer}` })).toBeVisible();
+  await expect(toast(page(), `Deleted ${outer}`)).toBeVisible();
   await expect(tile(page(), outer)).toBeHidden();
   await expect(page().getByRole('treeitem', { name: outer })).toBeHidden();
 

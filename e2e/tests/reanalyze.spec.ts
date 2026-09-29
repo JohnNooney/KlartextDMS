@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { guestPanel, seededExtraction, signedInPage } from './support';
+import { guestPanel, SEED_USER, seededExtraction, signedInPage } from './support';
 
 const page = signedInPage();
 
@@ -13,7 +13,7 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
   await expect(page().getByRole('img', { name: /^Page 1 of/ })).toBeVisible();
 
   // Slow the Host's byte fetch for the job so the queued state is observable.
-  const bytes = '**/o/users%2Fseed-test-user%2Fdocuments%2Fdoc-versicherungsschein.pdf?*';
+  const bytes = `**/o/users%2F${SEED_USER.uid}%2Fdocuments%2Fdoc-versicherungsschein.pdf?*`;
   await page().route(bytes, async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1_500));
     await route.fallback();

@@ -5,6 +5,7 @@ import {
   makePdf,
   seededExtraction,
   signedInPage,
+  toast,
   tile,
   unique,
   uploadViaDialog,
@@ -15,7 +16,7 @@ const page = signedInPage();
 // Journey: a seeded Document opens with its stored Extraction in the panel.
 test('a filed Document opens with its stored Extraction beside the PDF', async () => {
   await page().goto('/folder/root');
-  await page().getByRole('treeitem', { name: 'Verträge' }).getByRole('button', { name: 'Expand Verträge' }).click();
+  await page().getByRole('button', { name: 'Expand Verträge' }).click();
   await page().getByRole('treeitem', { name: 'Wohnung' }).click();
   await expect(page().getByRole('heading', { level: 1, name: 'Wohnung' })).toBeVisible();
 
@@ -37,7 +38,7 @@ test('the viewer pages through a multi-page Document', async () => {
   const title = unique('E2E paging');
   await browseRoot(page());
   await uploadViaDialog(page(), [{ name: `${title}.pdf`, buffer: makePdf(['One', 'Two', 'Three']) }]);
-  await expect(page().getByRole('status').filter({ hasText: `Uploaded ${title}.pdf` })).toBeVisible();
+  await expect(toast(page(), `Uploaded ${title}.pdf`)).toBeVisible();
 
   await tile(page(), title).click();
 

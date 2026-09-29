@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type FrameLocator, type Locator, type Page } from '@playwright/test';
 
 /** The emulator seed user (scripts/seed.mjs). */
-export const SEED_USER = { email: 'test-user@test.com', password: 'test1234' } as const;
+export const SEED_USER = { uid: 'seed-test-user', email: 'test-user@test.com', password: 'test1234' } as const;
 
 const repoFile = (path: string) => new URL(`../../${path}`, import.meta.url);
 
@@ -65,6 +65,10 @@ export async function browseRoot(page: Page): Promise<void> {
   await page.goto('/folder/root');
   await expect(page.getByRole('heading', { level: 1, name: 'Documents' })).toBeVisible();
 }
+
+/** A Host toast by (part of) its text. */
+export const toast = (page: Page, text: string): Locator =>
+  page.getByRole('status').filter({ hasText: text });
 
 /** A tile in the library grid by its visible name. */
 export const tile = (page: Page, name: string): Locator =>

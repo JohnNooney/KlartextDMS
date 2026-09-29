@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { browseRoot, dropFile, seededPdf, signedInPage, tile, unique, uploadViaDialog } from './support';
+import {
+  browseRoot,
+  dropFile,
+  seededPdf,
+  signedInPage,
+  tile,
+  toast,
+  unique,
+  uploadViaDialog,
+} from './support';
 
 const page = signedInPage();
 
@@ -26,12 +35,12 @@ test('a failed upload is retried by dropping the PDF on its tile', async () => {
 
   const failedTile = tile(page(), title);
   await expect(failedTile.getByText('Upload failed')).toBeVisible();
-  await expect(page().getByRole('status').filter({ hasText: 'Upload failed' })).toBeVisible();
+  await expect(toast(page(), 'Upload failed')).toBeVisible();
 
   await page().unroute(refuseUploads);
   await dropFile(failedTile, file);
 
-  await expect(page().getByRole('status').filter({ hasText: `Uploaded ${title}.pdf` })).toBeVisible();
+  await expect(toast(page(), `Uploaded ${title}.pdf`)).toBeVisible();
   await expect(failedTile.getByText('Upload failed')).toBeHidden();
   await expect(failedTile).toHaveAttribute('role', 'button');
   await expect(page().locator('app-document-tile').filter({ hasText: title })).toHaveCount(1);

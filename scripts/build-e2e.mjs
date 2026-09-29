@@ -32,7 +32,7 @@ function run(filter, env = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-function rootEnv(name) {
+function envValue(name) {
   if (process.env[name]) return process.env[name];
   const file = fileURLToPath(new URL('../.env', import.meta.url));
   if (!existsSync(file)) return undefined;
@@ -47,7 +47,7 @@ run('@klartext/guest', { VITE_USE_FIREBASE_EMULATORS: 'true', VITE_FAKE_AI_PROVI
 run('@klartext/host');
 
 const config = { guestOrigin: GUEST_ORIGIN, useEmulators: true };
-const token = rootEnv('KLARTEXT_HOST_DEBUG_TOKEN');
+const token = envValue('KLARTEXT_HOST_DEBUG_TOKEN');
 if (token) config.appCheckDebugToken = token;
 writeFileSync(`${hostAssets}config.json`, `${JSON.stringify(config, null, 2)}\n`);
 rmSync(`${hostAssets}config.local.json`, { force: true });

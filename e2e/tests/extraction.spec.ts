@@ -5,6 +5,7 @@ import {
   guestPanel,
   seededPdf,
   signedInPage,
+  toast,
   unique,
   uploadViaDialog,
 } from './support';
@@ -20,8 +21,8 @@ test('an uploaded PDF is analyzed in the background and opens beside its Extract
 
   await uploadViaDialog(page(), [{ name: `${title}.pdf`, buffer: seededPdf('mietvertrag-2024.pdf') }]);
 
-  await expect(page().getByRole('status').filter({ hasText: `Uploaded ${title}.pdf` })).toBeVisible();
-  const ready = page().getByRole('status').filter({ hasText: `"${title}" is ready` });
+  await expect(toast(page(), `Uploaded ${title}.pdf`)).toBeVisible();
+  const ready = toast(page(), `"${title}" is ready`);
   await expect(ready).toBeVisible();
 
   await ready.getByRole('button', { name: 'View' }).click();
