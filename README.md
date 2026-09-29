@@ -9,11 +9,9 @@ Moving to Germany means a flood of contracts and official letters: Mietvertrag, 
 
 Live at [klartext-host.web.app](https://klartext-host.web.app) — single-user deployment; sign-in is allowlist-gated.
 
-![A Document open in the reader beside its Extraction — Critical Warnings under "Needs your attention"](docs/screenshots/reader.png)
+![Klartext on desktop and phone — a Document open in the reader beside its Extraction](docs/screenshots/hero.png)
 
-| Library — Documents filed in nested Folders | Reader on a phone — insights sheet resting at peek |
-| --- | --- |
-| ![The library: Folder tree and Document tiles](docs/screenshots/library.png) | ![The reader on a phone: PDF above the insights sheet handle](docs/screenshots/mobile.png) |
+![The library: Folder tree and Document tiles](docs/screenshots/library.png)
 
 Screenshots regenerate deterministically with `pnpm screenshots` — the same seeded-emulator harness as the e2e suite.
 
