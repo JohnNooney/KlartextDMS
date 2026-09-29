@@ -25,5 +25,5 @@ test('inside a Folder, ‹ takes you up a level; at root there is none', async (
   await expect(upRoot).toBeVisible();
   await upRoot.tap();
   await expect(page().getByRole('heading', { level: 1, name: 'Documents' })).toBeVisible();
-  await expect(page().locator('.back-btn')).toBeHidden();
+  await expect(page().getByRole('button', { name: /Back to/ })).toBeHidden();
 });
