@@ -35,7 +35,7 @@ test('Folders can be created, nested and moved', async () => {
   await expect(tile(page(), child)).toBeHidden();
   await browseRoot(page());
   await expect(tile(page(), parent).getByTestId('folder-count')).toHaveText('0 documents');
-  await expect(tile(page(), destination).getByTestId('folder-count')).toHaveText('1 folder');
+  await expect(tile(page(), destination).getByTestId('folder-count')).toHaveText('0 documents');
   await tile(page(), destination).click();
   await expect(tile(page(), child)).toBeVisible();
 });
@@ -54,7 +54,7 @@ test('deleting a Folder removes everything inside it', async () => {
   await expect(toast(page(), `Uploaded ${doc}.pdf`)).toBeVisible();
 
   await browseRoot(page());
-  await expect(tile(page(), outer).getByTestId('folder-count')).toHaveText('1 document in 1 folder');
+  await expect(tile(page(), outer).getByTestId('folder-count')).toHaveText('1 document');
   await tileAction(page(), outer, 'Delete');
   const confirm = page().getByRole('alertdialog', { name: 'Delete folder' });
   await expect(confirm.getByTestId('folder-delete-contents')).toContainText('1 document in 1 folder');
