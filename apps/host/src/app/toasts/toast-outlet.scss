@@ -67,6 +67,22 @@
   }
 }
 
+.toast-action {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  padding: 3px 8px;
+  font-size: kt.$kt-text-xs;
+  font-weight: 600;
+  color: kt.$kt-accent;
+  cursor: pointer;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+}
+
 .toast-close {
   width: 22px;
   height: 22px;

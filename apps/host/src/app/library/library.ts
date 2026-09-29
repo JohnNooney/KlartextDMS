@@ -38,12 +38,11 @@ type DialogState =
 export class Library {
   protected readonly store = inject(LibraryStore);
   protected readonly dialog = signal<DialogState>(null);
+  // Instantiating starts Session flow + Extraction Job orchestration for
+  // the signed-in session (issue #31); it self-attaches to the Bus, and the
+  // tile's ⋮ Retry analysis routes through it (issue #32).
+  protected readonly flow = inject(ExtractionFlow);
 
-  constructor() {
-    // Instantiating starts Session flow + Extraction Job orchestration for
-    // the signed-in session (issue #31); it self-attaches to the Bus.
-    inject(ExtractionFlow);
-  }
   protected readonly dropHover = signal(false);
 
   protected openUpload(): void {
@@ -77,6 +76,9 @@ export class Library {
         break;
       case 'download':
         void this.store.download(doc.id);
+        break;
+      case 'retry-extraction':
+        this.flow.retryRequested(doc.id);
         break;
       case 'delete':
         this.dialog.set({ kind: 'delete', doc });

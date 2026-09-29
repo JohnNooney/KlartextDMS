@@ -107,4 +107,30 @@ describe('ExtractionPanel', () => {
     const item = wrapper.findAll('button').find((b) => b.text() === 'Re-analyze document');
     expect(item!.attributes('disabled')).toBeDefined();
   });
+
+  // The failed re-analysis banner is dismissible (issue #32): the stored
+  // content stays readable with or without it.
+
+  it('dismisses the failure banner while keeping the stored content', async () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, documentTitle: 'Mietvertrag 2024.pdf', extractionState: 'failed' },
+    });
+    expect(wrapper.text()).toContain("Couldn't re-analyze");
+
+    await wrapper.find('button[aria-label="Dismiss warning"]').trigger('click');
+    expect(wrapper.text()).not.toContain("Couldn't re-analyze");
+    expect(wrapper.text()).toContain(fixture.plainEnglishSummary);
+  });
+
+  it('re-shows the banner once a retried analysis fails again', async () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, documentTitle: 'Mietvertrag 2024.pdf', extractionState: 'failed' },
+    });
+    await wrapper.find('button[aria-label="Dismiss warning"]').trigger('click');
+    expect(wrapper.text()).not.toContain("Couldn't re-analyze");
+
+    await wrapper.setProps({ extractionState: 'queued' });
+    await wrapper.setProps({ extractionState: 'failed' });
+    expect(wrapper.text()).toContain("Couldn't re-analyze");
+  });
 });

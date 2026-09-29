@@ -48,6 +48,8 @@
             [progress]="store.progress().get(doc.id) ?? null"
             [canRetry]="store.canRetryUpload(doc.id)"
             [deleteFailed]="store.failedDeletes().has(doc.id)"
+            [extractionJob]="store.extractionJobs().get(doc.id) ?? null"
+            [hasExtraction]="store.extractionStored().has(doc.id)"
             (opened)="store.open(doc.id)"
             (action)="onTileAction(doc, $event)"
             (dropped)="onTileDropped(doc, $event)"

@@ -33,6 +33,8 @@ class FakeStore {
   readonly visible = signal<DocumentRecord[] | null>([]);
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
+  readonly extractionJobs = signal<ReadonlyMap<string, 'queued' | 'running' | 'failed'>>(new Map());
+  readonly extractionStored = signal<ReadonlySet<string>>(new Set());
   readonly openDoc = signal<DocumentRecord | null>(null);
   folderById = vi.fn(() => undefined);
   ancestryOf = vi.fn(() => []);
@@ -72,6 +74,7 @@ const fakeRepository = { getBytes: vi.fn(async () => new ArrayBuffer(4)) };
 async function setup() {
   const store = new FakeStore();
   const openDocument = new FakeOpenDocument();
+  const flow = { retryRequested: vi.fn(() => true) };
   Object.assign(URL, {
     createObjectURL: vi.fn(() => 'blob:fake'),
     revokeObjectURL: vi.fn(),
@@ -88,14 +91,14 @@ async function setup() {
       set: {
         providers: [
           { provide: LibraryStore, useValue: store },
-          { provide: ExtractionFlow, useValue: {} },
+          { provide: ExtractionFlow, useValue: flow },
         ],
       },
     })
     .compileComponents();
   const fixture = TestBed.createComponent(Library);
   fixture.detectChanges();
-  return { fixture, store, openDocument, el: fixture.nativeElement as HTMLElement };
+  return { fixture, store, openDocument, flow, el: fixture.nativeElement as HTMLElement };
 }
 
 function dropFiles(el: Element, files: File[]): void {
@@ -279,5 +282,37 @@ describe('Library', () => {
     fixture.detectChanges();
     (el.querySelector('app-document-tile') as HTMLElement).click();
     expect(store.open).toHaveBeenCalledWith('doc-1');
+  });
+
+  // The extraction chip wiring (issue #32): the store's job state and stored
+  // ids reach the tiles, and ⋮ Retry analysis routes to the flow's retry.
+
+  it('renders the store job state as the tile chip and routes Retry analysis to the flow', async () => {
+    const { fixture, store, flow, el } = await setup();
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
+    store.extractionJobs.set(new Map([['doc-1', 'failed']]));
+    fixture.detectChanges();
+
+    const tile = el.querySelector('app-document-tile')!;
+    expect(tile.textContent).toContain("Couldn't analyze");
+
+    tileAction(fixture, tile, 'Retry analysis');
+    expect(flow.retryRequested).toHaveBeenCalledWith('doc-1');
+  });
+
+  it('renders no failure chip for a Document with a stored Extraction and a failed job', async () => {
+    const { fixture, store, el } = await setup();
+    const docs = [record('ready')];
+    store.documents.set(docs);
+    store.visible.set(docs);
+    store.extractionJobs.set(new Map([['doc-1', 'failed']]));
+    store.extractionStored.set(new Set(['doc-1']));
+    fixture.detectChanges();
+
+    const tile = el.querySelector('app-document-tile')!;
+    expect(tile.textContent).not.toContain("Couldn't analyze");
+    expect(tile.querySelector('.tile-chip')).toBeNull();
   });
 });

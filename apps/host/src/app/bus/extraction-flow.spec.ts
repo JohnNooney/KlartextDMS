@@ -219,6 +219,7 @@ function setup(repository = new FakeDocumentRepository()) {
     events: TestBed.inject(HostBusEvents),
     toasts: TestBed.inject(ToastService),
     open: TestBed.inject(OpenDocument),
+    store: TestBed.inject(LibraryStore),
   };
 }
 
@@ -469,5 +470,145 @@ describe('ExtractionFlow — Extraction Job orchestration (issue #31)', () => {
     events.jobSucceeded('job-1', candidate(doc.id));
     await flush();
     expect(extractions.saves).toHaveLength(1);
+  });
+});
+
+// The chip state the library renders (issue #32): job states and analyzed
+// ids surface on the LibraryStore.
+describe('ExtractionFlow — library chip state (issue #32)', () => {
+  it('tracks the job state per Document on the store, clearing it on success', async () => {
+    const { repository, flow, store, tick } = setup();
+    const doc = await repository.seed({ status: 'ready' });
+    tick();
+    await flush();
+    expect(store.extractionJobs().get(doc.id)).toBe('queued');
+
+    flow.jobStarted('job-1', jobDocument(doc.id));
+    expect(store.extractionJobs().get(doc.id)).toBe('running');
+
+    flow.jobFailedFor('job-1', jobDocument(doc.id), {
+      code: 'AI_UNAVAILABLE',
+      message: 'No response.',
+      retryable: true,
+    });
+    await flush();
+    expect(store.extractionJobs().get(doc.id)).toBe('failed');
+  });
+
+  it('clears the job state once the Extraction is persisted', async () => {
+    const { repository, flow, store, tick } = setup();
+    const doc = await repository.seed({ status: 'ready' });
+    tick();
+    await flush();
+
+    flow.jobStarted('job-1', jobDocument(doc.id));
+    flow.jobSucceeded('job-1', candidate(doc.id));
+    await flush();
+    tick();
+    await flush();
+    expect(store.extractionJobs().has(doc.id)).toBe(false);
+    expect(store.extractionStored().has(doc.id)).toBe(true);
+  });
+
+  it('marks Documents with a stored Extraction as analyzed on load, even failed ones', async () => {
+    const repository = new FakeDocumentRepository();
+    const analyzed = await repository.seed({ status: 'ready' });
+    const failedButAnalyzed = await repository.seed({
+      status: 'ready',
+      extractionFailure: {
+        code: 'AI_UNAVAILABLE',
+        message: 'No response.',
+        retryable: true,
+        failedAt: { seconds: 1, nanoseconds: 0 },
+      },
+    });
+    const { extractions, store, tick } = setup(repository);
+    extractions.records.set(analyzed.id, storedRecord(analyzed.id));
+    extractions.records.set(failedButAnalyzed.id, storedRecord(failedButAnalyzed.id));
+
+    tick();
+    await flush();
+
+    expect(store.extractionStored().has(analyzed.id)).toBe(true);
+    // A Document holding a valid Extraction wears no failure badge (#32).
+    expect(store.extractionStored().has(failedButAnalyzed.id)).toBe(true);
+  });
+});
+
+// The notification actions (issue #32): View on background completion,
+// Try again on background failure — and a failed re-analysis never disturbs
+// the stored Extraction it could not replace.
+describe('ExtractionFlow — notification actions and re-analysis (issue #32)', () => {
+  it('a background completion toast offers View, which opens the Document', async () => {
+    const { repository, flow, open, toasts, tick } = setup();
+    const background = await repository.seed({ status: 'ready', title: 'background doc' });
+    tick();
+    await flush();
+
+    flow.jobSucceeded('job-1', candidate(background.id));
+    await flush();
+
+    const toast = toasts.toasts().find((t) => t.title === '"background doc" is ready');
+    expect(toast?.action?.label).toBe('View');
+    toast!.action!.run();
+
+    expect(open.docId()).toBe(background.id);
+  });
+
+  it('a background failure toast offers Try again, which re-enqueues the job', async () => {
+    const { repository, bus, flow, toasts, tick } = setup();
+    const doc = await repository.seed({ status: 'ready', title: 'broken doc' });
+    tick();
+    await flush();
+    expect(bus.requestExtraction).toHaveBeenCalledTimes(1);
+
+    flow.jobFailedFor(
+      'job-2',
+      jobDocument(doc.id, 'broken doc'),
+      { code: 'AI_UNAVAILABLE', message: 'No response.', retryable: true },
+    );
+    await flush();
+    const toast = toasts.toasts().find((t) => t.title === "Couldn't analyze broken doc");
+    expect(toast?.action?.label).toBe('Try again');
+    toast!.action!.run();
+    await flush();
+
+    expect(bus.requestExtraction).toHaveBeenCalledTimes(2);
+  });
+
+  it('a failed re-analysis leaves the stored Extraction untouched and the Session bannered', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const record = storedRecord(doc.id);
+    const { extractions, bus, flow, open, tick } = setup(repository);
+    extractions.records.set(doc.id, record);
+    tick();
+    await flush();
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+    // The Document is analyzed — no auto-enqueue happens.
+    expect(bus.requestExtraction).not.toHaveBeenCalled();
+
+    expect(flow.retryRequested(doc.id)).toBe(true);
+    await flush();
+    expect(bus.requestExtraction).toHaveBeenCalledTimes(1);
+
+    flow.jobFailedFor(
+      'job-1',
+      jobDocument(doc.id),
+      { code: 'AI_UNAVAILABLE', message: 'No response.', retryable: true },
+    );
+    await flush();
+    tick();
+    await flush();
+
+    // Only a success replaces the stored Extraction (AC #32).
+    expect(extractions.saves).toHaveLength(0);
+    expect(extractions.records.get(doc.id)).toEqual(record);
+    expect(sessions(bus).at(-1)).toMatchObject({
+      extraction: record,
+      extractionState: 'failed',
+    });
   });
 });
