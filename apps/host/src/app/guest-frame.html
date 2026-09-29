@@ -21,11 +21,6 @@
     [attr.aria-label]="sheetLabel()"
   >
     <span class="handle-pill" aria-hidden="true"></span>
-    <span class="sheet-dots" aria-hidden="true">
-      @for (i of [0, 1, 2]; track i) {
-        <span [class.is-active]="sheetIndex() === i"></span>
-      }
-    </span>
   </button>
   <div class="sheet-head">Insights</div>
   <iframe

@@ -54,13 +54,6 @@ function detent(el: HTMLElement): string | null {
   return host(el).getAttribute('data-sheet');
 }
 
-/** Index of the lit dot in the handle's detent indicator. */
-function activeDot(el: HTMLElement): number {
-  return [...el.querySelectorAll('.sheet-dots > span')].findIndex((d) =>
-    d.classList.contains('is-active'),
-  );
-}
-
 function tap(fixture: { detectChanges(): void }, el: HTMLElement): void {
   handle(el).click();
   fixture.detectChanges();
@@ -110,23 +103,20 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(detent(el)).toBe('peek');
   });
 
-  it('the affordance reads the current detent and where a tap moves', async () => {
+  it("the handle's label reads where a tap moves the sheet", async () => {
     const { fixture, el } = await setup();
     const button = handle(el);
 
-    // peek: first dot lit; collapsed to a11y.
-    expect(activeDot(el)).toBe(0);
+    // peek: collapsed to a11y; a tap expands.
     expect(button.getAttribute('aria-expanded')).toBe('false');
 
     tap(fixture, el);
-    // half: second dot lit; the sheet is expanded.
-    expect(activeDot(el)).toBe(1);
+    // half: the sheet is expanded; next stop is full.
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.getAttribute('aria-label')).toContain('full');
 
     tap(fixture, el);
     // full: the only way left is down, back to peek.
-    expect(activeDot(el)).toBe(2);
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.getAttribute('aria-label')).toContain('Collapse');
   });

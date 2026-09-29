@@ -71,14 +71,11 @@
 
   // Grab-handle strip in the sheet chrome (issue #49): its own row above the
   // iframe — never overlaid on Guest content — and a full-width touch target.
-  // The pill is the drag affordance (#62); the dots beneath mark the current
-  // detent, making the state legible from the handle (#50).
+  // The pill is the drag affordance (#62).
   .sheet-handle {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
     flex-shrink: 0;
     width: 100%;
     height: kt.$kt-touch-target;
@@ -95,22 +92,6 @@
       height: 5px;
       border-radius: 999px;
       background: kt.$kt-fill-strong;
-    }
-
-    .sheet-dots {
-      display: flex;
-      gap: 4px;
-
-      > span {
-        width: 4px;
-        height: 4px;
-        border-radius: 999px;
-        background: kt.$kt-fill-strong;
-
-        &.is-active {
-          background: kt.$kt-text-muted;
-        }
-      }
     }
   }
 
