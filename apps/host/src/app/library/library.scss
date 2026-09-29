@@ -11,6 +11,31 @@
   overflow: hidden;
 }
 
+.browse {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.browse-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar {
+  width: kt.$kt-sidebar-width;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid kt.$kt-border;
+
+  // Absent on mobile (push nav): Folder tiles navigate instead.
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
 .library-toolbar {
   min-height: 72px;
   display: flex;

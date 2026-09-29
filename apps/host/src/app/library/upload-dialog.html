@@ -7,13 +7,10 @@
     </button>
   </header>
 
-  <label class="field-inline">
+  <div class="field">
     <span>Save to</span>
-    <!-- Placeholder destination control — the Folder-tree picker lands with #33. -->
-    <select data-testid="destination" disabled>
-      <option>Documents</option>
-    </select>
-  </label>
+    <app-folder-picker [tree]="tree()" [value]="folderId()" (valueChange)="choose($event)" />
+  </div>
 
   <div
     class="drop-zone"

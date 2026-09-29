@@ -31,6 +31,18 @@ class FakeStore {
   readonly documents = signal<DocumentRecord[] | null>([]);
   readonly folders = signal<never[]>([]);
   readonly visible = signal<DocumentRecord[] | null>([]);
+  readonly visibleFolders = signal<never[]>([]);
+  readonly failedFolderDeletes = signal<ReadonlySet<string>>(new Set());
+  readonly tree = signal({ folders: [], documents: [] });
+  folderNode = vi.fn(() => undefined);
+  nameTaken = vi.fn(() => false);
+  moveBlockedIds = vi.fn(() => new Set<string>());
+  dropItem = vi.fn(async () => {});
+  createFolder = vi.fn(async () => true);
+  renameFolder = vi.fn(async () => true);
+  moveFolder = vi.fn(async () => true);
+  deleteFolder = vi.fn(async () => {});
+  retryFolderDelete = vi.fn(async () => {});
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
   readonly extractionJobs = signal<ReadonlyMap<string, 'queued' | 'running' | 'failed'>>(new Map());
@@ -162,7 +174,7 @@ describe('Library', () => {
     dropFiles(el.querySelector('.drop-zone')!, [file]);
     fixture.detectChanges();
 
-    expect(store.uploadFiles).toHaveBeenCalledWith([file]);
+    expect(store.uploadFiles).toHaveBeenCalledWith([file], null);
     expect(el.querySelector('app-upload-dialog')).toBeNull();
   });
 
@@ -216,7 +228,7 @@ describe('Library', () => {
     expect(el.querySelector('app-delete-dialog')).toBeNull();
   });
 
-  it('⋮ → Move to… opens the placeholder destination and moves via the store', async () => {
+  it('⋮ → Move to… opens the tree picker and moves via the store', async () => {
     const { fixture, store, el } = await setup();
     const docs = [record('ready')];
     store.documents.set(docs);
@@ -224,9 +236,9 @@ describe('Library', () => {
     fixture.detectChanges();
     tileAction(fixture, el.querySelector('app-document-tile')!, 'Move to…');
 
-    const select = el.querySelector<HTMLSelectElement>('[data-testid="destination"]')!;
-    expect(select.disabled).toBe(true);
-    expect(select.textContent).toContain('Documents');
+    expect(el.querySelector('app-move-dialog [data-testid="folder-picker"]')?.textContent).toContain(
+      'Documents',
+    );
 
     (el.querySelector('app-move-dialog .btn-primary') as HTMLButtonElement).click();
     expect(store.move).toHaveBeenCalledWith('doc-1', null);

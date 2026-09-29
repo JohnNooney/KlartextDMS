@@ -1,0 +1,115 @@
+@use 'tokens' as kt;
+
+:host {
+  display: block;
+  padding: kt.$kt-space-3 kt.$kt-space-2;
+}
+
+.tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 kt.$kt-space-2 kt.$kt-space-2;
+}
+
+.tree-title {
+  font-size: kt.$kt-text-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: kt.$kt-text-muted;
+}
+
+.tree-new,
+.tree-chevron {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: kt.$kt-text-muted;
+  cursor: pointer;
+  border-radius: kt.$kt-radius-sm;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+}
+
+.tree-new {
+  width: 24px;
+  height: 24px;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding-right: 8px;
+  border-radius: kt.$kt-radius-sm;
+  font-size: kt.$kt-text-sm;
+  cursor: pointer;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+
+  &.is-selected {
+    background: kt.$kt-accent-tint;
+    color: kt.$kt-accent;
+    font-weight: 600;
+  }
+
+  &.is-drop {
+    outline: 2px solid kt.$kt-accent;
+    background: kt.$kt-accent-tint;
+  }
+
+  &.is-deleting {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.tree-chevron {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+
+  svg {
+    transition: transform 0.12s ease;
+  }
+
+  &.is-open svg {
+    transform: rotate(90deg);
+  }
+}
+
+.tree-chevron-gap {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.tree-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-badge {
+  flex-shrink: 0;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  text-align: center;
+}

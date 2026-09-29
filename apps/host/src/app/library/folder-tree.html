@@ -1,0 +1,42 @@
+<div class="tree-head">
+  <span class="tree-title">Library</span>
+  <button type="button" class="tree-new" (click)="newFolder.emit()" aria-label="New folder" data-testid="new-folder">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
+  </button>
+</div>
+<ul class="tree" role="tree">
+  @for (row of rows(); track row.kind + ':' + row.id) {
+    <li role="none">
+      <div
+        class="tree-row"
+        role="treeitem"
+        tabindex="0"
+        [class.is-selected]="isSelected(row)"
+        [class.is-drop]="dropTarget() === row.id && row.kind !== 'document'"
+        [class.is-deleting]="row.deleting"
+        [attr.draggable]="row.kind !== 'root' && !row.deleting ? 'true' : null"
+        [attr.aria-level]="row.depth + 1"
+        [attr.aria-expanded]="row.kind === 'folder' && row.expandable ? row.expanded : null"
+        [style.padding-left.px]="8 + row.depth * 14"
+        (click)="activate(row)"
+        (keydown.enter)="activate(row)"
+        (dragstart)="onDragStart(row, $event)"
+        (dragover)="onDragOver(row, $event)"
+        (dragleave)="dropTarget.set(undefined)"
+        (drop)="onDrop(row, $event)"
+      >
+        @if (row.kind === 'folder' && row.expandable) {
+          <button type="button" class="tree-chevron" [class.is-open]="row.expanded" (click)="toggle(row, $event)" [attr.aria-label]="(row.expanded ? 'Collapse ' : 'Expand ') + row.name">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        } @else {
+          <span class="tree-chevron-gap"></span>
+        }
+        <span class="tree-name" lang="de">{{ row.name }}</span>
+        @if (row.count !== null && row.count > 0) {
+          <span class="tree-badge" data-testid="tree-badge">{{ row.count }}</span>
+        }
+      </div>
+    </li>
+  }
+</ul>

@@ -3,9 +3,23 @@
        reader's .insights-slot while a Document is open (issue #16). -->
   <app-reader [doc]="openDoc" />
 } @else {
+  <div class="browse">
+  <aside class="sidebar">
+    <app-folder-tree
+      [tree]="store.tree()"
+      [selectedFolderId]="openDocument.folderId()"
+      [openDocId]="openDocument.docId()"
+      (folderOpened)="openFolder($event)"
+      (documentOpened)="store.open($event)"
+      (itemDropped)="onItemDropped($event.item, $event.targetId)"
+      (newFolder)="dialog.set({ kind: 'new-folder' })"
+    />
+  </aside>
+  <div class="browse-main">
   <header class="library-toolbar">
-    <h1 class="library-title">Documents</h1>
+    <h1 class="library-title" lang="de">{{ title() }}</h1>
     <div class="toolbar-actions">
+      <button type="button" class="btn btn-secondary btn-new-folder" (click)="dialog.set({ kind: 'new-folder' })">New folder</button>
       <button type="button" class="btn btn-primary btn-upload" (click)="openUpload()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
         <span class="btn-upload-label">Upload</span>
@@ -25,7 +39,7 @@
   >
     @if (store.visible() === null) {
       <div class="library-loading"><span class="spinner" role="status" aria-label="Loading"></span></div>
-    } @else if (store.visible()!.length === 0) {
+    } @else if (store.visible()!.length === 0 && store.visibleFolders().length === 0) {
       <div class="empty">
         <svg width="64" height="51" viewBox="0 0 52 42" fill="none" aria-hidden="true">
           <path d="M2 6a4 4 0 0 1 4-4h11.3a4 4 0 0 1 3 1.4L23 6.5h23a4 4 0 0 1 4 4V36a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#8ed1fc"/>
@@ -42,6 +56,17 @@
     } @else {
       <p class="meta-line">{{ store.visible()!.length }} documents</p>
       <div class="grid">
+        @for (folder of store.visibleFolders(); track folder.id) {
+          <app-folder-tile
+            [folder]="folder"
+            [documentCount]="store.folderNode(folder.id)?.deepDocumentCount ?? 0"
+            [folderCount]="store.folderNode(folder.id)?.deepFolderCount ?? 0"
+            [deleteFailed]="store.failedFolderDeletes().has(folder.id)"
+            (opened)="openFolder(folder.id)"
+            (action)="onFolderAction(folder, $event)"
+            (itemDropped)="onItemDropped($event, folder.id)"
+          />
+        }
         @for (doc of store.visible()!; track doc.id) {
           <app-document-tile
             [doc]="doc"
@@ -58,12 +83,19 @@
       </div>
     }
   </div>
+  </div>
+  </div>
 }
 
 @if (dialog(); as dialog) {
   @switch (dialog.kind) {
     @case ('upload') {
-      <app-upload-dialog (picked)="onPicked($event)" (closed)="closeDialog()" />
+      <app-upload-dialog
+        [tree]="store.tree()"
+        [initialFolderId]="openDocument.folderId()"
+        (picked)="onPicked($event)"
+        (closed)="closeDialog()"
+      />
     }
     @case ('rename') {
       <app-rename-dialog
@@ -74,7 +106,9 @@
     }
     @case ('move') {
       <app-move-dialog
-        [doc]="dialog.doc"
+        [label]="dialog.doc.title"
+        [tree]="store.tree()"
+        [current]="dialog.doc.folderId"
         (moved)="store.move(dialog.doc.id, $event); closeDialog()"
         (closed)="closeDialog()"
       />
@@ -83,6 +117,43 @@
       <app-delete-dialog
         [doc]="dialog.doc"
         (confirmed)="store.confirmDelete(dialog.doc.id); closeDialog()"
+        (closed)="closeDialog()"
+      />
+    }
+    @case ('new-folder') {
+      <app-folder-name-dialog
+        heading="New folder"
+        [withDetails]="true"
+        [taken]="newFolderTaken"
+        (saved)="onFolderNamed($event)"
+        (closed)="closeDialog()"
+      />
+    }
+    @case ('rename-folder') {
+      <app-folder-name-dialog
+        heading="Rename folder"
+        [initialName]="dialog.folder.name"
+        [taken]="renameTaken(dialog.folder)"
+        (saved)="onFolderNamed($event)"
+        (closed)="closeDialog()"
+      />
+    }
+    @case ('move-folder') {
+      <app-move-dialog
+        [label]="dialog.folder.name"
+        [tree]="store.tree()"
+        [current]="dialog.folder.parentId"
+        [disabledIds]="store.moveBlockedIds(dialog.folder.id)"
+        (moved)="store.moveFolder(dialog.folder.id, $event); closeDialog()"
+        (closed)="closeDialog()"
+      />
+    }
+    @case ('delete-folder') {
+      <app-folder-delete-dialog
+        [name]="dialog.folder.name"
+        [documentCount]="store.folderNode(dialog.folder.id)?.deepDocumentCount ?? 0"
+        [folderCount]="store.folderNode(dialog.folder.id)?.deepFolderCount ?? 0"
+        (confirmed)="store.deleteFolder(dialog.folder.id); closeDialog()"
         (closed)="closeDialog()"
       />
     }

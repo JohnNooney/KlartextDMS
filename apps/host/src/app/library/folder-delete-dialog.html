@@ -1,25 +1,18 @@
 <button type="button" class="backdrop" (click)="closed.emit()" aria-label="Close"></button>
-<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="move-title">
+<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="folder-delete-title" aria-describedby="folder-delete-body">
   <header class="dialog-head">
-    <h2 id="move-title">Move “{{ label() }}”</h2>
+    <h2 id="folder-delete-title">Delete folder</h2>
     <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
     </button>
   </header>
 
-  <app-folder-picker
-    [tree]="tree()"
-    [value]="choice() === undefined ? current() : choice()!"
-    [disabledIds]="disabledIds()"
-    (valueChange)="choice.set($event)"
-  />
+  <p class="dialog-body" id="folder-delete-body">
+    Delete {{ name() }}? <span data-testid="folder-delete-contents">{{ contents() }}</span>
+  </p>
 
   <footer class="dialog-foot">
     <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
-    <button
-      type="button"
-      class="btn btn-primary"
-      (click)="moved.emit(choice() === undefined ? current() : choice()!)"
-    >Move</button>
+    <button type="button" class="btn btn-danger" (click)="confirmed.emit()">Delete</button>
   </footer>
 </div>
