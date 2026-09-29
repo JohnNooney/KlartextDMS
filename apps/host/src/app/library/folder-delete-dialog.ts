@@ -1,5 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { describeContents } from './folder-contents';
+import { DialogViewport } from './dialog-viewport';
 
 /**
  * Recursive Folder delete confirmation (issue #33): spells out the deep
@@ -9,6 +10,7 @@ import { describeContents } from './folder-contents';
   selector: 'app-folder-delete-dialog',
   templateUrl: './folder-delete-dialog.html',
   styleUrl: './dialogs.scss',
+  imports: [DialogViewport],
   host: {
     '(document:keydown.escape)': 'closed.emit()',
   },

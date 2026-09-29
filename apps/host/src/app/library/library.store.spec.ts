@@ -802,6 +802,24 @@ describe('LibraryStore', () => {
       expect(store.failedFolderDeletes().has(a)).toBe(true);
       expect(folderRepository.records.get(a)?.status).toBe('deleting');
     });
+
+    it('the browsed scope counts Documents at any depth, excluding deleting (issue #64)', async () => {
+      const { store, repository, folderRepository, open } = setup();
+      const { a, b } = await seedTree(repository, folderRepository);
+      await seedDoc(repository, null);
+      await repository.seed('deleting');
+      await untilFolders(store, (f) => f.length === 3);
+      await until(store, (d) => d.length === 4);
+
+      // Root: the root Document plus both nested ones — not the deleting one.
+      expect(store.deepDocumentCount()).toBe(3);
+
+      open.folderId.set(a);
+      expect(store.deepDocumentCount()).toBe(2); // docA + docC nested under it
+
+      open.folderId.set(b);
+      expect(store.deepDocumentCount()).toBe(1); // docC only
+    });
   });
 });
 

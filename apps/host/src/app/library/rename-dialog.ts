@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import type { DocumentRecord } from '../data/document';
+import { DialogViewport } from './dialog-viewport';
 
 /**
  * Rename dialog (issue #16): current `title` pre-filled; the only rule is
@@ -10,6 +11,7 @@ import type { DocumentRecord } from '../data/document';
   selector: 'app-rename-dialog',
   templateUrl: './rename-dialog.html',
   styleUrl: './dialogs.scss',
+  imports: [DialogViewport],
   host: {
     '(document:keydown.escape)': 'closed.emit()',
   },

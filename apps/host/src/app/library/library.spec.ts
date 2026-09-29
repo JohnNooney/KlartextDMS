@@ -43,6 +43,7 @@ class FakeStore {
   readonly documents = signal<DocumentRecord[] | null>([]);
   readonly folders = signal<FolderRecord[]>([]);
   readonly visible = signal<DocumentRecord[] | null>([]);
+  readonly deepDocumentCount = signal(0);
   readonly visibleFolders = signal<never[]>([]);
   readonly failedFolderDeletes = signal<ReadonlySet<string>>(new Set());
   readonly tree = signal({ folders: [], documents: [] });
@@ -171,9 +172,20 @@ describe('Library', () => {
     const docs = [record('ready'), record('failed', { id: 'doc-2', title: 'Scan' })];
     store.documents.set(docs);
     store.visible.set(docs);
+    store.deepDocumentCount.set(2);
     fixture.detectChanges();
     expect(el.querySelectorAll('app-document-tile')).toHaveLength(2);
     expect(el.querySelector('.meta-line')?.textContent).toContain('2 documents');
+  });
+
+  // The meta-line's count is the scope's deep count (issue #64): Documents
+  // nested inside the listed Folders count, not just the direct ones.
+  it('the meta-line counts Documents nested inside Folders too', async () => {
+    const { fixture, store, el } = await setup();
+    store.visible.set([record('ready')]);
+    store.deepDocumentCount.set(4);
+    fixture.detectChanges();
+    expect(el.querySelector('.meta-line')?.textContent).toContain('4 documents');
   });
 
   it('opens the upload dialog; picking files uploads and closes it', async () => {

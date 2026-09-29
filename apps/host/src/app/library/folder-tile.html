@@ -30,7 +30,7 @@
 }
 
 @if (menuOpen()) {
-  <button type="button" class="menu-shield" (click)="menuOpen.set(false)" aria-hidden="true" tabindex="-1"></button>
+  <button type="button" class="menu-shield" (click)="closeMenu($event)" aria-hidden="true" tabindex="-1"></button>
   <div class="menu" role="menu">
     @for (item of menuItems(); track item.action) {
       @if (item.separated) {

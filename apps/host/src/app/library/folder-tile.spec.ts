@@ -75,15 +75,34 @@ describe('FolderTile (issue #33)', () => {
     expect(fixture.nativeElement.querySelector('.menu')).toBeNull();
   });
 
-  it('shows the name and a deep-count badge; clicking opens the Folder', async () => {
-    const fixture = await setup(folder(), { documentCount: 7, folderCount: 3 });
+  it('the shield dismisses the menu without opening the Folder (issue #64)', async () => {
+    const fixture = await setup(folder());
+    const el = fixture.nativeElement as HTMLElement;
+    const opened = vi.fn();
+    fixture.componentInstance.opened.subscribe(opened);
+
+    openMenu(fixture);
+    expect(el.querySelector('.menu')).toBeTruthy();
+
+    (el.querySelector('.menu-shield') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('.menu')).toBeNull();
+    expect(opened).not.toHaveBeenCalled();
+
+    el.click();
+    expect(opened).toHaveBeenCalledOnce();
+  });
+
+  it('shows the name and a deep document count; clicking opens the Folder', async () => {
+    const fixture = await setup(folder(), { documentCount: 7 });
     const el = fixture.nativeElement as HTMLElement;
     const opened = vi.fn();
     fixture.componentInstance.opened.subscribe(opened);
 
     expect(el.querySelector('.tile-name')?.textContent).toContain('Wohnung');
     expect(el.querySelector('[data-testid="folder-count"]')?.textContent?.trim()).toBe(
-      '7 documents in 3 folders',
+      '7 documents',
     );
 
     el.click();

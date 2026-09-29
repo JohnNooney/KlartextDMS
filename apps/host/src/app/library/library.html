@@ -91,13 +91,12 @@
         </button>
       </div>
     } @else {
-      <p class="meta-line">{{ store.visible()!.length }} documents</p>
+      <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
       <div class="grid">
         @for (folder of store.visibleFolders(); track folder.id) {
           <app-folder-tile
             [folder]="folder"
             [documentCount]="store.folderNode(folder.id)?.deepDocumentCount ?? 0"
-            [folderCount]="store.folderNode(folder.id)?.deepFolderCount ?? 0"
             [deleteFailed]="store.failedFolderDeletes().has(folder.id)"
             (opened)="openFolder(folder.id)"
             (action)="onFolderAction(folder, $event)"

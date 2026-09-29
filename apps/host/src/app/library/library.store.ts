@@ -74,6 +74,20 @@ export class LibraryStore {
   readonly tree = computed<FolderTree>(() =>
     buildFolderTree(this.folders() ?? [], this.documents() ?? []),
   );
+  /**
+   * The meta-line's count (issue #64): every non-`deleting` Document in the
+   * browsed scope at any depth — FolderNode.deepDocumentCount semantics — so
+   * Documents filed inside Folders count too.
+   */
+  readonly deepDocumentCount = computed(() => {
+    const folderId = this.openDocument.folderId();
+    if (folderId !== null) return this.folderNode(folderId)?.deepDocumentCount ?? 0;
+    const tree = this.tree();
+    return (
+      tree.documents.filter((d) => d.status !== 'deleting').length +
+      tree.folders.reduce((sum, node) => sum + node.deepDocumentCount, 0)
+    );
+  });
   /** The Folders directly inside the browsed Folder, name-sorted (#33). */
   readonly visibleFolders = computed(() =>
     (this.folders() ?? [])

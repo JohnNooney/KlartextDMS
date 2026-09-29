@@ -37,14 +37,13 @@ interface MenuItem {
     '(dragover)': 'onDragOver($event)',
     '(dragleave)': 'dropHover.set(false)',
     '(drop)': 'onDrop($event)',
-    '(document:keydown.escape)': 'menuOpen.set(false)',
+    '(document:keydown.escape)': 'closeMenu()',
   },
 })
 export class FolderTile {
   readonly folder = input.required<FolderRecord>();
   /** Documents at any depth below, excluding `deleting` ones. */
   readonly documentCount = input(0);
-  readonly folderCount = input(0);
   /** A delete failed, leaving `deleting` — ⋮ offers **Retry delete**. */
   readonly deleteFailed = input(false);
 
@@ -69,9 +68,10 @@ export class FolderTile {
       { action: 'delete', label: 'Delete', destructive: true, separated: true },
     ];
   });
-  protected readonly summary = computed(() => {
-    return describeContents(this.documentCount(), this.folderCount());
-  });
+  // Just the deep document count — "N documents in M folders" read like the
+  // documents live inside the subfolders; the delete dialog keeps the full
+  // phrase where the containment detail earns its place.
+  protected readonly summary = computed(() => describeContents(this.documentCount(), 0));
 
   protected onTileClick(): void {
     if (this.openable() && !this.menuOpen()) this.opened.emit();
@@ -86,6 +86,12 @@ export class FolderTile {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.action.emit(item.action);
+  }
+
+  /** Shield/Escape dismiss — the shield's click must not reach the tile's own open handler (#64). */
+  protected closeMenu(event?: Event): void {
+    event?.stopPropagation();
+    this.menuOpen.set(false);
   }
 
   protected onDragStart(event: DragEvent): void {

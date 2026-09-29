@@ -117,6 +117,26 @@ describe('DocumentTile — per-state contract (issue #16)', () => {
     expect(menuItems(fixture)).toEqual(['Retry delete']);
   });
 
+  it('the shield dismisses the menu without opening the tile (issue #64)', async () => {
+    const fixture = await setup(record('ready'));
+    const el = fixture.nativeElement as HTMLElement;
+    const opened = vi.fn();
+    fixture.componentInstance.opened.subscribe(opened);
+
+    openMenu(fixture);
+    expect(el.querySelector('.menu')).toBeTruthy();
+
+    (el.querySelector('.menu-shield') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('.menu')).toBeNull();
+    expect(opened).not.toHaveBeenCalled();
+
+    // The tile itself still opens once the menu is gone.
+    el.click();
+    expect(opened).toHaveBeenCalledOnce();
+  });
+
   it('menu item clicks emit the action; the shield closes the menu', async () => {
     const fixture = await setup(record('ready'));
     const el = fixture.nativeElement as HTMLElement;

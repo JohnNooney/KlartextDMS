@@ -29,6 +29,8 @@
 .icon-btn {
   width: kt.$kt-control-height;
   height: kt.$kt-control-height;
+  // No shrinking: the flex row's controls must hold their size (issue #64).
+  flex-shrink: 0;
   border: 0;
   border-radius: kt.$kt-radius-sm;
   background: transparent;
@@ -94,6 +96,10 @@
 }
 
 .pdf-sheet {
+  // Auto margins, not align-items, do the centring (issue #66): once the sheet
+  // is wider than the stage they collapse to 0, so it start-aligns and the
+  // left edge stays scrollable — centred centring would clip it off-screen.
+  margin-inline: auto;
   background: #fff;
   box-shadow: kt.$kt-shadow-raised;
   border-radius: 2px;
@@ -189,6 +195,21 @@
 
 // ---------- Mobile (≤768px): clear the peeking insights sheet (issue #50) ----------
 @media (max-width: 768px) {
+  .pdf-chrome {
+    padding: 0 kt.$kt-space-2;
+  }
+
+  // 44px touch targets at phone widths (issue #64); the trimmed padding and
+  // page number keep the row inside 320px.
+  .pdf-chrome .icon-btn {
+    width: kt.$kt-touch-target;
+    height: kt.$kt-touch-target;
+  }
+
+  .pdf-pageno {
+    min-width: 44px;
+  }
+
   .pdf-stage {
     // The extra gap keeps the last page's tail from resting under the peek chrome.
     padding-bottom: calc(#{kt.$kt-sheet-peek-height} + #{kt.$kt-space-4});
