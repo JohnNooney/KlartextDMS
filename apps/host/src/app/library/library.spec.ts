@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
+import type { FolderRecord } from '../data/folder';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { OpenDocument } from '../open-document';
@@ -27,6 +28,17 @@ function record(status: DocumentStatus, overrides: Partial<DocumentRecord> = {})
   };
 }
 
+function folder(id: string, name: string, parentId: string | null): FolderRecord {
+  return {
+    id,
+    name,
+    parentId,
+    status: 'ready',
+    createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
+    updatedAt: { seconds: 1_700_000_000, nanoseconds: 0 },
+  };
+}
+
 class FakeStore {
   readonly documents = signal<DocumentRecord[] | null>([]);
   readonly folders = signal<never[]>([]);
@@ -48,7 +60,7 @@ class FakeStore {
   readonly extractionJobs = signal<ReadonlyMap<string, 'queued' | 'running' | 'failed'>>(new Map());
   readonly extractionStored = signal<ReadonlySet<string>>(new Set());
   readonly openDoc = signal<DocumentRecord | null>(null);
-  folderById = vi.fn(() => undefined);
+  folderById = vi.fn((_id: string | null): FolderRecord | undefined => undefined);
   ancestryOf = vi.fn(() => []);
   uploadFiles = vi.fn();
   cancelUpload = vi.fn();
@@ -326,5 +338,49 @@ describe('Library', () => {
     const tile = el.querySelector('app-document-tile')!;
     expect(tile.textContent).not.toContain("Couldn't analyze");
     expect(tile.querySelector('.tile-chip')).toBeNull();
+  });
+
+  // Mobile push nav (issue #55): inside a Folder the toolbar offers ‹ parent —
+  // the sidebar tree that desktop navigates with is hidden there.
+
+  it('inside a nested Folder the back button names its parent and taps up to it', async () => {
+    const { fixture, store, openDocument, el } = await setup();
+    openDocument.folderId.set('wohnung');
+    store.folderById = vi.fn((id: string | null) =>
+      id === 'wohnung'
+        ? folder('wohnung', 'Wohnung', 'vertraege')
+        : id === 'vertraege'
+          ? folder('vertraege', 'Verträge', null)
+          : undefined,
+    );
+    fixture.detectChanges();
+
+    const back = el.querySelector<HTMLButtonElement>('.back-btn')!;
+    expect(back).toBeTruthy();
+    expect(back.textContent).toContain('Verträge');
+    expect(back.getAttribute('aria-label')).toContain('Verträge');
+
+    back.click();
+    expect(openDocument.openFolder).toHaveBeenCalledWith('vertraege');
+  });
+
+  it('inside a top-level Folder the back button goes up to Documents', async () => {
+    const { fixture, store, openDocument, el } = await setup();
+    openDocument.folderId.set('vertraege');
+    store.folderById = vi.fn((id: string | null) =>
+      id === 'vertraege' ? folder('vertraege', 'Verträge', null) : undefined,
+    );
+    fixture.detectChanges();
+
+    const back = el.querySelector<HTMLButtonElement>('.back-btn')!;
+    expect(back.textContent).toContain('Documents');
+
+    back.click();
+    expect(openDocument.openFolder).toHaveBeenCalledWith(null);
+  });
+
+  it('at root there is no back affordance', async () => {
+    const { el } = await setup();
+    expect(el.querySelector('.back-btn')).toBeNull();
   });
 });

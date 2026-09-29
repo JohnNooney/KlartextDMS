@@ -71,6 +71,29 @@ export class Library {
     () => this.store.folderById(this.openDocument.folderId())?.name ?? 'Documents',
   );
 
+  /**
+   * Inside a Folder, the ‹ affordance's target — the Folder's own parent
+   * (issue #55). `undefined` at root, where the affordance doesn't show;
+   * `null` = the way up is Documents. The sidebar tree that desktop
+   * navigates with is hidden on mobile, so this is the way back up a level.
+   */
+  protected readonly backTarget = computed<string | null | undefined>(() => {
+    const folderId = this.openDocument.folderId();
+    if (folderId === null) return undefined;
+    return this.store.folderById(folderId)?.parentId ?? null;
+  });
+
+  /** The ‹ affordance's label — the parent Folder's name, Documents at top level. */
+  protected readonly backLabel = computed(() => {
+    const target = this.backTarget();
+    return target ? (this.store.folderById(target)?.name ?? 'Documents') : 'Documents';
+  });
+
+  protected back(): void {
+    const target = this.backTarget();
+    if (target !== undefined) this.openDocument.openFolder(target);
+  }
+
   protected openUpload(): void {
     this.dialog.set({ kind: 'upload' });
   }
