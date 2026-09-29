@@ -3,15 +3,24 @@
      right-hand lane on desktop, a bottom sheet on mobile (#29) with three
      snap detents — peek, half, full — resting at peek so the PDF stays
      primary (issue #50). -->
-<div class="guest-frame-host" [hidden]="docOpen() === null" [attr.data-sheet]="sheetState()">
+<div
+  class="guest-frame-host"
+  #host
+  [hidden]="docOpen() === null"
+  [attr.data-sheet]="sheetState()"
+>
   <button
     type="button"
     class="sheet-handle"
     (click)="cycleSheet()"
+    (pointerdown)="onHandlePointerDown($event)"
+    (pointermove)="onHandlePointerMove($event)"
+    (pointerup)="onHandlePointerUp($event)"
+    (pointercancel)="onHandlePointerUp($event)"
     [attr.aria-expanded]="sheetState() !== 'peek'"
     [attr.aria-label]="sheetLabel()"
   >
-    <span class="handle-pill" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="chevronPath()"/></svg></span>
+    <span class="handle-pill" aria-hidden="true"></span>
     <span class="sheet-dots" aria-hidden="true">
       @for (i of [0, 1, 2]; track i) {
         <span [class.is-active]="sheetIndex() === i"></span>

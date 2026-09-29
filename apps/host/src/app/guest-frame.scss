@@ -44,6 +44,11 @@
     border-top: 1px solid kt.$kt-border;
     border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
     transition: height 0.2s ease;
+
+    // While dragging, the inline height tracks the finger — no transition.
+    &.is-dragging {
+      transition: none;
+    }
     // viewport-fit=cover: the sheet extends under the home indicator, so its
     // bottom inset is padding rather than content (issue #59).
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -66,14 +71,14 @@
 
   // Grab-handle strip in the sheet chrome (issue #49): its own row above the
   // iframe — never overlaid on Guest content — and a full-width touch target.
-  // The pill's chevron points where a tap moves the sheet; the dots beneath
-  // mark the current detent, making the state legible from the handle (#50).
+  // The pill is the drag affordance (#62); the dots beneath mark the current
+  // detent, making the state legible from the handle (#50).
   .sheet-handle {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 4px;
     flex-shrink: 0;
     width: 100%;
     height: kt.$kt-touch-target;
@@ -81,14 +86,15 @@
     padding: 0;
     background: transparent;
     color: kt.$kt-text-muted;
+    // The sheet resizes on vertical drags — the browser must not take the
+    // gesture over for scrolling, or the pointer stream is cancelled.
+    touch-action: none;
 
     .handle-pill {
-      display: grid;
-      place-items: center;
-      width: 44px;
-      height: 22px;
+      width: 36px;
+      height: 5px;
       border-radius: 999px;
-      background: kt.$kt-fill;
+      background: kt.$kt-fill-strong;
     }
 
     .sheet-dots {

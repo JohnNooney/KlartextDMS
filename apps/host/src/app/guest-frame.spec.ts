@@ -61,23 +61,19 @@ function activeDot(el: HTMLElement): number {
   );
 }
 
-/** Reads the chevron path as three absolute points; the apex sits above or below the baseline. */
-function chevronDirection(path: string): 'up' | 'down' {
-  const [, y1, , dy1, , dy2] = path.match(/-?\d+(?:\.\d+)?/g)!.map(Number) as [
-    number, number, number, number, number, number,
-  ];
-  const apexY = y1 + dy1;
-  const farEndY = y1 + dy1 + dy2;
-  return apexY < y1 && apexY < farEndY ? 'up' : 'down';
-}
-
-function chevron(el: HTMLElement): 'up' | 'down' {
-  return chevronDirection(handle(el).querySelector('path')!.getAttribute('d')!);
-}
-
 function tap(fixture: { detectChanges(): void }, el: HTMLElement): void {
   handle(el).click();
   fixture.detectChanges();
+}
+
+/** jsdom has no PointerEvent — a MouseEvent carries clientY and the handlers
+ *  only read pointer-agnostic fields. An explicit timeStamp fakes velocity. */
+function pointer(el: HTMLElement, type: string, clientY: number, timeStamp?: number): void {
+  const event = new MouseEvent(type, { clientY, bubbles: true });
+  if (timeStamp !== undefined) {
+    Object.defineProperty(event, 'timeStamp', { value: timeStamp });
+  }
+  handle(el).dispatchEvent(event);
 }
 
 describe('GuestFrame mobile sheet detents (issue #50)', () => {
@@ -88,7 +84,9 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     const button = handle(el);
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(button.getAttribute('aria-label')).toContain('Expand');
-    expect(chevron(el)).toBe('up');
+    // The grab bar is the drag affordance (issue #62) — no directional glyph.
+    expect(button.querySelector('.handle-pill')).not.toBeNull();
+    expect(button.querySelector('svg')).toBeNull();
 
     // The minimal header is chrome above the iframe, keeping the Extraction
     // discoverable while the sheet only covers a sliver of the reader.
@@ -112,26 +110,23 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(detent(el)).toBe('peek');
   });
 
-  it('the affordance reads the current detent and the direction a tap moves', async () => {
+  it('the affordance reads the current detent and where a tap moves', async () => {
     const { fixture, el } = await setup();
     const button = handle(el);
 
-    // peek: one more tap goes up; first dot lit; collapsed to a11y.
+    // peek: first dot lit; collapsed to a11y.
     expect(activeDot(el)).toBe(0);
-    expect(chevron(el)).toBe('up');
     expect(button.getAttribute('aria-expanded')).toBe('false');
 
     tap(fixture, el);
-    // half: still up (next is full); second dot lit; the sheet is expanded.
+    // half: second dot lit; the sheet is expanded.
     expect(activeDot(el)).toBe(1);
-    expect(chevron(el)).toBe('up');
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.getAttribute('aria-label')).toContain('full');
 
     tap(fixture, el);
     // full: the only way left is down, back to peek.
     expect(activeDot(el)).toBe(2);
-    expect(chevron(el)).toBe('down');
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.getAttribute('aria-label')).toContain('Collapse');
   });
@@ -145,6 +140,64 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     openDocument.docId.set('doc-2');
     fixture.detectChanges();
     expect(detent(el)).toBe('peek');
+  });
+
+  it('a drag tracks the finger, then snaps to the nearest detent on release', async () => {
+    const { fixture, el } = await setup();
+    const vh = window.innerHeight;
+    const sheet = host(el);
+
+    // Press near the sheet's top edge, drag until the sheet stands half open.
+    // Explicit timeStamps keep the flick velocity under threshold.
+    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointermove', vh * 0.5, 1000);
+    expect(sheet.classList.contains('is-dragging')).toBe(true);
+    expect(sheet.style.height).toBe(`${vh * 0.5}px`);
+
+    pointer(el, 'pointerup', vh * 0.5, 1050);
+    expect(detent(el)).toBe('half');
+    expect(sheet.style.height).toBe('');
+    expect(sheet.classList.contains('is-dragging')).toBe(false);
+
+    // The click the release still fires must not cycle on top of the snap.
+    handle(el).click();
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
+  });
+
+  it('release snaps to the nearest detent — a short pull returns to peek', async () => {
+    const { el } = await setup();
+    const vh = window.innerHeight;
+
+    // jsdom: peek resolves to its 76px fallback, so the peek/half midpoint
+    // sits at (76 + vh/2) / 2 ≈ 230 — a 200px sheet lands below it.
+    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointermove', vh - 200, 1000);
+    pointer(el, 'pointerup', vh - 200, 1050);
+    expect(detent(el)).toBe('peek');
+  });
+
+  it('a fast flick moves one detent in the flick direction', async () => {
+    const { el } = await setup();
+    const vh = window.innerHeight;
+
+    // Released at ~140px — nearest detent is peek — but the upward flick
+    // overrides position and takes the sheet to half.
+    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointermove', vh - 120, 10);
+    pointer(el, 'pointerup', vh - 140, 20);
+    expect(detent(el)).toBe('half');
+  });
+
+  it('a wobble under the drag threshold still taps through', async () => {
+    const { fixture, el } = await setup();
+    const vh = window.innerHeight;
+
+    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointermove', vh - 73, 100);
+    pointer(el, 'pointerup', vh - 73, 150);
+    tap(fixture, el);
+    expect(detent(el)).toBe('half');
   });
 
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {
