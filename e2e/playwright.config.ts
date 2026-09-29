@@ -20,6 +20,10 @@ const hostingPort = (
  */
 export default defineConfig({
   testDir: './tests',
+  // screenshots.spec.ts rewrites the committed docs/screenshots/*.png — keep it
+  // out of the normal suite (`pnpm e2e`, CI) so a run can't dirty the tree.
+  // `pnpm screenshots` sets SCREENSHOTS to opt it back in (issue #52).
+  testIgnore: process.env['SCREENSHOTS'] ? undefined : '**/screenshots.spec.ts',
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env['CI'],

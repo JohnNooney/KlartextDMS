@@ -11,7 +11,8 @@ import {
 /** The emulator seed user (scripts/seed.mjs). */
 export const SEED_USER = { uid: 'seed-test-user', email: 'test-user@test.com', password: 'test1234' } as const;
 
-const repoFile = (path: string) => new URL(`../../${path}`, import.meta.url);
+/** A repo-root-relative file as a URL — readFileSync/screenshot-path friendly. */
+export const repoFile = (path: string) => new URL(`../../${path}`, import.meta.url);
 
 /** Seeded fixture PDFs (scripts/fixtures). */
 export const seededPdf = (name: string): Buffer => readFileSync(repoFile(`scripts/fixtures/${name}`));
