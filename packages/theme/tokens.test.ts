@@ -15,7 +15,7 @@ const TOKENS = [
   '--kt-success', '--kt-warning', '--kt-warning-tint',
   '--kt-danger', '--kt-danger-tint', '--kt-folder',
   '--kt-font-sans', '--kt-font-mono',
-  '--kt-text-xs', '--kt-text-sm', '--kt-text-base', '--kt-text-lg', '--kt-text-xl', '--kt-text-2xl',
+  '--kt-text-xs', '--kt-text-sm', '--kt-text-base', '--kt-text-lg', '--kt-text-xl', '--kt-text-2xl', '--kt-text-3xl',
   '--kt-space-1', '--kt-space-2', '--kt-space-3', '--kt-space-4', '--kt-space-5', '--kt-space-6', '--kt-space-8',
   '--kt-radius-sm', '--kt-radius-md', '--kt-radius-lg', '--kt-radius-xl',
   '--kt-shadow-panel', '--kt-shadow-raised', '--kt-shadow-popover',

@@ -54,9 +54,14 @@
   flex-direction: column;
   gap: 1px;
 
+  // Long titles ellipsize too — the action and ✕ must never sit on top of
+  // the text (issue #59).
   strong {
     font-size: kt.$kt-text-sm;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   span {
     font-size: kt.$kt-text-xs;
@@ -98,5 +103,27 @@
   &:hover {
     background: kt.$kt-fill;
     color: kt.$kt-text;
+  }
+}
+
+// ---------- Mobile (≤768px): anchor bottom, clear of the toolbar (#59) ----------
+@media (max-width: 768px) {
+  .toasts {
+    top: auto;
+    right: kt.$kt-space-3;
+    bottom: calc(#{kt.$kt-space-4} + env(safe-area-inset-bottom, 0px));
+    left: kt.$kt-space-3;
+    width: auto;
+  }
+
+  .toast {
+    animation-name: toast-in-up;
+  }
+}
+
+@keyframes toast-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }

@@ -157,6 +157,12 @@
 }
 
 // ---------- Mobile (≤768px): push navigation, large title, + add, rows ----------
+// The + affordance and its menu are mobile-only; the wrapper takes no flex
+// slot on desktop so the Upload button keeps its edge position.
+.add-wrap {
+  display: none;
+}
+
 .btn-add {
   display: none;
   width: kt.$kt-touch-target;
@@ -168,21 +174,105 @@
   place-items: center;
 }
 
+// The + affordance's add menu (issue #59) — same frosted recipe as the tiles'
+// ⋮ menus (document-tile.scss), anchored under the +.
+.menu-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: kt.$kt-radius-md;
+  box-shadow: kt.$kt-shadow-popover;
+  z-index: 40;
+  animation: pop 0.12s ease;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: kt.$kt-text-sm;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+  color: kt.$kt-text;
+
+  svg {
+    opacity: 0.75;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: kt.$kt-accent;
+    color: #fff;
+
+    svg {
+      opacity: 1;
+    }
+  }
+}
+
 @media (max-width: 768px) {
+  // iOS-style two-part header (issue #59): the navigation row carries
+  // ‹ parent left and the + affordance right; the Folder title renders on
+  // its own line below at large-title size.
+  .library-toolbar {
+    flex-wrap: wrap;
+    row-gap: kt.$kt-space-1;
+    min-height: 0;
+    padding: kt.$kt-space-2 kt.$kt-space-4;
+  }
+
   .back-btn {
     display: inline-flex;
   }
 
   .library-title {
-    font-size: kt.$kt-text-2xl;
+    order: 3;
+    flex-basis: 100%;
+    font-size: kt.$kt-text-3xl;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
   }
 
+  // The standalone pills collapse into the + affordance's add menu.
+  .btn-new-folder,
   .btn-upload {
     display: none;
+  }
+
+  .add-wrap {
+    display: inline-flex;
+    position: relative;
   }
 
   .btn-add {

@@ -3,7 +3,9 @@
 .boot {
   display: grid;
   place-items: center;
+  // Tracks the visible viewport as the mobile URL bar toggles (issue #59).
   height: 100vh;
+  height: 100dvh;
   background: kt.$kt-canvas;
 }
 
@@ -26,15 +28,20 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  // viewport-fit=cover: keep the content above the home indicator.
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .toolbar {
   height: kt.$kt-toolbar-height;
+  height: calc(#{kt.$kt-toolbar-height} + env(safe-area-inset-top, 0px));
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;
-  padding: 0 kt.$kt-space-4;
+  // The bar's surface extends under the status bar; its content sits below.
+  padding: env(safe-area-inset-top, 0px) kt.$kt-space-4 0;
   background: kt.$kt-surface;
   border-bottom: 1px solid kt.$kt-border;
 }

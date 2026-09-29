@@ -129,14 +129,20 @@ export async function tileAction(page: Page, name: string, action: string): Prom
 
 /**
  * Uploads PDFs through the toolbar's Upload dialog into the browsed Folder.
- * Desktop shows a labeled **Upload** button; on mobile it's the round **+**
- * button (`Upload document`).
+ * Desktop shows a labeled **Upload** button; on phone widths the round **+**
+ * affordance opens the add menu that offers **Upload document** (issue #59).
  */
 export async function uploadViaDialog(
   page: Page,
   files: { name: string; buffer: Buffer }[],
 ): Promise<void> {
-  await page.getByRole('button', { name: /^Upload( document)?$/ }).click();
+  const uploadButton = page.getByRole('button', { name: /^Upload( document)?$/ });
+  if (await uploadButton.isVisible()) {
+    await uploadButton.click();
+  } else {
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Upload document' }).click();
+  }
   const dialog = page.getByRole('dialog', { name: 'Upload documents' });
   await dialog
     .locator('input[type="file"]')
@@ -146,7 +152,14 @@ export async function uploadViaDialog(
 
 /** Creates a Folder in the browsed Folder through the toolbar's New folder dialog. */
 export async function createFolder(page: Page, name: string): Promise<void> {
-  await page.locator('.library-toolbar').getByRole('button', { name: 'New folder' }).click();
+  const pill = page.locator('.library-toolbar').getByRole('button', { name: 'New folder' });
+  if (await pill.isVisible()) {
+    await pill.click();
+  } else {
+    // Phone widths: the + affordance opens the add menu first (issue #59).
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'New folder' }).click();
+  }
   const dialog = page.getByRole('dialog', { name: 'New folder' });
   await dialog.getByTestId('folder-name-input').fill(name);
   await dialog.getByRole('button', { name: 'Save' }).click();

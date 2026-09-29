@@ -37,6 +37,7 @@
   --kt-text-lg: 1.0625rem; /* 17 body/headline */
   --kt-text-xl: 1.375rem; /* 22 title2 */
   --kt-text-2xl: 1.75rem; /* 28 title1 */
+  --kt-text-3xl: 2.125rem; /* 34 large title (mobile header) */
 
   /* Spacing (4pt grid) */
   --kt-space-1: 4px;
