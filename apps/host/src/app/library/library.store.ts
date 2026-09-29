@@ -202,8 +202,8 @@ export class LibraryStore {
   }
 
   /**
-   * The confirmed recursive Folder delete (ADR 0005): leave the tree if the
-   * mark the Folder `deleting`, leave the tree if the open Document or browsed
+   * The confirmed recursive Folder delete (ADR 0005): mark the Folder
+   * `deleting`, leave the tree if the open Document or browsed
    * Folder is inside it, then tear everything down.
    */
   async deleteFolder(folderId: string): Promise<void> {
