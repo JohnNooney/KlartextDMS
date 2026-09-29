@@ -5,6 +5,7 @@ import { LibraryStore } from '../library/library.store';
 import { PDF_ENGINE } from '../reader/pdf-engine';
 import { PdfJsEngine } from '../reader/pdfjs-engine';
 import { FirestoreDocumentRepository, type DocumentRepository } from './document-repository';
+import { FirestoreExtractionRepository, type ExtractionRepository } from './extraction-repository';
 import { FirestoreFolderRepository, type FolderRepository } from './folder-repository';
 import { UploadPipeline } from './upload-pipeline';
 
@@ -15,6 +16,11 @@ export const DOCUMENT_REPOSITORY = new InjectionToken<DocumentRepository>(
 
 /** The signed-in owner's Folder persistence (issue #29) — Host-only. */
 export const FOLDER_REPOSITORY = new InjectionToken<FolderRepository>('FOLDER_REPOSITORY');
+
+/** The signed-in owner's Extraction persistence (ADR 0008) — Host-only. */
+export const EXTRACTION_REPOSITORY = new InjectionToken<ExtractionRepository>(
+  'EXTRACTION_REPOSITORY',
+);
 
 /**
  * The Host's document data layer for one signed-in session (issue #28).
@@ -41,6 +47,14 @@ export function provideDocumentData(): Provider[] {
         const user = inject(AuthService).user();
         if (!user) throw new Error('FOLDER_REPOSITORY requires a signed-in user');
         return new FirestoreFolderRepository(inject(FIREBASE_FIRESTORE), user.uid);
+      },
+    },
+    {
+      provide: EXTRACTION_REPOSITORY,
+      useFactory: () => {
+        const user = inject(AuthService).user();
+        if (!user) throw new Error('EXTRACTION_REPOSITORY requires a signed-in user');
+        return new FirestoreExtractionRepository(inject(FIREBASE_FIRESTORE), user.uid);
       },
     },
     { provide: UploadPipeline, useFactory: () => new UploadPipeline(inject(DOCUMENT_REPOSITORY)) },

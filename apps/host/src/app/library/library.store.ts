@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { ExtractionJobs } from '../bus/extraction-jobs';
+import { HostBus } from '../bus/host-bus';
 import type { DocumentRecord } from '../data/document';
 import { InvalidDocumentFileError } from '../data/document-input';
 import { folderAncestry, type FolderRecord } from '../data/folder';
@@ -21,7 +21,7 @@ export class LibraryStore {
   private readonly folderRepository = inject(FOLDER_REPOSITORY);
   private readonly pipeline = inject(UploadPipeline);
   private readonly toasts = inject(ToastService);
-  private readonly jobs = inject(ExtractionJobs);
+  private readonly bus = inject(HostBus);
   private readonly openDocument = inject(OpenDocument);
 
   /** The live library feed; `null` until the first snapshot lands. */
@@ -214,7 +214,7 @@ export class LibraryStore {
 
   /** Shared delete path: cancel the Document's jobs, then tear down (#16). */
   private async delete(documentId: string): Promise<void> {
-    this.jobs.cancelJobsFor(documentId);
+    this.bus.cancelJobsFor(documentId);
     await this.runDelete(documentId);
   }
 

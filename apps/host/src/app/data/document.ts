@@ -4,10 +4,24 @@
  * `DocumentRepository`. PDF bytes live in Storage at `storagePath`. The Guest
  * never sees this type — repositories are Host-only.
  */
-import type { Timestamp } from '@klartext/bus-contract';
+import type { ExtractionErrorCode, Timestamp } from '@klartext/bus-contract';
 
 /** The metadata-first machine (issues #9/#16): where a Document stands. */
 export type DocumentStatus = 'uploading' | 'ready' | 'failed' | 'deleting';
+
+/**
+ * A recorded Extraction Job failure (issue #31, ADR 0008): the job axis's only
+ * persisted state — `queued`/`running` are never persisted, so a Host reload
+ * re-queues rather than resumes. A recorded failure is never auto-requeued;
+ * `RETRY_EXTRACTION` clears it.
+ */
+export interface ExtractionFailure {
+  code: ExtractionErrorCode;
+  /** User-safe English carried over the Bus — never the raw SDK error. */
+  message: string;
+  retryable: boolean;
+  failedAt: Timestamp;
+}
 
 export interface DocumentRecord {
   id: string;
@@ -20,6 +34,12 @@ export interface DocumentRecord {
   /** `users/{uid}/documents/{documentId}.pdf` in Cloud Storage. */
   storagePath: string;
   status: DocumentStatus;
+  /**
+   * The last Extraction Job's recorded failure — the Session's `failed`
+   * `extractionState` and the no-auto-requeue marker. Absent on Documents
+   * written before the field existed; `null` means no recorded failure.
+   */
+  extractionFailure?: ExtractionFailure | null;
   /** `null` = root ("Documents"). */
   folderId: string | null;
   createdAt: Timestamp;

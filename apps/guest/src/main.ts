@@ -6,7 +6,7 @@ import { windowBusSource } from './bus/window-bus';
 import { createExtractionJobRunner } from './extraction/run-extraction-job';
 import { initGuestFirebase, signInThenReady } from './firebase';
 import { loadGuestConfig, referrerPeerOrigin } from './guest-config';
-import { loadFixtureSession, sessionProbe } from './session-store';
+import { loadFixtureSession, retrySender, sessionProbe } from './session-store';
 import './style.css';
 
 // Guest bootstrap (issue #26): Firebase + App Check first, then the panel.
@@ -32,6 +32,8 @@ if (window.parent === window) {
     probe: sessionProbe,
     runJob: createExtractionJobRunner(config, app),
   });
+  // The panel's Analyze/Re-analyze/Try-again actions send RETRY_EXTRACTION.
+  retrySender.value = (documentId) => adapter.requestRetry(documentId);
   // GUEST_READY goes out only once anonymous sign-in resolves (issue #10).
   void signInThenReady(() => signInAnonymously(auth), adapter);
 }

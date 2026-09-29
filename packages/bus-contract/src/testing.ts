@@ -27,7 +27,7 @@ import {
 } from './messages.js';
 import { NO_SESSION } from './envelope.js';
 import type { BusEnd, BusMessageEvent, BusMessageListener, BusSink, BusSource } from './endpoints.js';
-import type { ExtractionCandidate } from './extraction.js';
+import { isExtractionCandidate, type ExtractionCandidate } from './extraction.js';
 import type {
   ExtractionError,
   ExtractDocumentPayload,
@@ -107,6 +107,12 @@ export function createLinkedBusPair(options: LinkedBusPairOptions = {}): LinkedB
 const AI_UNAVAILABLE: ExtractionError = {
   code: 'AI_UNAVAILABLE',
   message: 'The document assistant is not responding.',
+  retryable: true,
+};
+
+const INVALID_EXTRACTION: ExtractionError = {
+  code: 'INVALID_EXTRACTION',
+  message: 'The document could not be analyzed.',
   retryable: true,
 };
 
@@ -210,6 +216,11 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
     switch (msg.type) {
       case 'GUEST_READY': {
         guestReady = true;
+        // A fresh sessionId per send (issue #31): a late SESSION_ACK from the
+        // old Guest instance must never satisfy the resent Session's watchdog.
+        if (currentSession) {
+          currentSession = { ...currentSession, sessionId: `sess_${++sessionSeq}` };
+        }
         sendSession();
         if (activeJob !== null) {
           // Re-issue the in-flight job under a fresh jobId; stale results are discarded.
@@ -239,7 +250,16 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
       case 'AI_PROCESSING_SUCCESS': {
         const { jobId, extraction } = msg.payload;
         if (activeJob && activeJob.acknowledged && jobId === activeJob.jobId) {
-          settleJob(null, extraction);
+          // Same validation the production Host adapter applies (issue #31):
+          // a partial, schema-invalid, or foreign-Document Extraction fails
+          // the job rather than reaching the probe.
+          settleJob(
+            isExtractionCandidate(extraction) &&
+              extraction.documentId === activeJob.document.documentId
+              ? null
+              : INVALID_EXTRACTION,
+            extraction,
+          );
         }
         break;
       }

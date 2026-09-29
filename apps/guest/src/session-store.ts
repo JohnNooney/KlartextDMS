@@ -24,3 +24,15 @@ export const sessionProbe: GuestProbe = {
 export function loadFixtureSession(): void {
   sessionProbe.sessionApplied(goldenFixtureMessages.INIT_SESSION.payload);
 }
+
+/**
+ * The Bus adapter's retry sender (issue #31), wired by main.ts once the
+ * adapter exists. `RETRY_EXTRACTION` is the Guest's only write-back: it asks
+ * the Host to enqueue an Extraction Job — both "Analyze document" and
+ * "Re-analyze document"/"Try again" funnel through it.
+ */
+export const retrySender = shallowRef<((documentId: string) => void) | null>(null);
+
+export function requestRetry(documentId: string): void {
+  retrySender.value?.(documentId);
+}

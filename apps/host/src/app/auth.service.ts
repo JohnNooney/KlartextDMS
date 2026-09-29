@@ -101,6 +101,14 @@ export class AuthService {
     return email !== null && allowed.some((e) => e.toLowerCase() === email.toLowerCase());
   }
 
+  /**
+   * A fresh Firebase ID token for the Session's `authToken` (issue #31) —
+   * OPAQUE DATA to the Guest, never a credential it exercises.
+   */
+  async idToken(): Promise<string> {
+    return (await this.auth.currentUser?.getIdToken()) ?? '';
+  }
+
   async signInWithGoogle(): Promise<void> {
     this.error.set(null);
     try {
