@@ -133,3 +133,82 @@ describe('DocumentTile — per-state contract (issue #16)', () => {
     expect(el.querySelector('.menu')).toBeNull();
   });
 });
+
+// The Extraction chip state table (issue #32): ready tiles wear a chip per
+// job state, and a failure without a stored Extraction adds ⋮ Retry analysis.
+
+const FAILURE: DocumentRecord['extractionFailure'] = {
+  code: 'AI_UNAVAILABLE',
+  message: 'No response.',
+  retryable: true,
+  failedAt: { seconds: 1, nanoseconds: 0 },
+};
+
+describe('DocumentTile — extraction chips (issue #32)', () => {
+  it('queued shows "Queued"', async () => {
+    const fixture = await setup(record('ready'), { extractionJob: 'queued' });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')?.textContent).toContain('Queued');
+    expect(el.querySelector('.spinner')).toBeNull();
+  });
+
+  it('running shows a spinner and "Analyzing…"', async () => {
+    const fixture = await setup(record('ready'), { extractionJob: 'running' });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip .spinner')).toBeTruthy();
+    expect(el.querySelector('.tile-chip')?.textContent).toContain('Analyzing…');
+  });
+
+  it('failed without an Extraction warns "Couldn\'t analyze" and ⋮ offers Retry analysis', async () => {
+    const fixture = await setup(record('ready'), { extractionJob: 'failed' });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')?.textContent).toContain("Couldn't analyze");
+
+    const actions: TileAction[] = [];
+    fixture.componentInstance.action.subscribe((a: TileAction) => actions.push(a));
+    openMenu(fixture);
+    expect(menuItems(fixture)).toEqual([
+      'Retry analysis',
+      'Rename',
+      'Move to…',
+      'Download',
+      'Delete',
+    ]);
+    const retry = [...el.querySelectorAll<HTMLButtonElement>('.menu-item')].find((b) =>
+      b.textContent!.includes('Retry analysis'),
+    )!;
+    retry.click();
+    fixture.detectChanges();
+    expect(actions).toEqual(['retry-extraction']);
+  });
+
+  it('a recorded failure persists as the warning chip without runtime job state', async () => {
+    const fixture = await setup(record('ready', { extractionFailure: FAILURE }));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')?.textContent).toContain("Couldn't analyze");
+    openMenu(fixture);
+    expect(menuItems(fixture)).toContain('Retry analysis');
+  });
+
+  it('failed with a stored Extraction shows no failure badge and no Retry analysis', async () => {
+    const fixture = await setup(record('ready'), { extractionJob: 'failed', hasExtraction: true });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')).toBeNull();
+    openMenu(fixture);
+    expect(menuItems(fixture)).toEqual(['Rename', 'Move to…', 'Download', 'Delete']);
+  });
+
+  it('a Document with an Extraction and no job shows no chip', async () => {
+    const fixture = await setup(record('ready'), { hasExtraction: true });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')).toBeNull();
+  });
+
+  it('Retry analysis follows a retry: queued overrides the recorded failure', async () => {
+    const fixture = await setup(record('ready', { extractionFailure: FAILURE }), {
+      extractionJob: 'queued',
+    });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tile-chip')?.textContent).toContain('Queued');
+  });
+});

@@ -124,6 +124,35 @@
   font-weight: 500;
 }
 
+.tile-chips {
+  min-height: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.tile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: kt.$kt-text-xs;
+  color: kt.$kt-text-muted;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: kt.$kt-fill;
+
+  &.tile-warn {
+    color: kt.$kt-warning;
+    font-weight: 500;
+    background: transparent;
+  }
+
+  .spinner {
+    width: 10px;
+    height: 10px;
+    border-width: 1.5px;
+  }
+}
+
 .menu-shield {
   position: fixed;
   inset: 0;

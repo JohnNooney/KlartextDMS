@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { DocumentType, ExtractionRecord, ExtractionState } from '@klartext/bus-contract';
 import KeyTakeawayCard from './KeyTakeawayCard.vue';
 
@@ -66,6 +66,16 @@ const jobInFlight = computed(
   () => props.extractionState === 'queued' || props.extractionState === 'running',
 );
 
+// The failed re-analysis banner is dismissible (#32); a new failure after
+// another retry re-shows it.
+const bannerDismissed = ref(false);
+watch(
+  () => props.extractionState,
+  (state) => {
+    if (state !== 'failed') bannerDismissed.value = false;
+  },
+);
+
 function reanalyze(): void {
   menuOpen.value = false;
   emit('reanalyze');
@@ -124,13 +134,24 @@ function reanalyze(): void {
       Re-analyzing…
     </p>
     <div
-      v-else-if="extractionState === 'failed'"
+      v-else-if="extractionState === 'failed' && !bannerDismissed"
       class="mt-kt-4 flex items-start justify-between gap-kt-3 rounded-kt-md border border-kt-warning bg-kt-warning-tint p-kt-3 text-kt-sm"
+      role="status"
     >
       <p>Couldn't re-analyze — showing the result from {{ analyzedAt }}.</p>
-      <button type="button" class="shrink-0 font-medium underline" @click="reanalyze">
-        Try again
-      </button>
+      <div class="flex shrink-0 items-center gap-kt-2">
+        <button type="button" class="font-medium underline" @click="reanalyze">
+          Try again
+        </button>
+        <button
+          type="button"
+          aria-label="Dismiss warning"
+          class="rounded-kt-sm px-kt-1 text-kt-text-muted hover:bg-kt-fill"
+          @click="bannerDismissed = true"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+        </button>
+      </div>
     </div>
 
     <p class="mt-kt-4 text-kt-base leading-relaxed">{{ extraction.plainEnglishSummary }}</p>

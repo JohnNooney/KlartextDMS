@@ -14,6 +14,11 @@
           <span>{{ toast.body }}</span>
         }
       </div>
+      @if (toast.action; as action) {
+        <button type="button" class="toast-action" (click)="toasts.activate(toast.id)">
+          {{ action.label }}
+        </button>
+      }
       <button type="button" class="toast-close" (click)="toasts.dismiss(toast.id)" [attr.aria-label]="'Dismiss ' + toast.title">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
       </button>

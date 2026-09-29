@@ -9,6 +9,14 @@ import { OpenDocument } from '../open-document';
 import { ToastService } from '../toasts/toast.service';
 
 /**
+ * Runtime Extraction Job state (issues #31/#32): `queued`/`running` come from
+ * the Bus, `failed` is set the moment the outcome arrives so the UI flips
+ * straight to the retry affordance. Never persisted — `running` survives no
+ * reload — and `failed` counts as handled for the auto-enqueue rule.
+ */
+export type ExtractionJobState = 'queued' | 'running' | 'failed';
+
+/**
  * The Document library's state seam (issues #16, #28): owns the live document
  * feed, in-flight upload progress, the per-state tile actions, and the
  * delete/orchestration rules — cancel jobs, navigate back, toast. UI components
@@ -32,6 +40,13 @@ export class LibraryStore {
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   /** Documents whose delete failed — the ⋮ menu offers **Retry delete**. */
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
+  /**
+   * Per-Document runtime Extraction Job state (issue #32) — the tile chips and
+   * the in-flight guards. Written by `ExtractionFlow`; never persisted.
+   */
+  readonly extractionJobs = signal<ReadonlyMap<string, ExtractionJobState>>(new Map());
+  /** Documents holding a stored Extraction — no failure badge for these (#32). */
+  readonly extractionStored = signal<ReadonlySet<string>>(new Set());
   /** The open Document record — only while the open id resolves to `ready`. */
   readonly openDoc = computed(() => {
     const doc = this.docById(this.openDocument.docId());
@@ -160,6 +175,28 @@ export class LibraryStore {
 
   close(): void {
     this.openDocument.close();
+  }
+
+  /** Records a Document's runtime Extraction Job state (chips, guards). */
+  setExtractionJob(documentId: string, state: ExtractionJobState): void {
+    this.extractionJobs.update((map) => new Map(map).set(documentId, state));
+  }
+
+  /** Clears a Document's runtime job state — its outcome is resolved. */
+  clearExtractionJob(documentId: string): void {
+    this.extractionJobs.update((map) => {
+      if (!map.has(documentId)) return map;
+      const next = new Map(map);
+      next.delete(documentId);
+      return next;
+    });
+  }
+
+  /** Marks a Document as holding a stored Extraction (no failure badge). */
+  markExtractionStored(documentId: string): void {
+    this.extractionStored.update((set) =>
+      set.has(documentId) ? set : new Set(set).add(documentId),
+    );
   }
 
   private startUpload(file: File, folderId: string | null): Promise<void> {

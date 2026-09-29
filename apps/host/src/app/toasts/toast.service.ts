@@ -6,11 +6,18 @@ import { Injectable, signal } from '@angular/core';
  */
 export type ToastTone = 'success' | 'info' | 'error';
 
+/** A toast's inline verb — View on completion, Try again on failure (#32). */
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface Toast {
   id: number;
   tone: ToastTone;
   title: string;
   body?: string;
+  action?: ToastAction;
 }
 
 const TOAST_MS = 6500;
@@ -30,5 +37,13 @@ export class ToastService {
 
   dismiss(id: number): void {
     this.toasts.update((toasts) => toasts.filter((t) => t.id !== id));
+  }
+
+  /** Runs a toast's action, if any, and dismisses the toast. */
+  activate(id: number): void {
+    const toast = this.toasts().find((t) => t.id === id);
+    if (!toast) return;
+    toast.action?.run();
+    this.dismiss(id);
   }
 }

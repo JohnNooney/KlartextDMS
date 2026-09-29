@@ -11,7 +11,11 @@ export type TileAction =
   | 'rename'
   | 'move'
   | 'download'
+  | 'retry-extraction'
   | 'delete';
+
+/** The runtime Extraction Job states a tile can wear a chip for (issue #32). */
+export type TileExtractionJob = 'queued' | 'running' | 'failed';
 
 interface MenuItem {
   action: TileAction;
@@ -56,6 +60,10 @@ export class DocumentTile {
   readonly canRetry = input(false);
   /** A delete failed, leaving `deleting` — ⋮ offers **Retry delete**. */
   readonly deleteFailed = input(false);
+  /** The runtime Extraction Job state; `null` falls back to a recorded failure (#32). */
+  readonly extractionJob = input<TileExtractionJob | null>(null);
+  /** The Document holds a stored Extraction — suppresses the failure badge (#32). */
+  readonly hasExtraction = input(false);
 
   readonly opened = output<void>();
   readonly action = output<TileAction>();
@@ -66,6 +74,10 @@ export class DocumentTile {
   protected readonly dropHover = signal(false);
 
   protected readonly openable = computed(() => this.doc().status === 'ready');
+  /** Runtime job state, or `failed` while a recorded failure stands (#32). */
+  protected readonly chipJob = computed(
+    () => this.extractionJob() ?? (this.doc().extractionFailure ? 'failed' : null),
+  );
   protected readonly progressPct = computed(() =>
     Math.round((this.progress() ?? 0) * 100),
   );
@@ -80,6 +92,10 @@ export class DocumentTile {
         return [{ action: 'cancel-upload', label: 'Cancel upload' }];
       case 'ready':
         return [
+          // A failed analysis with nothing stored offers the retry (#32).
+          ...(this.chipJob() === 'failed' && !this.hasExtraction()
+            ? [{ action: 'retry-extraction' as TileAction, label: 'Retry analysis' }]
+            : []),
           { action: 'rename', label: 'Rename' },
           { action: 'move', label: 'Move to…' },
           { action: 'download', label: 'Download' },

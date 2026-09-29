@@ -32,8 +32,29 @@
   }
   @case ('ready') {
     <span class="tile-meta">{{ createdLabel() | date: 'd MMM yyyy' }}</span>
-    <!-- Extraction chips land here with the lifecycle-UX issue (#32). -->
-    <span class="tile-chips"></span>
+    <!-- Extraction chips per the job state table (#32); a stored Extraction
+         suppresses the failure badge. -->
+    <span class="tile-chips">
+      @switch (chipJob()) {
+        @case ('queued') {
+          <span class="tile-chip">Queued</span>
+        }
+        @case ('running') {
+          <span class="tile-chip">
+            <span class="spinner" aria-hidden="true"></span>
+            Analyzing…
+          </span>
+        }
+        @case ('failed') {
+          @if (!hasExtraction()) {
+            <span class="tile-chip tile-warn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 4.6 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0zM12 9.5v4M12 16.8v.2"/></svg>
+              Couldn't analyze
+            </span>
+          }
+        }
+      }
+    </span>
   }
   @case ('failed') {
     <span class="tile-meta tile-warn">
@@ -84,6 +105,9 @@
           }
           @case ('download') {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5v11M7.5 11 12 15.5 16.5 11M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+          }
+          @case ('retry-extraction') {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v3h-3"/></svg>
           }
           @case ('delete') {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 6.5h15M9.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v1.5M6.5 6.5l.9 12a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-12"/></svg>

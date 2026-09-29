@@ -36,4 +36,24 @@ describe('ToastService', () => {
     vi.advanceTimersByTime(10_000);
     expect(toasts.toasts()).toHaveLength(0);
   });
+
+  // Issue #32: toasts carry an optional action — View on completion,
+  // Try again on failure.
+  it('runs a toast action on demand and dismisses the toast', () => {
+    const toasts = setup();
+    const run = vi.fn();
+    const id = toasts.show({ tone: 'success', title: 'x', action: { label: 'View', run } });
+    expect(toasts.toasts()[0]?.action).toMatchObject({ label: 'View' });
+
+    toasts.activate(id);
+    expect(run).toHaveBeenCalledOnce();
+    expect(toasts.toasts()).toHaveLength(0);
+  });
+
+  it('activating a toast without an action only dismisses it', () => {
+    const toasts = setup();
+    const id = toasts.show({ tone: 'info', title: 'x' });
+    toasts.activate(id);
+    expect(toasts.toasts()).toHaveLength(0);
+  });
 });

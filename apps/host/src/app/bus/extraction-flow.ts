@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, effect, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, effect, inject } from '@angular/core';
 import type {
   ExtractionCandidate,
   ExtractionError,
@@ -13,21 +13,12 @@ import type { DocumentRecord } from '../data/document';
 import type { DocumentRepository } from '../data/document-repository';
 import type { ExtractionRepository } from '../data/extraction-repository';
 import { DOCUMENT_REPOSITORY, EXTRACTION_REPOSITORY } from '../data/providers';
-import { LibraryStore } from '../library/library.store';
+import { LibraryStore, type ExtractionJobState } from '../library/library.store';
 import { OpenDocument } from '../open-document';
 import { ToastService } from '../toasts/toast.service';
 import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
 import type { HostBusProbe } from './host-bus.adapter';
-
-/**
- * Runtime job state — `queued`/`running` come from the Bus, `failed` is set
- * the moment the outcome arrives so the open Session flips straight to the
- * retry affordance instead of flickering `none` until the failure record's
- * snapshot lands. `failed` also counts as "handled" for the auto-enqueue
- * rule — a failure is never requeued without an explicit retry.
- */
-type JobState = 'queued' | 'running' | 'failed';
 
 /** What the panel is presumed to show — resends only on a real change. */
 interface SentSession {
@@ -64,8 +55,6 @@ export class ExtractionFlow implements HostBusProbe {
   private readonly bus = inject(HostBus);
   private readonly toasts = inject(ToastService);
 
-  /** Per-Document job state this session — runtime only, never persisted. */
-  private readonly jobStates = signal<ReadonlyMap<string, JobState>>(new Map());
   /** Extraction Records resolved this session — the Session builder's read-through cache. */
   private readonly extractionCache = new Map<string, ExtractionRecord>();
   /** Ready Documents the auto-enqueue rule already handled this load. */
@@ -86,7 +75,7 @@ export class ExtractionFlow implements HostBusProbe {
         docId === null
           ? null
           : (this.store.documents()?.find((d) => d.id === docId) ?? null);
-      void this.refreshSession(doc, this.jobStates().get(docId ?? ''), this.auth.user());
+      void this.refreshSession(doc, this.store.extractionJobs().get(docId ?? ''), this.auth.user());
     });
   }
 
@@ -117,7 +106,14 @@ export class ExtractionFlow implements HostBusProbe {
     void this.recordFailure(document.documentId, error);
     if (this.open.docId() !== document.documentId) {
       const title = this.docById(document.documentId)?.title ?? document.documentTitle;
-      this.toasts.show({ tone: 'error', title: `Couldn't analyze ${title}` });
+      this.toasts.show({
+        tone: 'error',
+        title: `Couldn't analyze ${title}`,
+        action: {
+          label: 'Try again',
+          run: () => this.retryRequested(document.documentId),
+        },
+      });
     }
   }
 
@@ -129,7 +125,9 @@ export class ExtractionFlow implements HostBusProbe {
   retryRequested(documentId: string): boolean {
     const doc = this.docById(documentId);
     // A queued/running job needs no second enqueue — the retry is a no-op.
-    const inFlight = ['queued', 'running'].includes(this.jobStates().get(documentId) ?? '');
+    const inFlight = ['queued', 'running'].includes(
+      this.store.extractionJobs().get(documentId) ?? '',
+    );
     if (doc && doc.status === 'ready' && !inFlight) void this.retry(doc);
     return true;
   }
@@ -140,20 +138,31 @@ export class ExtractionFlow implements HostBusProbe {
     for (const doc of documents) {
       if (doc.status !== 'ready' || this.handled.has(doc.id)) continue;
       this.handled.add(doc.id);
-      // A recorded failure is never auto-requeued — retry clears it manually.
-      if (doc.extractionFailure) continue;
-      void this.enqueueIfMissing(doc.id);
+      void this.classify(doc);
     }
   }
 
-  private async enqueueIfMissing(documentId: string): Promise<void> {
+  /**
+   * One ready Document per load: resolves whether it holds a stored Extraction
+   * (the chips' no-badge rule, #32) and auto-enqueues when it does not — a
+   * recorded failure is never auto-requeued, `running` is never persisted.
+   */
+  private async classify(doc: DocumentRecord): Promise<void> {
     try {
-      if (this.jobStates().has(documentId)) return;
-      if ((await this.extractions.get(documentId)) !== null) return;
-      if (this.jobStates().has(documentId)) return;
-      await this.enqueue(documentId);
+      const record = await this.extractions.get(doc.id);
+      if (record) {
+        this.extractionCache.set(doc.id, record);
+        this.store.markExtractionStored(doc.id);
+        return;
+      }
+      if (doc.extractionFailure) return;
+      if (this.store.extractionJobs().has(doc.id)) return;
+      await this.enqueue(doc.id);
     } catch (err) {
-      console.warn('[extraction] could not check job for', documentId, err);
+      // Release the slot: a transient read failure must not cost the
+      // Document its auto-enqueue for the rest of the session.
+      this.handled.delete(doc.id);
+      console.warn('[extraction] could not check job for', doc.id, err);
     }
   }
 
@@ -168,7 +177,11 @@ export class ExtractionFlow implements HostBusProbe {
     } catch (err) {
       this.clearJobState(doc.id);
       console.warn('[extraction] retry could not enqueue', doc.id, err);
-      this.toasts.show({ tone: 'error', title: `Couldn't analyze ${doc.title}`, body: 'Try again.' });
+      this.toasts.show({
+        tone: 'error',
+        title: `Couldn't analyze ${doc.title}`,
+        action: { label: 'Try again', run: () => this.retryRequested(doc.id) },
+      });
     }
   }
 
@@ -182,7 +195,11 @@ export class ExtractionFlow implements HostBusProbe {
     } catch (err) {
       this.clearJobState(documentId);
       console.warn('[extraction] could not enqueue job for', documentId, err);
-      this.toasts.show({ tone: 'error', title: `Couldn't analyze ${doc.title}`, body: 'Try again.' });
+      this.toasts.show({
+        tone: 'error',
+        title: `Couldn't analyze ${doc.title}`,
+        action: { label: 'Try again', run: () => this.retryRequested(documentId) },
+      });
     }
   }
 
@@ -197,7 +214,8 @@ export class ExtractionFlow implements HostBusProbe {
         (await this.extractions.get(documentId)) ??
         ({ ...candidate, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } } as ExtractionRecord);
       this.extractionCache.set(documentId, record);
-      this.clearJobState(documentId);
+      this.store.markExtractionStored(documentId);
+      this.store.clearExtractionJob(documentId);
       const doc = this.docById(documentId);
       if (doc && this.open.docId() === documentId) {
         // The adapter already resent INIT_SESSION with the result — mark that
@@ -209,7 +227,18 @@ export class ExtractionFlow implements HostBusProbe {
           extraction: record,
         };
       } else {
-        this.toasts.show({ tone: 'success', title: `"${doc?.title ?? documentId}" is ready` });
+        this.toasts.show({
+          tone: 'success',
+          title: `"${doc?.title ?? documentId}" is ready`,
+          action: {
+            label: 'View',
+            run: () => {
+              // Resolved at click time — the Document may have been deleted.
+              const current = this.docById(documentId);
+              if (current) this.open.open({ id: current.id, folderId: current.folderId });
+            },
+          },
+        });
       }
     } catch (err) {
       // A failed Firestore write is a Host-side error, not a Bus concern (#7):
@@ -236,7 +265,7 @@ export class ExtractionFlow implements HostBusProbe {
 
   private async refreshSession(
     doc: DocumentRecord | null,
-    jobState: JobState | undefined,
+    jobState: ExtractionJobState | undefined,
     user: SessionUser | null | undefined,
   ): Promise<void> {
     const seq = ++this.refreshSeq;
@@ -282,17 +311,12 @@ export class ExtractionFlow implements HostBusProbe {
 
   // -- helpers ----------------------------------------------------------------
 
-  private setJobState(documentId: string, state: JobState): void {
-    this.jobStates.update((map) => new Map(map).set(documentId, state));
+  private setJobState(documentId: string, state: ExtractionJobState): void {
+    this.store.setExtractionJob(documentId, state);
   }
 
   private clearJobState(documentId: string): void {
-    this.jobStates.update((map) => {
-      if (!map.has(documentId)) return map;
-      const next = new Map(map);
-      next.delete(documentId);
-      return next;
-    });
+    this.store.clearExtractionJob(documentId);
   }
 
   private docById(documentId: string): DocumentRecord | undefined {
