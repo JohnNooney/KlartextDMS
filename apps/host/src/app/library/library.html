@@ -37,9 +37,33 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
         <span class="btn-upload-label">Upload</span>
       </button>
-      <button type="button" class="btn-add" (click)="openUpload()" aria-label="Upload document">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
-      </button>
+      <!-- The + affordance (mobile only) opens the add menu — the toolbar's
+           two creation verbs in one place (issue #59). -->
+      <span class="add-wrap">
+        <button
+          type="button"
+          class="btn-add"
+          (click)="toggleAddMenu()"
+          aria-label="Add"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="addMenuOpen()"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
+        </button>
+        @if (addMenuOpen()) {
+          <button type="button" class="menu-shield" (click)="closeAddMenu()" aria-hidden="true" tabindex="-1"></button>
+          <div class="menu" role="menu" aria-label="Add">
+            <button type="button" class="menu-item" role="menuitem" (click)="pickAdd('upload')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+              <span>Upload document</span>
+            </button>
+            <button type="button" class="menu-item" role="menuitem" (click)="pickAdd('new-folder')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5zM12 11v5M9.5 13.5h5"/></svg>
+              <span>New folder</span>
+            </button>
+          </div>
+        }
+      </span>
     </div>
   </header>
 

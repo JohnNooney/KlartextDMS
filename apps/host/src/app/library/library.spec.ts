@@ -395,4 +395,68 @@ describe('Library', () => {
     fixture.detectChanges();
     expect(el.querySelector('.back-btn')).toBeTruthy();
   });
+
+  // The + affordance's add menu (issue #59): on phone widths the toolbar's two
+  // creation verbs collapse into a single + that opens a menu — the standalone
+  // New folder pill is desktop-only now.
+
+  it('+ opens a menu offering Upload document and New folder', async () => {
+    const { fixture, el } = await setup();
+    (el.querySelector('.btn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const items = [...el.querySelectorAll<HTMLElement>('.library-toolbar [role="menuitem"]')].map((i) =>
+      i.textContent!.trim(),
+    );
+    expect(items).toEqual(['Upload document', 'New folder']);
+  });
+
+  it('add menu → Upload document opens the upload dialog and closes the menu', async () => {
+    const { fixture, el } = await setup();
+    (el.querySelector('.btn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const item = [...el.querySelectorAll<HTMLElement>('.library-toolbar [role="menuitem"]')].find((i) =>
+      i.textContent!.includes('Upload document'),
+    )!;
+    item.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-upload-dialog')).toBeTruthy();
+    expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+  });
+
+  it('add menu → New folder opens the folder-name dialog and closes the menu', async () => {
+    const { fixture, el } = await setup();
+    (el.querySelector('.btn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const item = [...el.querySelectorAll<HTMLElement>('.library-toolbar [role="menuitem"]')].find((i) =>
+      i.textContent!.includes('New folder'),
+    )!;
+    item.click();
+    fixture.detectChanges();
+
+    const dialog = el.querySelector('app-folder-name-dialog');
+    expect(dialog?.textContent).toContain('New folder');
+    expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+  });
+
+  it('Escape and the shield dismiss the add menu without acting', async () => {
+    const { fixture, el } = await setup();
+    (el.querySelector('.btn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.library-toolbar [role="menu"]')).toBeTruthy();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+    expect(el.querySelector('app-upload-dialog')).toBeNull();
+
+    (el.querySelector('.btn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (el.querySelector('.menu-shield') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+  });
 });

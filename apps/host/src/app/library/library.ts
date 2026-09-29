@@ -53,6 +53,9 @@ type DialogState =
     FolderNameDialog,
     FolderDeleteDialog,
   ],
+  host: {
+    '(document:keydown.escape)': 'closeAddMenu()',
+  },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
   providers: [...provideDocumentData(), ExtractionFlow],
@@ -93,6 +96,26 @@ export class Library {
   protected back(): void {
     const target = this.backTarget();
     if (target !== undefined) this.openFolder(target);
+  }
+
+  /**
+   * The + affordance's menu (issue #59): on phone widths the toolbar's two
+   * creation verbs — upload and New folder — collapse into this one menu,
+   * leaving the navigation row just ‹ parent and +.
+   */
+  protected readonly addMenuOpen = signal(false);
+
+  protected toggleAddMenu(): void {
+    this.addMenuOpen.update((open) => !open);
+  }
+
+  protected closeAddMenu(): void {
+    this.addMenuOpen.set(false);
+  }
+
+  protected pickAdd(kind: 'upload' | 'new-folder'): void {
+    this.addMenuOpen.set(false);
+    this.dialog.set(kind === 'upload' ? { kind: 'upload' } : { kind: 'new-folder' });
   }
 
   protected openUpload(): void {

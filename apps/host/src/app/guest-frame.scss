@@ -44,11 +44,14 @@
     border-top: 1px solid kt.$kt-border;
     border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
     transition: height 0.2s ease;
+    // viewport-fit=cover: the sheet extends under the home indicator, so its
+    // bottom inset is padding rather than content (issue #59).
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 
     // Peek is just the chrome — grab-handle strip plus the minimal header —
     // so the PDF stays essentially unobstructed.
     &[data-sheet='peek'] {
-      height: kt.$kt-sheet-peek-height;
+      height: calc(#{kt.$kt-sheet-peek-height} + env(safe-area-inset-bottom, 0px));
     }
 
     &[data-sheet='half'] {
