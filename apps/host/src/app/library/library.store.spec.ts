@@ -30,6 +30,9 @@ class FakeDocumentRepository implements DocumentRepository {
   /** Parks upload tasks until `releaseGated()`; they report half progress. */
   gated = false;
   failNextDelete = false;
+  /** Parks `create` after its metadata lands (and emits) until `releaseCreate()`. */
+  gateCreate = false;
+  private createGate: (() => void) | null = null;
 
   private seq = 0;
   private readonly pending = new Map<string, (cancelled: boolean) => void>();
@@ -68,6 +71,7 @@ class FakeDocumentRepository implements DocumentRepository {
     this.records.set(id, record);
     this.calls.push(`create:${id}`);
     this.emit();
+    if (this.gateCreate) await new Promise<void>((resolve) => (this.createGate = resolve));
     return { ...record };
   }
 
@@ -149,6 +153,11 @@ class FakeDocumentRepository implements DocumentRepository {
       },
       result,
     };
+  }
+
+  releaseCreate(): void {
+    this.createGate?.();
+    this.createGate = null;
   }
 
   releaseGated(): void {
@@ -716,6 +725,25 @@ describe('LibraryStore', () => {
       expect(repository.calls).toContain(`cancel:${id}`);
       expect(repository.records.size).toBe(0);
       expect(folderRepository.records.size).toBe(0);
+    });
+
+    it('an upload whose metadata is still landing never sends bytes into a deleted tree', async () => {
+      const { store, repository, folderRepository, toasts } = setup();
+      const a = await folderRepository.seed('A');
+      await untilFolders(store, (f) => f.length === 1);
+      repository.gateCreate = true;
+      store.uploadFiles([pdfFile()], a);
+      await until(store, (d) => d[0]?.status === 'uploading');
+      const id = store.documents()![0]!.id;
+
+      await store.deleteFolder(a);
+      repository.releaseCreate();
+      await flush();
+
+      expect(repository.calls).not.toContain(`bytes:${id}`);
+      expect(repository.records.size).toBe(0);
+      expect(folderRepository.records.size).toBe(0);
+      expect(toasts.toasts().map((t) => t.title)).not.toContain('Upload failed');
     });
 
     it('leaves a browsed Folder that is deleting or gone for its parent', async () => {

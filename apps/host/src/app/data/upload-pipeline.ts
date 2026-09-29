@@ -41,6 +41,13 @@ export class UploadCancelledError extends Error {
 
 export class UploadPipeline {
   private readonly live = new Map<string, DocumentUpload>();
+  /** Each live task's settled completion — `delete` awaits it after cancelling. */
+  private readonly settling = new Map<string, Promise<unknown>>();
+  /**
+   * Documents deleted this session: an upload whose metadata was still
+   * landing when the delete ran must never start sending bytes (issue #33).
+   */
+  private readonly deleted = new Set<string>();
   /**
    * The `File` behind each in-session upload (issue #16): a `failed` Document
    * can be retried through ⋮ → Retry upload only while the session holds the
@@ -76,6 +83,8 @@ export class UploadPipeline {
       sizeBytes: file.size,
       folderId: options.folderId ?? null,
     });
+    // Deleted while `create` was in flight — the delete already tore it down.
+    if (this.deleted.has(record.id)) throw new UploadCancelledError(record.id);
     return this.run(record.id, file, options);
   }
 
@@ -102,6 +111,13 @@ export class UploadPipeline {
    * reconciliation) re-runs the teardown to completion.
    */
   async delete(documentId: string): Promise<void> {
+    this.deleted.add(documentId);
+    // Stop a live upload and let its cancel scrub settle before tearing down.
+    const task = this.live.get(documentId);
+    if (task) {
+      task.cancel();
+      await this.settling.get(documentId);
+    }
     try {
       await this.documents.setStatus(documentId, 'deleting');
     } catch (err) {
@@ -135,14 +151,14 @@ export class UploadPipeline {
         options.onProgress?.(documentId, totalBytes > 0 ? bytesTransferred / totalBytes : 1),
     );
     this.live.set(documentId, task);
-    return {
-      documentId,
-      completion: task.result.then(
-        () => this.markReady(documentId),
-        (err: unknown) => this.recover(documentId, err),
-      ),
-      cancel: () => task.cancel(),
-    };
+    const completion = task.result.then(
+      () => this.markReady(documentId),
+      (err: unknown) => this.recover(documentId, err),
+    );
+    const settled = completion.catch(() => undefined);
+    this.settling.set(documentId, settled);
+    void settled.then(() => this.settling.delete(documentId));
+    return { documentId, completion, cancel: () => task.cancel() };
   }
 
   private async markReady(documentId: string): Promise<void> {

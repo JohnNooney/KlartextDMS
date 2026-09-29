@@ -82,8 +82,6 @@ export class LibraryStore {
   );
 
   private reconciled = false;
-  /** Live upload completions by Document id — awaited when a Folder delete cancels them. */
-  private readonly uploads = new Map<string, Promise<void>>();
   private foldersReconciled = false;
 
   constructor() {
@@ -239,9 +237,6 @@ export class LibraryStore {
     );
     try {
       for (const doc of documents) this.bus.cancelJobsFor(doc.id);
-      // In-flight uploads are cancelled and settled first, so their own
-      // cancel scrub can't race the teardown below.
-      for (const doc of documents) await this.settleUpload(doc.id);
       for (const doc of documents) await this.pipeline.delete(doc.id);
       for (const id of folderIds) await this.folderRepository.delete(id);
       this.failedFolderDeletes.update((set) => without(set, folderId));
@@ -250,13 +245,6 @@ export class LibraryStore {
       this.failedFolderDeletes.update((set) => new Set(set).add(folderId));
       this.toasts.show({ tone: 'error', title: `Couldn't delete ${name}`, body: 'Try again.' });
     }
-  }
-
-  private async settleUpload(documentId: string): Promise<void> {
-    const completion = this.uploads.get(documentId);
-    if (!completion) return;
-    this.pipeline.cancel(documentId);
-    await completion.catch(() => undefined);
   }
 
   /** Files picked in the upload dialog or dropped on the grid (#16). */
@@ -409,7 +397,7 @@ export class LibraryStore {
 
   private track(handle: UploadHandle, filename: string): void {
     const documentId = handle.documentId;
-    const settled = handle.completion.then(
+    handle.completion.then(
       () => {
         this.clearProgress(documentId);
         this.toasts.show({ tone: 'success', title: `Uploaded ${filename}` });
@@ -422,11 +410,11 @@ export class LibraryStore {
         }
       },
     );
-    this.uploads.set(documentId, settled);
-    void settled.finally(() => this.uploads.delete(documentId));
   }
 
   private notifyUploadRejection(err: unknown, filename: string): void {
+    // Deleted before its bytes started (#33) — as silent as a cancel.
+    if (err instanceof UploadCancelledError) return;
     if (err instanceof InvalidDocumentFileError) {
       this.toasts.show({ tone: 'error', title: err.message, body: filename });
     } else {
