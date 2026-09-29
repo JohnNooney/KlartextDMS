@@ -81,6 +81,40 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
   await expect(expand()).toHaveAttribute('aria-expanded', 'false');
 });
 
+// Issue #62: the grab bar is draggable — the sheet tracks the pointer, then
+// snaps to the nearest detent on release. A real drag must not also fire the
+// handle's tap-to-cycle.
+test('dragging the handle snaps the sheet to the nearest detent', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+
+  const vh = page().viewportSize()!.height;
+
+  /** Presses the handle's centre and drags to clientY, pausing before the
+   *  release so the settle is a snap-to-nearest, not a flick. */
+  async function dragSheetTo(clientY: number): Promise<void> {
+    const box = (await page().locator('.sheet-handle').boundingBox())!;
+    await page().mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page().mouse.down();
+    await page().mouse.move(box.x + box.width / 2, clientY, { steps: 12 });
+    await page().waitForTimeout(200);
+    await page().mouse.up();
+  }
+
+  // Up to ~55% open — nearest detent is half; the release's click is eaten.
+  await dragSheetTo(vh * 0.45);
+  await expect(sheet()).toHaveAttribute('data-sheet', 'half');
+  await expectNoOverlap(page());
+  await expectSheetHeight(vh * 0.4, vh * 0.6);
+
+  // To the top — full — then back to the bottom — peek.
+  await dragSheetTo(vh * 0.05);
+  await expect(sheet()).toHaveAttribute('data-sheet', 'full');
+  await dragSheetTo(vh * 0.97);
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  await expect(expand()).toHaveAttribute('aria-expanded', 'false');
+});
+
 test('opening another Document rests the sheet back at peek', async () => {
   await page().goto('/folder/kranken/doc/doc-versicherungsschein');
   await expand().tap();
