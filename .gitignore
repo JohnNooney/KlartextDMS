@@ -178,3 +178,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Playwright (issue #34)
+e2e/test-results/
+e2e/playwright-report/

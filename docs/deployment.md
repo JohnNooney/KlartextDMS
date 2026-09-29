@@ -20,8 +20,8 @@ The Guest renders in the Host's `<iframe>`, so the two are genuinely cross-origi
                     │                   ║  (iframe, x-origin  │
                     │                   ║   by port)          │
                     └───────────────────╨─────────────────────┘
- e2e                Hosting emulator: Host :5000 (first site in
-                    firebase.json), Guest :5005 (auto-assigned
+ e2e                Hosting emulator: Host :5050 (first site in
+                    firebase.json), Guest :5055 (auto-assigned
                     convention — see ADR 0004 escape hatch)
  preview            klartext-host--pr-N-<hash>.web.app
                     klartext-guest--pr-N-<hash>.web.app
@@ -38,7 +38,7 @@ All environments share the project's Auth / Firestore / Storage / AI Logic — e
   "storage": { "rules": "storage.rules" },
   "hosting": [
     {
-      "target": "host",                       // site order matters: first = :5000
+      "target": "host",                       // site order matters: first = :5050
       "public": "apps/host/dist/<browser>",   // Angular output dir
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
       "headers": [{
@@ -64,7 +64,7 @@ All environments share the project's Auth / Firestore / Storage / AI Logic — e
     }
   ],
   "emulators": {
-    "hosting": { "port": 5000 }
+    "hosting": { "port": 5050 }
     // auth/firestore/storage ports per emulator defaults
   }
 }
@@ -93,7 +93,7 @@ Each app learns the other's origin differently:
 | Environment | `guestOrigin` | `useEmulators` | Source of `config.json` |
 |---|---|---|---|
 | dev | `http://localhost:5173` | true | committed `config.json`, overlaid by gitignored `config.local.json` (App Check debug token from `.env`, written by `pnpm start`'s `prestart` hook) |
-| e2e | `http://localhost:5005` | true | e2e variant written by the test run |
+| e2e | `http://localhost:5055` | true | e2e variant written by the test run |
 | preview | captured Guest channel URL | false | CI overwrites before Host deploy (including `appCheckDebugToken` from the GitHub secret) |
 | production | `https://klartext-guest.web.app` | false | committed `config.production.json` (`appCheckSiteKey` + `allowedEmails` — the sign-in allowlist, mirrored by the rules `isAllowedUser()`) |
 
@@ -145,7 +145,7 @@ The three gate jobs live in the reusable `.github/workflows/ci.yml` (`workflow_c
 
 - `checks`: pnpm install → `pnpm -r --if-present lint` (no lint tooling yet — `typecheck` is the static gate) → unit tests.
 - `rules+integration`: `pnpm test:integration` — `firebase emulators:exec` over the seed plus each package's `test:integration`, where emulator-backed repository tests and the `@firebase/rules-unit-testing` suite accumulate.
-- `e2e`: placeholder that builds both apps; #34 swaps in `emulators:exec` + Playwright chromium.
+- `e2e`: `pnpm e2e` — `pnpm build:e2e` (the e2e Environment builds), then `firebase emulators:exec --only auth,firestore,storage,hosting` over the seed plus `pnpm test:e2e` (Playwright, chromium, Guest via `frameLocator`).
 
 - **On PR** (`firebase-hosting-pull-request.yml`): gates → preview deploy — **Guest channel first** (`channelId: pr-<n>`), capture its URL, write it into the Host's `config.json`, build and deploy the **Host channel**. The deploy action posts each preview URL on the PR.
 - **On merge to main** (`firebase-hosting-merge.yml`): gates → production `config.json` → `firebase deploy` — both sites' live channels plus `firestore.rules`/`storage.rules`.

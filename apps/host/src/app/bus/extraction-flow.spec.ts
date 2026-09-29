@@ -367,6 +367,35 @@ describe('ExtractionFlow — Extraction Job orchestration (issue #31)', () => {
     expect(bus.openSession).toHaveBeenCalledTimes(1);
   });
 
+  // A fast provider answers before the `running` Session goes out — success
+  // lands before the effect runs, or while its refresh is still awaiting. The
+  // adapter has already resent the result, so a late `running` would stick.
+  it.each([
+    ['before the running refresh starts', false],
+    ['while the running refresh is in flight', true],
+  ])('a job that succeeds %s never sends a stale running Session', async (_, refreshStarted) => {
+    const { repository, bus, flow, open, tick } = setup();
+    const doc = await repository.seed({ status: 'ready' });
+    tick();
+    await flush();
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+    expect(sessions(bus).at(-1)).toMatchObject({ extractionState: 'queued' });
+
+    flow.jobStarted('job-1', jobDocument(doc.id));
+    if (refreshStarted) tick();
+    flow.jobSucceeded('job-1', candidate(doc.id));
+    tick();
+    await flush();
+    tick();
+    await flush();
+
+    expect(sessions(bus).map((s) => s.extractionState)).not.toContain('running');
+    // The adapter's resend is the panel's final state — the flow adds nothing.
+    expect(sessions(bus).map((s) => s.extractionState)).toEqual(['queued']);
+  });
+
   it('toasts on a background job\'s success and failure, not when open', async () => {
     const { repository, extractions, bus, flow, open, toasts, tick } = setup();
     const openDoc = await repository.seed({ status: 'ready', title: 'open doc' });

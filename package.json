@@ -13,6 +13,9 @@
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "test:integration": "firebase emulators:exec --only auth,firestore,storage \"node scripts/seed.mjs && pnpm -r --if-present test:integration\"",
+    "build:e2e": "node scripts/build-e2e.mjs",
+    "test:e2e": "pnpm --filter @klartext/e2e test:e2e",
+    "e2e": "pnpm build:e2e && firebase emulators:exec --only auth,firestore,storage,hosting \"node scripts/seed.mjs && pnpm test:e2e\"",
     "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {

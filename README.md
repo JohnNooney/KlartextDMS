@@ -47,8 +47,11 @@ pnpm dev          # Host :4200 + Guest :5173 + Auth/Firestore/Storage emulators 
 pnpm test         # unit/smoke suites across apps and packages
 pnpm build        # build both apps
 pnpm seed         # regenerate emulator-data/ from scripts/seed.mjs
-pnpm emulators    # full emulator suite incl. Hosting emulator (:5000/:5005)
+pnpm emulators    # full emulator suite incl. Hosting emulator (:5050/:5055)
+pnpm e2e          # e2e build, then Playwright under firebase emulators:exec (seeded)
 ```
+
+**E2E:** `pnpm e2e` builds both apps for the e2e Environment (`pnpm build:e2e`: Guest with `VITE_USE_FIREBASE_EMULATORS`/`VITE_FAKE_AI_PROVIDER`, Host `config.json` pointing at the Guest on :5055) and runs `firebase emulators:exec --only auth,firestore,storage,hosting "node scripts/seed.mjs && pnpm test:e2e"`. First run needs `pnpm --filter @klartext/e2e exec playwright install chromium`. To iterate, keep `firebase emulators:start --only auth,firestore,storage,hosting` running, `node scripts/seed.mjs` once, and rerun `pnpm test:e2e` (optionally with a spec path via `pnpm --filter @klartext/e2e exec playwright test tests/<file>`).
 
 The emulator suite is seeded with the demo Auth user `test-user@test.com` / `test1234`, the prototype Folder tree, and three fixture Documents. The Guest loads inside the Host's iframe on :4200 — sign in with the seed credentials (the Email/Password form shows only under `useEmulators`).
 
@@ -56,7 +59,7 @@ The emulator suite is seeded with the demo Auth user `test-user@test.com` / `tes
 
 **Node/Angular note:** the workspace pins Node 20 LTS, so the Host uses Angular 21 — the newest major whose toolchain still supports Node 20 (Angular 22 requires ≥22.22).
 
-**macOS port note:** the Hosting emulator's :5000 collides with the AirPlay Receiver. `pnpm dev` doesn't need it (dev uses ng/vite); for `pnpm emulators` or the e2e Hosting flow either disable AirPlay Receiver (System Settings → General → AirDrop & Handoff) or remap the port in `firebase.json`.
+**macOS port note:** the Hosting emulator runs on :5050 (Guest auto-assigned :5055) because the default :5000 collides with macOS's AirPlay Receiver.
 
 ## Working on this repo
 

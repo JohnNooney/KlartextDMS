@@ -11,7 +11,7 @@ Host and Guest deploy as two Firebase Hosting sites in `klartext-b836c` — `kla
 - **One site serving `host/` and `guest/` paths.** Rejected: same-origin, defeats the cross-origin constraint that motivates the project.
 - **Build-time env files for the Guest origin.** Rejected: preview channel URLs carry a per-site random hash (`SITE--CHANNEL-HASH.web.app`) that cannot be baked into a build; a uniform runtime `config.json` covers all four Environments with one mechanism.
 - **Guest `frame-ancestors` with exact origins only** (strict live config, CI-generated relaxed config for previews). Rejected: a second source of truth for little real protection in a personal app; the Bus allow-list carries the security load.
-- **Pin both Hosting emulator ports explicitly.** Not possible: firebase-tools only exposes the first site's port; later sites auto-assign (~+5). Accepted as convention — Host first in the `firebase.json` array → :5000, Guest → :5005 — with the emulator hub API (`localhost:4400/emulators`) as the escape hatch if assignment ever shifts.
+- **Pin both Hosting emulator ports explicitly.** Not possible: firebase-tools only exposes the first site's port; later sites auto-assign (~+5). Accepted as convention — Host first in the `firebase.json` array → :5050, Guest → :5055 (moved off the default :5000 in #34: macOS's AirPlay Receiver holds it) — with the emulator hub API (`localhost:4400/emulators`) as the escape hatch if assignment ever shifts.
 - **Custom domains.** Rejected: `*.web.app` suffices for a personal project; revisitable later without changing the topology.
 
 ## Consequences

@@ -2,8 +2,7 @@
 # jobs must pass before a preview deploy and before a live deploy. Suites
 # accumulate in place: the bus-contract conformance suite joins `checks` (#24),
 # emulator-backed repository tests and the @firebase/rules-unit-testing suite
-# join `rules+integration` (#27), Playwright replaces the `e2e` placeholder
-# (#34).
+# join `rules+integration` (#27), and the Playwright suite runs in `e2e` (#34).
 name: CI gates
 
 on:
@@ -41,19 +40,29 @@ jobs:
     name: e2e
     runs-on: ubuntu-latest
     env:
-      # App Check debug tokens (#21), needed at build time once the App Check
-      # SDK lands in the apps (#25/#26).
+      # App Check debug tokens (#21), baked into the e2e builds by
+      # scripts/build-e2e.mjs (Host config.json / Guest build-time env).
       KLARTEXT_HOST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_HOST_DEBUG_TOKEN }}
       KLARTEXT_GUEST_DEBUG_TOKEN: ${{ secrets.KLARTEXT_GUEST_DEBUG_TOKEN }}
-      # The e2e Environment runs the built apps against the emulators — the
-      # Guest takes the flag as a build-time env var (#26) — and stubs Gemini
-      # with the seeded fixture Extractions (#30: deterministic, offline, free).
-      VITE_USE_FIREBASE_EMULATORS: 'true'
-      VITE_FAKE_AI_PROVIDER: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # Placeholder until #34: builds both apps for the Hosting emulator. Then:
-      #   firebase emulators:exec --only auth,firestore,storage,hosting 'pnpm test:e2e'
-      # (Playwright, chromium only, Guest via frameLocator).
-      - run: pnpm build
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: pnpm --filter @klartext/e2e exec playwright install --with-deps chromium
+      # Playwright suite (#34): `pnpm build:e2e` builds the apps for the e2e
+      # Environment — Guest with VITE_USE_FIREBASE_EMULATORS/VITE_FAKE_AI_PROVIDER
+      # (#30: deterministic, offline, free), Host config.json → Guest :5055 —
+      # then `firebase emulators:exec --only auth,firestore,storage,hosting`
+      # seeds and runs `pnpm test:e2e` (chromium, Guest via frameLocator).
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
