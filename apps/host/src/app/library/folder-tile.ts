@@ -37,7 +37,7 @@ interface MenuItem {
     '(dragover)': 'onDragOver($event)',
     '(dragleave)': 'dropHover.set(false)',
     '(drop)': 'onDrop($event)',
-    '(document:keydown.escape)': 'menuOpen.set(false)',
+    '(document:keydown.escape)': 'closeMenu()',
   },
 })
 export class FolderTile {
@@ -86,6 +86,12 @@ export class FolderTile {
     event.stopPropagation();
     this.menuOpen.set(false);
     this.action.emit(item.action);
+  }
+
+  /** Shield/Escape dismiss — the shield's click must not reach the tile's own open handler (#64). */
+  protected closeMenu(event?: Event): void {
+    event?.stopPropagation();
+    this.menuOpen.set(false);
   }
 
   protected onDragStart(event: DragEvent): void {

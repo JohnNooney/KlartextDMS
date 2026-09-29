@@ -135,7 +135,9 @@ export class DocumentTile {
     this.action.emit(item.action);
   }
 
-  protected closeMenu(): void {
+  /** Shield/Escape dismiss — the shield's click must not reach the tile's own open handler (#64). */
+  protected closeMenu(event?: Event): void {
+    event?.stopPropagation();
     this.menuOpen.set(false);
   }
 

@@ -1,4 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { DialogViewport } from './dialog-viewport';
 
 export interface FolderNameResult {
   name: string;
@@ -16,6 +17,7 @@ export interface FolderNameResult {
   selector: 'app-folder-name-dialog',
   templateUrl: './folder-name-dialog.html',
   styleUrl: './dialogs.scss',
+  imports: [DialogViewport],
   host: {
     '(document:keydown.escape)': 'closed.emit()',
   },

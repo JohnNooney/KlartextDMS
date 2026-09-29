@@ -75,6 +75,25 @@ describe('FolderTile (issue #33)', () => {
     expect(fixture.nativeElement.querySelector('.menu')).toBeNull();
   });
 
+  it('the shield dismisses the menu without opening the Folder (issue #64)', async () => {
+    const fixture = await setup(folder());
+    const el = fixture.nativeElement as HTMLElement;
+    const opened = vi.fn();
+    fixture.componentInstance.opened.subscribe(opened);
+
+    openMenu(fixture);
+    expect(el.querySelector('.menu')).toBeTruthy();
+
+    (el.querySelector('.menu-shield') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('.menu')).toBeNull();
+    expect(opened).not.toHaveBeenCalled();
+
+    el.click();
+    expect(opened).toHaveBeenCalledOnce();
+  });
+
   it('shows the name and a deep-count badge; clicking opens the Folder', async () => {
     const fixture = await setup(folder(), { documentCount: 7, folderCount: 3 });
     const el = fixture.nativeElement as HTMLElement;

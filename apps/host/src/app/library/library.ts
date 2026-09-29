@@ -7,6 +7,7 @@ import { OpenDocument } from '../open-document';
 import { Reader } from '../reader/reader';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
+import { describeContents } from './folder-contents';
 import { FolderDeleteDialog } from './folder-delete-dialog';
 import { isItemDrag, type DragItem } from './folder-drag';
 import { FolderNameDialog, type FolderNameResult } from './folder-name-dialog';
@@ -70,6 +71,7 @@ export class Library {
 
   protected readonly dropHover = signal(false);
   protected readonly openDocument = inject(OpenDocument);
+  protected readonly describeContents = describeContents;
   protected readonly title = computed(
     () => this.store.folderById(this.openDocument.folderId())?.name ?? 'Documents',
   );

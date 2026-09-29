@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import type { DocumentRecord } from '../data/document';
+import { DialogViewport } from './dialog-viewport';
 
 /**
  * Delete confirmation (issue #16): "Delete {title}? This permanently removes
@@ -9,6 +10,7 @@ import type { DocumentRecord } from '../data/document';
   selector: 'app-delete-dialog',
   templateUrl: './delete-dialog.html',
   styleUrl: './dialogs.scss',
+  imports: [DialogViewport],
   host: {
     '(document:keydown.escape)': 'closed.emit()',
   },
