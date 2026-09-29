@@ -96,6 +96,10 @@
 }
 
 .pdf-sheet {
+  // Auto margins, not align-items, do the centring (issue #66): once the sheet
+  // is wider than the stage they collapse to 0, so it start-aligns and the
+  // left edge stays scrollable — centred centring would clip it off-screen.
+  margin-inline: auto;
   background: #fff;
   box-shadow: kt.$kt-shadow-raised;
   border-radius: 2px;

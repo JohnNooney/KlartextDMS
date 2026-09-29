@@ -59,3 +59,44 @@ test('the viewer pages through a multi-page Document', async () => {
   await prev.click();
   await expect(pageNo).toHaveText('2 / 3');
 });
+
+// Journey (issue #66): a page zoomed wider than the stage must keep its left
+// edge on-screen — the sheet start-aligns once it overflows, so the stage
+// scrolls right instead of centring the overflow off the reachable region.
+test('a zoomed page keeps its left edge on-screen and scrolls right', async () => {
+  await browseRoot(page());
+  await page().getByRole('button', { name: 'Expand Verträge' }).click();
+  await page().getByRole('treeitem', { name: 'Wohnung' }).click();
+  await tile(page(), 'Mietvertrag 2024').click();
+  await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
+
+  const zoom = page().getByRole('button', { name: 'Zoom in' });
+  const stage = page().locator('.pdf-stage');
+  const sheet = page().locator('.pdf-sheet');
+
+  // Zoom until the sheet is wider than the stage (each click re-renders async).
+  for (let i = 0; i < 12; i++) {
+    if (await zoom.isDisabled()) break;
+    const [s, w] = await Promise.all([stage.boundingBox(), sheet.boundingBox()]);
+    if (s && w && w.width > s.width) break;
+    await zoom.click();
+    await page().waitForTimeout(150);
+  }
+
+  const [stageBox, sheetBox] = await Promise.all([stage.boundingBox(), sheet.boundingBox()]);
+  expect(sheetBox!.width).toBeGreaterThan(stageBox!.width);
+  // The left edge starts inside the stage — nothing clipped, scroll origin.
+  expect(sheetBox!.x).toBeGreaterThanOrEqual(stageBox!.x - 1);
+
+  // …and the right edge is reachable by scrolling right.
+  await stage.evaluate((el) => {
+    el.scrollLeft = el.scrollWidth;
+  });
+  const [scrolledSheet, scrolledStage] = await Promise.all([
+    sheet.boundingBox(),
+    stage.boundingBox(),
+  ]);
+  expect(scrolledSheet!.x + scrolledSheet!.width).toBeLessThanOrEqual(
+    scrolledStage!.x + scrolledStage!.width + 1,
+  );
+});
