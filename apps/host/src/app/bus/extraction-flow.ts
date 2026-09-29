@@ -94,6 +94,25 @@ export class ExtractionFlow implements HostBusProbe {
   }
 
   jobSucceeded(_jobId: string, extraction: ExtractionCandidate): void {
+    const documentId = extraction.documentId;
+    const doc = this.docById(documentId);
+    if (doc && this.open.docId() === documentId) {
+      // The adapter has just resent the open Document's Session with this
+      // result. Mirror that resend so the Session flow dedupes against what
+      // the panel shows, and drop any refresh still in flight from before it
+      // (e.g. `running`) — a late stale Session would stick on the panel.
+      this.refreshSeq++;
+      const shown = { ...extraction, createdAt: nowTimestamp() } as ExtractionRecord;
+      this.extractionCache.set(documentId, shown);
+      this.lastSent = {
+        documentId,
+        documentTitle: doc.title,
+        extractionState: 'none',
+        extraction: shown,
+      };
+    }
+    // The outcome is in: the job is no longer running, even while persisting.
+    this.clearJobState(documentId);
     void this.persist(extraction);
   }
 
@@ -212,7 +231,7 @@ export class ExtractionFlow implements HostBusProbe {
       await this.extractions.save(documentId, candidate);
       const record =
         (await this.extractions.get(documentId)) ??
-        ({ ...candidate, createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } } as ExtractionRecord);
+        ({ ...candidate, createdAt: nowTimestamp() } as ExtractionRecord);
       this.extractionCache.set(documentId, record);
       this.store.markExtractionStored(documentId);
       this.store.clearExtractionJob(documentId);
@@ -322,6 +341,10 @@ export class ExtractionFlow implements HostBusProbe {
   private docById(documentId: string): DocumentRecord | undefined {
     return this.store.documents()?.find((d) => d.id === documentId);
   }
+}
+
+function nowTimestamp(): ExtractionRecord['createdAt'] {
+  return { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
 }
 
 function toJobDocument(doc: DocumentRecord): JobDocument {

@@ -27,7 +27,7 @@ knowledge:
     contents: |
       pnpm test — Vitest in both apps + packages
       pnpm test:integration — emulator-backed repository and rules tests
-      firebase emulators:exec --only auth,firestore,storage,hosting 'pnpm test:e2e' — Playwright e2e
+      pnpm e2e — e2e builds, then firebase emulators:exec --only auth,firestore,storage,hosting "node scripts/seed.mjs && pnpm test:e2e" (Playwright e2e)
   - name: orientation
     contents: |
       Read CONTEXT.md (domain vocabulary), docs/spec.md (build order + invariants),
