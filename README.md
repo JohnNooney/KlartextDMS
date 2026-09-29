@@ -12,8 +12,8 @@ Live at [klartext-host.web.app](https://klartext-host.web.app) — single-user d
 ![A Document open in the reader beside its Extraction — Critical Warnings under "Needs your attention"](docs/screenshots/reader.png)
 
 | Library — Documents filed in nested Folders | Reader on a phone — insights sheet resting at peek |
-| --- | --- |
-| ![The library: Folder tree and Document tiles](docs/screenshots/library.png) | ![The reader on a phone: PDF above the insights sheet handle](docs/screenshots/mobile.png) |
+| :---: | :---: |
+| <img alt="The library: Folder tree and Document tiles" src="docs/screenshots/library.png" height="300"> | <img alt="The reader on a phone: PDF above the insights sheet handle" src="docs/screenshots/mobile.png" height="300"> |
 
 Screenshots regenerate deterministically with `pnpm screenshots` — the same seeded-emulator harness as the e2e suite.
 
