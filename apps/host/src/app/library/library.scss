@@ -45,6 +45,32 @@
   flex-shrink: 0;
 }
 
+// ‹ up a level inside a Folder — mobile only; the desktop sidebar tree
+// navigates instead (issue #55). Mirrors the reader's .back-btn.
+.back-btn {
+  display: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 kt.$kt-space-2 0 0;
+  border: 0;
+  border-radius: kt.$kt-radius-sm;
+  background: transparent;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-base;
+  min-width: 0;
+  flex-shrink: 1;
+
+  &:hover {
+    background: kt.$kt-accent-tint;
+  }
+
+  .back-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 .library-title {
   margin: 0;
   font-size: kt.$kt-text-xl;
@@ -143,8 +169,16 @@
 }
 
 @media (max-width: 768px) {
+  .back-btn {
+    display: inline-flex;
+  }
+
   .library-title {
     font-size: kt.$kt-text-2xl;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .btn-upload {
