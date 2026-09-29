@@ -21,6 +21,7 @@ const TOKENS = [
   '--kt-shadow-panel', '--kt-shadow-raised', '--kt-shadow-popover',
   '--kt-sidebar-width', '--kt-list-width', '--kt-insights-width',
   '--kt-toolbar-height', '--kt-control-height', '--kt-touch-target',
+  '--kt-sheet-peek-height',
 ];
 
 const SPEC_VALUES: Record<string, string> = {

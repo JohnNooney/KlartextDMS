@@ -65,4 +65,6 @@
   --kt-toolbar-height: 52px;
   --kt-control-height: 32px;
   --kt-touch-target: 44px;
+  /* Mobile sheet's peek detent: grab-handle strip plus the minimal header. */
+  --kt-sheet-peek-height: calc(var(--kt-touch-target) + var(--kt-control-height));
 }

@@ -24,12 +24,13 @@
   border: 0;
 }
 
-// The sheet handle is a mobile-only affordance.
-.sheet-handle {
+// The sheet handle and peek header are mobile-only affordances.
+.sheet-handle,
+.sheet-head {
   display: none;
 }
 
-// ---------- Mobile (≤768px): half-height bottom sheet, expandable (#29) ----------
+// ---------- Mobile (≤768px): bottom sheet with peek/half/full detents (#50) ----------
 @media (max-width: 768px) {
   .guest-frame-host {
     display: flex;
@@ -39,13 +40,22 @@
     right: 0;
     bottom: 0;
     width: auto;
-    height: 50%;
     border-left: 0;
     border-top: 1px solid kt.$kt-border;
     border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
     transition: height 0.2s ease;
 
-    &.is-full {
+    // Peek is just the chrome — grab-handle strip plus the minimal header —
+    // so the PDF stays essentially unobstructed.
+    &[data-sheet='peek'] {
+      height: kt.$kt-sheet-peek-height;
+    }
+
+    &[data-sheet='half'] {
+      height: 50%;
+    }
+
+    &[data-sheet='full'] {
       height: 100%;
       border-radius: 0;
     }
@@ -53,9 +63,14 @@
 
   // Grab-handle strip in the sheet chrome (issue #49): its own row above the
   // iframe — never overlaid on Guest content — and a full-width touch target.
+  // The pill's chevron points where a tap moves the sheet; the dots beneath
+  // mark the current detent, making the state legible from the handle (#50).
   .sheet-handle {
-    display: grid;
-    place-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     flex-shrink: 0;
     width: 100%;
     height: kt.$kt-touch-target;
@@ -72,6 +87,37 @@
       border-radius: 999px;
       background: kt.$kt-fill;
     }
+
+    .sheet-dots {
+      display: flex;
+      gap: 4px;
+
+      > span {
+        width: 4px;
+        height: 4px;
+        border-radius: 999px;
+        background: kt.$kt-fill-strong;
+
+        &.is-active {
+          background: kt.$kt-text-muted;
+        }
+      }
+    }
+  }
+
+  // The minimal header — only visible at peek, where it names the panel so
+  // the Extraction stays discoverable while the iframe is clipped away.
+  .guest-frame-host[data-sheet='peek'] .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    height: kt.$kt-control-height;
+    font-size: kt.$kt-text-xs;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: kt.$kt-text-faint;
   }
 
   .guest-frame {

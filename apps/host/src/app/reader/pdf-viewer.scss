@@ -186,3 +186,11 @@
 .pdf-error-actions .btn-secondary {
   text-decoration: none;
 }
+
+// ---------- Mobile (≤768px): clear the peeking insights sheet (issue #50) ----------
+@media (max-width: 768px) {
+  .pdf-stage {
+    // The extra gap keeps the last page's tail from resting under the peek chrome.
+    padding-bottom: calc(#{kt.$kt-sheet-peek-height} + #{kt.$kt-space-4});
+  }
+}
