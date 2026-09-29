@@ -1,16 +1,24 @@
 <!-- Mounted once while signed in and kept mounted hidden for background
      Extraction Jobs (issues #16, #25); displays while a Document is open —
-     right-hand lane on desktop, a half-height bottom sheet on mobile (#29). -->
-<div class="guest-frame-host" [hidden]="docOpen() === null" [class.is-full]="sheetFull()">
+     right-hand lane on desktop, a bottom sheet on mobile (#29) with three
+     snap detents — peek, half, full — resting at peek so the PDF stays
+     primary (issue #50). -->
+<div class="guest-frame-host" [hidden]="docOpen() === null" [attr.data-sheet]="sheetState()">
   <button
     type="button"
     class="sheet-handle"
-    (click)="sheetFull.set(!sheetFull())"
-    [attr.aria-expanded]="sheetFull()"
-    [attr.aria-label]="sheetFull() ? 'Collapse insights panel' : 'Expand insights panel'"
+    (click)="cycleSheet()"
+    [attr.aria-expanded]="sheetState() !== 'peek'"
+    [attr.aria-label]="sheetLabel()"
   >
-    <span class="handle-pill" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="sheetFull() ? 'm6 9.5 6 6 6-6' : 'm6 14.5 6-6 6 6'"/></svg></span>
+    <span class="handle-pill" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="chevronPath()"/></svg></span>
+    <span class="sheet-dots" aria-hidden="true">
+      <span [class.is-active]="sheetIndex() === 0"></span>
+      <span [class.is-active]="sheetIndex() === 1"></span>
+      <span [class.is-active]="sheetIndex() === 2"></span>
+    </span>
   </button>
+  <div class="sheet-head" aria-hidden="true">Insights</div>
   <iframe
     #frame
     class="guest-frame"

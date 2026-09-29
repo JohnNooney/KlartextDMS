@@ -1,9 +1,10 @@
 import { devices, expect, test, type Page } from '@playwright/test';
 import { guestPanel, signedInPage } from './support';
 
-// Journey (issue #49): on a phone-sized viewport the insights sheet's grab
-// handle lives in its own strip — the chevron points where the sheet will
-// move, and no Guest content hides under it.
+// Journey (issue #50): on a phone-sized viewport the insights sheet rests at
+// peek — the grab-handle strip plus a minimal header over an unobstructed
+// PDF — and the handle cycles it through peek → half → full → peek. The
+// handle never covers Guest content (issue #49).
 const page = signedInPage({ ...devices['iPhone 13'] });
 
 /** The handle strip shares no pixels with the iframe it sits above — one
@@ -13,33 +14,79 @@ async function expectNoOverlap(page: Page): Promise<void> {
   const boxes = await page.evaluate(() => {
     const handle = document.querySelector('.sheet-handle')!.getBoundingClientRect();
     const frame = document.querySelector('iframe.guest-frame')!.getBoundingClientRect();
-    return { handleBottom: handle.bottom, handleHeight: handle.height, frameTop: frame.top };
+    return {
+      handleBottom: handle.bottom,
+      handleHeight: handle.height,
+      frameTop: frame.top,
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
   });
   // --kt-touch-target (packages/theme/tokens.css) is the >=44px AC.
   expect(boxes.handleHeight).toBeGreaterThanOrEqual(44);
   expect(boxes.handleBottom).toBeLessThanOrEqual(boxes.frameTop + 0.5);
+  expect(boxes.overflowX).toBeLessThanOrEqual(0);
 }
 
-test('the handle strip points where the sheet will move and never covers the Guest', async () => {
+const sheet = () => page().locator('.guest-frame-host');
+const expand = () => page().getByRole('button', { name: 'Expand insights panel', exact: true });
+const expandFull = () =>
+  page().getByRole('button', { name: 'Expand insights panel to full screen' });
+const collapse = () => page().getByRole('button', { name: 'Collapse insights panel' });
+
+/** Asserts the sheet's rendered height — retries while the height transition settles. */
+async function expectSheetHeight(min: number, max: number): Promise<void> {
+  await expect(async () => {
+    const box = await sheet().boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(min);
+    expect(box!.height).toBeLessThanOrEqual(max);
+  }).toPass();
+}
+
+test('the sheet rests at peek and the handle cycles it through the detents', async () => {
   await page().goto('/folder/wohnung/doc/doc-mietvertrag');
 
   const frame = page().locator('iframe[title="Klartext insights panel"]');
-  const expand = page().getByRole('button', { name: 'Expand insights panel' });
-  await expect(frame).toBeVisible();
-  await expect(expand).toBeVisible();
-  await expect(expand).toHaveAttribute('aria-expanded', 'false');
+
+  // Peek: just the chrome — the strip plus the "Insights" header — so the
+  // PDF stays essentially unobstructed. The iframe stays mounted.
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  await expect(expand()).toBeVisible();
+  await expect(expand()).toHaveAttribute('aria-expanded', 'false');
+  await expect(page().locator('.sheet-head')).toHaveText('Insights');
+  await expect(frame).toBeAttached();
   await expectNoOverlap(page());
+  const viewport = page().viewportSize()!;
+  await expectSheetHeight(44, viewport.height * 0.15);
 
-  await expand.tap();
-
-  const collapse = page().getByRole('button', { name: 'Collapse insights panel' });
-  await expect(collapse).toHaveAttribute('aria-expanded', 'true');
+  // → half: about half the viewport, the Extraction readable.
+  await expand().tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'half');
+  await expect(expandFull()).toHaveAttribute('aria-expanded', 'true');
+  await expectSheetHeight(viewport.height * 0.4, viewport.height * 0.6);
   await expectNoOverlap(page());
   await expect(guestPanel(page()).getByRole('heading', { name: 'Mietvertrag 2024' })).toBeVisible();
 
-  await collapse.tap();
-  await expect(page().getByRole('button', { name: 'Expand insights panel' })).toHaveAttribute(
-    'aria-expanded',
-    'false',
-  );
+  // → full: the sheet fills the viewport.
+  await expandFull().tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'full');
+  await expect(collapse()).toHaveAttribute('aria-expanded', 'true');
+  await expectSheetHeight(viewport.height * 0.9, viewport.height);
+  await expectNoOverlap(page());
+  await expect(guestPanel(page()).getByRole('heading', { name: 'Mietvertrag 2024' })).toBeVisible();
+
+  // → back to peek.
+  await collapse().tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  await expect(expand()).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('opening another Document rests the sheet back at peek', async () => {
+  await page().goto('/folder/kranken/doc/doc-versicherungsschein');
+  await expand().tap();
+  await expandFull().tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'full');
+
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
 });

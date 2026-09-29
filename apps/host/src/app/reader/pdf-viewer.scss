@@ -186,3 +186,14 @@
 .pdf-error-actions .btn-secondary {
   text-decoration: none;
 }
+
+// ---------- Mobile (≤768px): clear the peeking insights sheet (#50) ----------
+@media (max-width: 768px) {
+  .pdf-stage {
+    // Peek chrome is --kt-touch-target + --kt-control-height tall; the extra
+    // gap keeps the last page's tail from resting under it.
+    padding-bottom: calc(
+      #{kt.$kt-touch-target} + #{kt.$kt-control-height} + #{kt.$kt-space-4}
+    );
+  }
+}

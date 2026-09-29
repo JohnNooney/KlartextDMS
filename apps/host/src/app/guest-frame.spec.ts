@@ -42,8 +42,23 @@ async function setup() {
   return { fixture, openDocument, el: fixture.nativeElement as HTMLElement };
 }
 
+function host(el: HTMLElement): HTMLElement {
+  return el.querySelector<HTMLElement>('.guest-frame-host')!;
+}
+
 function handle(el: HTMLElement): HTMLButtonElement {
   return el.querySelector<HTMLButtonElement>('.sheet-handle')!;
+}
+
+function detent(el: HTMLElement): string | null {
+  return host(el).getAttribute('data-sheet');
+}
+
+/** Index of the lit dot in the handle's detent indicator. */
+function activeDot(el: HTMLElement): number {
+  return [...el.querySelectorAll('.sheet-dots > span')].findIndex((d) =>
+    d.classList.contains('is-active'),
+  );
 }
 
 /** Reads the chevron path as three absolute points; the apex sits above or below the baseline. */
@@ -56,36 +71,80 @@ function chevronDirection(path: string): 'up' | 'down' {
   return apexY < y1 && apexY < farEndY ? 'up' : 'down';
 }
 
-describe('GuestFrame mobile sheet handle (issue #49)', () => {
-  it('collapsed: the chevron points up — the direction a tap moves the sheet', async () => {
+function chevron(el: HTMLElement): 'up' | 'down' {
+  return chevronDirection(handle(el).querySelector('path')!.getAttribute('d')!);
+}
+
+function tap(fixture: { detectChanges(): void }, el: HTMLElement): void {
+  handle(el).click();
+  fixture.detectChanges();
+}
+
+describe('GuestFrame mobile sheet detents (issue #50)', () => {
+  it('rests at peek when a Document opens — strip plus a minimal header over the PDF', async () => {
     const { el } = await setup();
+    expect(detent(el)).toBe('peek');
+
     const button = handle(el);
     expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(button.getAttribute('aria-label')).toContain('Expand');
-    expect(chevronDirection(button.querySelector('path')!.getAttribute('d')!)).toBe('up');
+    expect(chevron(el)).toBe('up');
+
+    // The minimal header is chrome above the iframe, keeping the Extraction
+    // discoverable while the sheet only covers a sliver of the reader.
+    const head = el.querySelector<HTMLElement>('.sheet-head')!;
+    expect(head.textContent).toContain('Insights');
+    const frame = el.querySelector<HTMLIFrameElement>('iframe.guest-frame')!;
+    expect(
+      head.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it('a tap expands the sheet and the chevron flips to down', async () => {
+  it('the handle cycles peek → half → full → peek', async () => {
     const { fixture, el } = await setup();
-    handle(el).click();
-    fixture.detectChanges();
+    expect(detent(el)).toBe('peek');
 
+    tap(fixture, el);
+    expect(detent(el)).toBe('half');
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
+    tap(fixture, el);
+    expect(detent(el)).toBe('peek');
+  });
+
+  it('the affordance reads the current detent and the direction a tap moves', async () => {
+    const { fixture, el } = await setup();
     const button = handle(el);
-    expect(el.querySelector('.guest-frame-host')!.classList.contains('is-full')).toBe(true);
+
+    // peek: one more tap goes up; first dot lit; collapsed to a11y.
+    expect(activeDot(el)).toBe(0);
+    expect(chevron(el)).toBe('up');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+
+    tap(fixture, el);
+    // half: still up (next is full); second dot lit; the sheet is expanded.
+    expect(activeDot(el)).toBe(1);
+    expect(chevron(el)).toBe('up');
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.getAttribute('aria-label')).toContain('full');
+
+    tap(fixture, el);
+    // full: the only way left is down, back to peek.
+    expect(activeDot(el)).toBe(2);
+    expect(chevron(el)).toBe('down');
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.getAttribute('aria-label')).toContain('Collapse');
-    expect(chevronDirection(button.querySelector('path')!.getAttribute('d')!)).toBe('down');
   });
 
-  it('a second tap collapses back to the half sheet', async () => {
-    const { fixture, el } = await setup();
-    handle(el).click();
-    fixture.detectChanges();
-    handle(el).click();
-    fixture.detectChanges();
+  it('opening another Document rests the sheet back at peek', async () => {
+    const { fixture, el, openDocument } = await setup();
+    tap(fixture, el);
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
 
-    expect(el.querySelector('.guest-frame-host')!.classList.contains('is-full')).toBe(false);
-    expect(handle(el).getAttribute('aria-expanded')).toBe('false');
+    openDocument.docId.set('doc-2');
+    fixture.detectChanges();
+    expect(detent(el)).toBe('peek');
   });
 
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {
@@ -94,6 +153,8 @@ describe('GuestFrame mobile sheet handle (issue #49)', () => {
     const frame = el.querySelector<HTMLIFrameElement>('iframe.guest-frame')!;
     // Siblings in flow — the handle is its own row, so it cannot cover Guest content.
     expect(button.parentElement).toBe(frame.parentElement);
-    expect(button.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      button.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
