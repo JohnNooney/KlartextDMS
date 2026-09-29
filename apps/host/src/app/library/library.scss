@@ -189,9 +189,10 @@
     display: grid;
   }
 
-  // Tiles become list rows (issue #29 mobile navigation).
+  // Tiles become list rows (issue #29 mobile navigation). minmax(0, …)
+  // keeps a long-titled row's min-content from widening the track (issue #47).
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .library-drop {

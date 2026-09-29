@@ -77,6 +77,32 @@ export async function browseRoot(page: Page): Promise<void> {
 export const toast = (page: Page, text: string): Locator =>
   page.getByRole('status').filter({ hasText: text });
 
+/**
+ * The shared mobile check (issue #47): nothing side-scrolls — not the page,
+ * and not any inner container (e.g. `.library-drop` computes
+ * `overflow-x: auto`, so a too-wide row would scroll inside it without ever
+ * growing `documentElement`). Reports the offending elements on failure.
+ * Elements that clip (`overflow-x: hidden/clip`, like an ellipsized title)
+ * are excluded — they truncate, not scroll.
+ */
+export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const offenders = await page.evaluate(() => {
+    const out: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('*')) {
+      const { overflowX } = getComputedStyle(el);
+      if (overflowX === 'hidden' || overflowX === 'clip') continue;
+      if (el.scrollWidth - el.clientWidth > 1) {
+        out.push(
+          `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}` +
+            `${el.className ? `.${String(el.className).trim().split(/\s+/).join('.')}` : ''}`,
+        );
+      }
+    }
+    return out;
+  });
+  expect(offenders).toEqual([]);
+}
+
 /** A tile in the library grid by its visible name. */
 export const tile = (page: Page, name: string): Locator =>
   page.locator('app-document-tile, app-folder-tile').filter({
@@ -89,12 +115,16 @@ export async function tileAction(page: Page, name: string, action: string): Prom
   await page.getByRole('menuitem', { name: action }).click();
 }
 
-/** Uploads PDFs through the toolbar's Upload dialog into the browsed Folder. */
+/**
+ * Uploads PDFs through the toolbar's Upload dialog into the browsed Folder.
+ * Desktop shows a labeled **Upload** button; on mobile it's the round **+**
+ * button (`Upload document`).
+ */
 export async function uploadViaDialog(
   page: Page,
   files: { name: string; buffer: Buffer }[],
 ): Promise<void> {
-  await page.getByRole('button', { name: 'Upload', exact: true }).click();
+  await page.getByRole('button', { name: /^Upload( document)?$/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Upload documents' });
   await dialog
     .locator('input[type="file"]')

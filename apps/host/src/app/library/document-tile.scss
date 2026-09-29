@@ -242,11 +242,23 @@
     padding: kt.$kt-space-2 kt.$kt-space-3;
     text-align: left;
     border-radius: kt.$kt-radius-md;
+    // The row is a grid item — let it shrink to the track, never force it
+    // wider than the viewport (issue #47).
+    min-width: 0;
+  }
+
+  // The ⋮ leaves its corner overlay and takes the row's last slot so it can
+  // never sit on top of — or get pushed off by — the trailing meta.
+  .tile-more {
+    position: static;
+    order: 1;
+    flex-shrink: 0;
   }
 
   .tile-thumb {
     height: 32px;
     align-items: center;
+    flex-shrink: 0;
 
     .doc-thumb {
       width: 26px;
@@ -256,10 +268,24 @@
 
   .tile-name {
     flex: 1;
-    -webkit-line-clamp: 1;
+    // Single-line ellipsis (issue #47): the name yields to the row's fixed
+    // slots instead of wrapping a second line or widening the row.
+    min-width: 0;
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
-  .tile-meta {
-    margin-left: auto;
+  // Date, chips, and ⋮ keep their size; the name is what gives.
+  .tile-meta,
+  .tile-chips {
+    flex-shrink: 0;
+  }
+
+  // …except the upload progress bar, which flexes instead of forcing 100%.
+  .tile-meta-progress {
+    flex: 1;
+    width: auto;
+    min-width: 0;
   }
 }
