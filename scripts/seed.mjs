@@ -49,6 +49,7 @@ const FOLDERS = [
   { id: 'behoerden', name: 'Behörden', parentId: null },
 ];
 
+// Fixture PDFs: regenerate with `node scripts/make-fixtures.mjs`.
 const fixture = (name) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)));
 

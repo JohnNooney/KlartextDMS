@@ -1,0 +1,15 @@
+{
+  "name": "users/seed-test-user/documents/doc-finanzamt.pdf",
+  "bucket": "klartext-b836c.firebasestorage.app",
+  "metageneration": 1,
+  "generation": 1790688929332,
+  "contentType": "application/pdf",
+  "storageClass": "STANDARD",
+  "downloadTokens": [],
+  "etag": "wuxkupC5q8f2Txz1i3z0jSSHfdY",
+  "timeCreated": "2026-09-29T13:35:29.332Z",
+  "updated": "2026-09-29T13:35:29.332Z",
+  "size": 2941,
+  "md5Hash": "SWNxVHttEay1hXMy2Osyfg==",
+  "crc32c": "2351198195"
+}

@@ -28,7 +28,7 @@ test('an uploaded PDF is analyzed in the background and opens beside its Extract
   await ready.getByRole('button', { name: 'View' }).click();
 
   await expect(page().locator('.reader .title-doc').first()).toHaveText(title);
-  await expect(page().getByRole('img', { name: 'Page 1 of 1' })).toBeVisible();
+  await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
   const panel = guestPanel(page());
   const fixture = goldenExtraction();
   await expect(panel.getByRole('heading', { level: 1, name: title })).toBeVisible();

@@ -22,7 +22,7 @@ test('a filed Document opens with its stored Extraction beside the PDF', async (
 
   await tile(page(), 'Mietvertrag 2024').click();
 
-  await expect(page().getByRole('img', { name: 'Page 1 of 1' })).toBeVisible();
+  await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
   const panel = guestPanel(page());
   const fixture = seededExtraction('doc-mietvertrag');
   await expect(panel.getByRole('heading', { level: 1, name: 'Mietvertrag 2024' })).toBeVisible();
