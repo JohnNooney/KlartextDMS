@@ -1,5 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type FrameLocator, type Locator, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type BrowserContextOptions,
+  type FrameLocator,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 
 /** The emulator seed user (scripts/seed.mjs). */
 export const SEED_USER = { uid: 'seed-test-user', email: 'test-user@test.com', password: 'test1234' } as const;
@@ -43,11 +50,11 @@ export async function signIn(page: Page): Promise<void> {
  * per file (issue #34). Call at the top of a spec file; the specs in that file
  * run serially against the returned page.
  */
-export function signedInPage(): () => Page {
+export function signedInPage(contextOptions?: BrowserContextOptions): () => Page {
   let page: Page;
   test.describe.configure({ mode: 'serial' });
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
+    page = await browser.newPage(contextOptions);
     await signIn(page);
   });
   test.afterAll(async () => {
