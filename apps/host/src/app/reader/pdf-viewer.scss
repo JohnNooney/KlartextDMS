@@ -187,13 +187,10 @@
   text-decoration: none;
 }
 
-// ---------- Mobile (≤768px): clear the peeking insights sheet (#50) ----------
+// ---------- Mobile (≤768px): clear the peeking insights sheet (issue #50) ----------
 @media (max-width: 768px) {
   .pdf-stage {
-    // Peek chrome is --kt-touch-target + --kt-control-height tall; the extra
-    // gap keeps the last page's tail from resting under it.
-    padding-bottom: calc(
-      #{kt.$kt-touch-target} + #{kt.$kt-control-height} + #{kt.$kt-space-4}
-    );
+    // The extra gap keeps the last page's tail from resting under the peek chrome.
+    padding-bottom: calc(#{kt.$kt-sheet-peek-height} + #{kt.$kt-space-4});
   }
 }

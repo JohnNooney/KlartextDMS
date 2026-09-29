@@ -13,12 +13,12 @@
   >
     <span class="handle-pill" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path [attr.d]="chevronPath()"/></svg></span>
     <span class="sheet-dots" aria-hidden="true">
-      <span [class.is-active]="sheetIndex() === 0"></span>
-      <span [class.is-active]="sheetIndex() === 1"></span>
-      <span [class.is-active]="sheetIndex() === 2"></span>
+      @for (i of [0, 1, 2]; track i) {
+        <span [class.is-active]="sheetIndex() === i"></span>
+      }
     </span>
   </button>
-  <div class="sheet-head" aria-hidden="true">Insights</div>
+  <div class="sheet-head">Insights</div>
   <iframe
     #frame
     class="guest-frame"

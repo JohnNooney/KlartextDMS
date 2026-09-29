@@ -48,7 +48,7 @@
     // Peek is just the chrome — grab-handle strip plus the minimal header —
     // so the PDF stays essentially unobstructed.
     &[data-sheet='peek'] {
-      height: calc(#{kt.$kt-touch-target} + #{kt.$kt-control-height});
+      height: kt.$kt-sheet-peek-height;
     }
 
     &[data-sheet='half'] {
