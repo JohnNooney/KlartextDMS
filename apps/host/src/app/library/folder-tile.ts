@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import type { FolderRecord } from '../data/folder';
+import { describeContents } from './folder-contents';
 import { isItemDrag, readDragItem, setDragItem, type DragItem } from './folder-drag';
 
 export type FolderTileAction = 'rename' | 'move' | 'delete' | 'retry-delete';
@@ -69,8 +70,7 @@ export class FolderTile {
     ];
   });
   protected readonly summary = computed(() => {
-    const docs = this.documentCount();
-    return `${docs} ${docs === 1 ? 'document' : 'documents'}`;
+    return describeContents(this.documentCount(), this.folderCount());
   });
 
   protected onTileClick(): void {

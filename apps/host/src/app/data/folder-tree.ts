@@ -14,7 +14,7 @@ export interface FolderNode {
   documents: DocumentRecord[];
   /** Documents at any depth below, excluding `deleting` ones. */
   deepDocumentCount: number;
-  /** Folders at any depth below. */
+  /** Folders at any depth below, excluding `deleting` ones. */
   deepFolderCount: number;
 }
 
@@ -52,7 +52,10 @@ export function buildFolderTree(
       deepDocumentCount:
         own.filter((d) => d.status !== 'deleting').length +
         children.reduce((sum, c) => sum + c.deepDocumentCount, 0),
-      deepFolderCount: children.reduce((sum, c) => sum + 1 + c.deepFolderCount, 0),
+      deepFolderCount: children.reduce(
+        (sum, c) => sum + (c.folder.status === 'deleting' ? 0 : 1) + c.deepFolderCount,
+        0,
+      ),
     };
   };
 

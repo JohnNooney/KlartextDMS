@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { describeContents } from './folder-contents';
 
 /**
  * Recursive Folder delete confirmation (issue #33): spells out the deep
@@ -23,8 +24,6 @@ export class FolderDeleteDialog {
     const docs = this.documentCount();
     const folders = this.folderCount();
     if (docs === 0 && folders === 0) return 'This folder is empty.';
-    const documents = `${docs} ${docs === 1 ? 'document' : 'documents'}`;
-    const subfolders = `${folders} ${folders === 1 ? 'folder' : 'folders'}`;
-    return `Contains ${documents} in ${subfolders} — all permanently deleted`;
+    return `Contains ${describeContents(docs, folders)} — all permanently deleted`;
   });
 }

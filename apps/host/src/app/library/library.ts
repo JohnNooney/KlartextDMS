@@ -11,7 +11,7 @@ import { FolderDeleteDialog } from './folder-delete-dialog';
 import { isItemDrag, type DragItem } from './folder-drag';
 import { FolderNameDialog, type FolderNameResult } from './folder-name-dialog';
 import { FolderTile, type FolderTileAction } from './folder-tile';
-import { FolderTree } from './folder-tree';
+import { FolderTreeView } from './folder-tree';
 import { MoveDialog } from './move-dialog';
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
@@ -44,7 +44,7 @@ type DialogState =
   imports: [
     DocumentTile,
     FolderTile,
-    FolderTree,
+    FolderTreeView,
     Reader,
     UploadDialog,
     RenameDialog,

@@ -1,5 +1,5 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
-import type { FolderNode, FolderTree as Tree } from '../data/folder-tree';
+import type { FolderNode, FolderTree } from '../data/folder-tree';
 import { isItemDrag, readDragItem, setDragItem, type DragItem } from './folder-drag';
 
 interface TreeRow {
@@ -24,8 +24,8 @@ interface TreeRow {
   templateUrl: './folder-tree.html',
   styleUrl: './folder-tree.scss',
 })
-export class FolderTree {
-  readonly tree = input.required<Tree>();
+export class FolderTreeView {
+  readonly tree = input.required<FolderTree>();
   /** The browsed Folder (`null` = root) — highlighted and revealed. */
   readonly selectedFolderId = input<string | null>(null);
   readonly openDocId = input<string | null>(null);

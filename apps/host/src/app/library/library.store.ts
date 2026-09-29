@@ -82,12 +82,15 @@ export class LibraryStore {
   );
 
   private reconciled = false;
+  /** Live upload completions by Document id — awaited when a Folder delete cancels them. */
+  private readonly uploads = new Map<string, Promise<void>>();
   private foldersReconciled = false;
 
   constructor() {
     const unwatchDocuments = this.repository.watch((documents) => this.onSnapshot(documents));
     const unwatchFolders = this.folderRepository.watch((folders) => {
       this.folders.set(folders);
+      this.leaveUnbrowsableFolder(folders);
       this.reconcileFolders();
     });
     inject(DestroyRef).onDestroy(() => {
@@ -129,6 +132,11 @@ export class LibraryStore {
   async dropItem(item: { kind: 'folder' | 'document'; id: string }, targetId: string | null) {
     if (item.kind === 'folder') await this.moveFolder(item.id, targetId);
     else if (this.docById(item.id)?.folderId !== targetId) await this.move(item.id, targetId);
+  }
+
+  /** A filing target must exist and not be mid-teardown (`null` = root). */
+  private acceptsItems(folderId: string | null): boolean {
+    return folderId === null || this.folderById(folderId)?.status === 'ready';
   }
 
   /** Whether a sibling Folder already uses `name` under `parentId` (case-insensitive). */
@@ -173,13 +181,14 @@ export class LibraryStore {
     if (!folder) return false;
     if (folder.parentId === targetId) return true;
     if (
+      !this.acceptsItems(targetId) ||
       !canMoveFolder(this.folders() ?? [], folderId, targetId) ||
       this.nameTaken(targetId, folder.name, folderId)
     ) {
       this.toasts.show({
         tone: 'error',
         title: 'Move failed',
-        body: 'A folder can\'t move into itself or a folder that already has that name.',
+        body: 'A folder can\'t move into itself, a folder being deleted, or next to one with the same name.',
       });
       return false;
     }
@@ -194,24 +203,24 @@ export class LibraryStore {
 
   /**
    * The confirmed recursive Folder delete (ADR 0005): leave the tree if the
-   * open Document or browsed Folder is inside it, mark the Folder `deleting`,
-   * then tear everything down.
+   * mark the Folder `deleting`, leave the tree if the open Document or browsed
+   * Folder is inside it, then tear everything down.
    */
   async deleteFolder(folderId: string): Promise<void> {
     const folder = this.folderById(folderId);
     if (!folder) return;
     const { folderIds } = folderSubtree(this.folders() ?? [], this.documents() ?? [], folderId);
-    const openDocFolder = this.docById(this.openDocument.docId())?.folderId ?? null;
-    if (this.openDocument.docId() !== null && openDocFolder !== null && folderIds.includes(openDocFolder)) {
-      this.openDocument.close(folder.parentId);
-    } else if (this.openDocument.folderId() !== null && folderIds.includes(this.openDocument.folderId()!)) {
-      this.openDocument.openFolder(folder.parentId);
-    }
     try {
       await this.folderRepository.update(folderId, { status: 'deleting' });
     } catch {
       this.toasts.show({ tone: 'error', title: `Couldn't delete ${folder.name}`, body: 'Try again.' });
       return;
+    }
+    const openDocFolder = this.docById(this.openDocument.docId())?.folderId ?? null;
+    if (openDocFolder !== null && folderIds.includes(openDocFolder)) {
+      this.openDocument.close(folder.parentId);
+    } else if (this.openDocument.folderId() !== null && folderIds.includes(this.openDocument.folderId()!)) {
+      this.openDocument.openFolder(folder.parentId);
     }
     await this.runFolderDelete(folderId, folder.name);
   }
@@ -230,6 +239,9 @@ export class LibraryStore {
     );
     try {
       for (const doc of documents) this.bus.cancelJobsFor(doc.id);
+      // In-flight uploads are cancelled and settled first, so their own
+      // cancel scrub can't race the teardown below.
+      for (const doc of documents) await this.settleUpload(doc.id);
       for (const doc of documents) await this.pipeline.delete(doc.id);
       for (const id of folderIds) await this.folderRepository.delete(id);
       this.failedFolderDeletes.update((set) => without(set, folderId));
@@ -238,6 +250,13 @@ export class LibraryStore {
       this.failedFolderDeletes.update((set) => new Set(set).add(folderId));
       this.toasts.show({ tone: 'error', title: `Couldn't delete ${name}`, body: 'Try again.' });
     }
+  }
+
+  private async settleUpload(documentId: string): Promise<void> {
+    const completion = this.uploads.get(documentId);
+    if (!completion) return;
+    this.pipeline.cancel(documentId);
+    await completion.catch(() => undefined);
   }
 
   /** Files picked in the upload dialog or dropped on the grid (#16). */
@@ -287,6 +306,10 @@ export class LibraryStore {
 
   /** ⋮ → Move to…: files the Document into `folderId` (`null` = root). */
   async move(documentId: string, folderId: string | null): Promise<void> {
+    if (!this.acceptsItems(folderId)) {
+      this.toasts.show({ tone: 'error', title: 'Move failed', body: 'That folder is being deleted.' });
+      return;
+    }
     try {
       await this.repository.setFolder(documentId, folderId);
     } catch {
@@ -386,7 +409,7 @@ export class LibraryStore {
 
   private track(handle: UploadHandle, filename: string): void {
     const documentId = handle.documentId;
-    handle.completion.then(
+    const settled = handle.completion.then(
       () => {
         this.clearProgress(documentId);
         this.toasts.show({ tone: 'success', title: `Uploaded ${filename}` });
@@ -399,6 +422,8 @@ export class LibraryStore {
         }
       },
     );
+    this.uploads.set(documentId, settled);
+    void settled.finally(() => this.uploads.delete(documentId));
   }
 
   private notifyUploadRejection(err: unknown, filename: string): void {
@@ -442,6 +467,20 @@ export class LibraryStore {
   }
 
   /**
+   * The browsed Folder went `deleting` or vanished (another tab, a deep link,
+   * reconcile) — step up to the nearest browsable ancestor, root at worst.
+   */
+  private leaveUnbrowsableFolder(folders: FolderRecord[]): void {
+    if (this.openDocument.docId() !== null) return;
+    const byId = new Map(folders.map((f) => [f.id, f]));
+    let target = this.openDocument.folderId();
+    while (target !== null && byId.get(target)?.status !== 'ready') {
+      target = byId.get(target)?.parentId ?? null;
+    }
+    if (target !== this.openDocument.folderId()) this.openDocument.openFolder(target);
+  }
+
+  /**
    * Startup reconciliation for Folders (ADR 0005): once both feeds have
    * landed, any Folder still `deleting` re-runs its recursive delete.
    */
@@ -449,8 +488,11 @@ export class LibraryStore {
     const folders = this.folders();
     if (this.foldersReconciled || folders === null || this.documents() === null) return;
     this.foldersReconciled = true;
+    // Only the top of each `deleting` subtree — its run covers the rest.
+    const deleting = new Set(folders.filter((f) => f.status === 'deleting').map((f) => f.id));
     for (const folder of folders) {
-      if (folder.status === 'deleting') void this.runFolderDelete(folder.id, folder.name, true);
+      const nested = folderAncestry(folders, folder.parentId).some((a) => deleting.has(a.id));
+      if (deleting.has(folder.id) && !nested) void this.runFolderDelete(folder.id, folder.name, true);
     }
   }
 

@@ -51,6 +51,12 @@ describe('buildFolderTree', () => {
     expect(a.folders[0]!.folders[0]!.deepFolderCount).toBe(0);
   });
 
+  it('deep Folder counts exclude deleting Folders', () => {
+    const gone = { ...folder('b', 'a'), status: 'deleting' as const };
+    const tree = buildFolderTree([folder('a', null), gone, folder('c', 'a')], []);
+    expect(tree.folders[0]!.deepFolderCount).toBe(1);
+  });
+
   it('treats a Folder with a missing parent as unreachable rather than throwing', () => {
     const tree = buildFolderTree([folder('x', 'ghost')], []);
     expect(tree.folders).toEqual([]);

@@ -2,13 +2,13 @@
  * Folder metadata schema (ADR 0005): the Firestore record at
  * `users/{uid}/folders/{folderId}`. Folders form a client-side adjacency
  * tree — the Host loads the whole collection and walks `parentId` links.
- * Read-only so far; the Folders issue (#33) adds the write side.
+ * Written through `FolderRepository` (issue #33); tree logic in `folder-tree.ts`.
  */
 import type { Timestamp } from '@klartext/bus-contract';
 
 export interface FolderRecord {
   id: string;
-  /** `name` is the display label; sibling names are unique per #20. */
+  /** `name` is the display label; sibling names are unique per ADR 0005. */
   name: string;
   /** `null` = root ("Documents"). */
   parentId: string | null;

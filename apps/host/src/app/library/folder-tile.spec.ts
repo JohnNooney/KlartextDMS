@@ -82,7 +82,9 @@ describe('FolderTile (issue #33)', () => {
     fixture.componentInstance.opened.subscribe(opened);
 
     expect(el.querySelector('.tile-name')?.textContent).toContain('Wohnung');
-    expect(el.textContent).toContain('7');
+    expect(el.querySelector('[data-testid="folder-count"]')?.textContent?.trim()).toBe(
+      '7 documents in 3 folders',
+    );
 
     el.click();
     expect(opened).toHaveBeenCalled();

@@ -669,6 +669,83 @@ describe('LibraryStore', () => {
       expect(store.failedFolderDeletes().has(a)).toBe(false);
     });
 
+    it('refuses to file a Document or Folder into a deleting Folder', async () => {
+      const { store, repository, folderRepository } = setup();
+      const target = await folderRepository.seed('Target', null, 'deleting');
+      const other = await folderRepository.seed('Other');
+      const docId = await seedDoc(repository, null);
+      await untilFolders(store, (f) => f.length === 2);
+      await until(store, (d) => d.length === 1);
+
+      await store.move(docId, target);
+      await store.dropItem({ kind: 'document', id: docId }, target);
+      expect(await store.moveFolder(other, target)).toBe(false);
+
+      expect(repository.records.get(docId)?.folderId).toBeNull();
+      expect(folderRepository.records.get(other)?.parentId).toBeNull();
+    });
+
+    it('stays put when marking the Folder deleting fails', async () => {
+      const { store, repository, folderRepository, open, toasts } = setup();
+      const { a } = await seedTree(repository, folderRepository);
+      await untilFolders(store, (f) => f.length === 3);
+      open.folderId.set(a);
+      folderRepository.update = async () => {
+        throw new Error('offline');
+      };
+
+      await store.deleteFolder(a);
+
+      expect(open.folderId()).toBe(a);
+      expect(folderRepository.records.size).toBe(3);
+      expect(toasts.toasts()[0]?.tone).toBe('error');
+    });
+
+    it('cancels an in-flight upload inside the deleted tree before tearing it down', async () => {
+      const { store, repository, folderRepository } = setup();
+      const a = await folderRepository.seed('A');
+      await untilFolders(store, (f) => f.length === 1);
+      repository.gated = true;
+      store.uploadFiles([pdfFile()], a);
+      await until(store, (d) => d[0]?.status === 'uploading');
+      const id = store.documents()![0]!.id;
+
+      await store.deleteFolder(a);
+      await flush();
+
+      expect(repository.calls).toContain(`cancel:${id}`);
+      expect(repository.records.size).toBe(0);
+      expect(folderRepository.records.size).toBe(0);
+    });
+
+    it('leaves a browsed Folder that is deleting or gone for its parent', async () => {
+      const { store, folderRepository, open } = setup();
+      const a = await folderRepository.seed('A');
+      const b = await folderRepository.seed('B', a);
+      await untilFolders(store, (f) => f.length === 2);
+      open.folderId.set(b);
+
+      await folderRepository.update(b, { status: 'deleting' });
+      expect(open.folderId()).toBe(a);
+
+      await folderRepository.delete(a);
+      expect(open.folderId()).toBeNull();
+    });
+
+    it('startup reconcile runs a nested deleting subtree once, from its top', async () => {
+      const repository = new FakeDocumentRepository();
+      const folderRepository = new FakeFolderRepository();
+      const a = await folderRepository.seed('A', null, 'deleting');
+      const b = await folderRepository.seed('B', a, 'deleting');
+      await seedDoc(repository, b);
+
+      setupLate(repository, folderRepository);
+
+      for (let i = 0; i < 100 && folderRepository.records.size > 0; i++) await flush();
+      expect(folderRepository.records.size).toBe(0);
+      expect(folderRepository.calls.filter((c) => c === `delete:${b}`)).toHaveLength(1);
+    });
+
     it('startup reconcile re-runs a Folder left deleting, including its contents', async () => {
       const repository = new FakeDocumentRepository();
       const folderRepository = new FakeFolderRepository();
