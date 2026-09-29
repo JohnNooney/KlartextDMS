@@ -97,7 +97,6 @@
           <app-folder-tile
             [folder]="folder"
             [documentCount]="store.folderNode(folder.id)?.deepDocumentCount ?? 0"
-            [folderCount]="store.folderNode(folder.id)?.deepFolderCount ?? 0"
             [deleteFailed]="store.failedFolderDeletes().has(folder.id)"
             (opened)="openFolder(folder.id)"
             (action)="onFolderAction(folder, $event)"

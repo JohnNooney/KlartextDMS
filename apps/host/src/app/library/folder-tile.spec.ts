@@ -94,15 +94,15 @@ describe('FolderTile (issue #33)', () => {
     expect(opened).toHaveBeenCalledOnce();
   });
 
-  it('shows the name and a deep-count badge; clicking opens the Folder', async () => {
-    const fixture = await setup(folder(), { documentCount: 7, folderCount: 3 });
+  it('shows the name and a deep document count; clicking opens the Folder', async () => {
+    const fixture = await setup(folder(), { documentCount: 7 });
     const el = fixture.nativeElement as HTMLElement;
     const opened = vi.fn();
     fixture.componentInstance.opened.subscribe(opened);
 
     expect(el.querySelector('.tile-name')?.textContent).toContain('Wohnung');
     expect(el.querySelector('[data-testid="folder-count"]')?.textContent?.trim()).toBe(
-      '7 documents in 3 folders',
+      '7 documents',
     );
 
     el.click();

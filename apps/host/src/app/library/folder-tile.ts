@@ -44,7 +44,6 @@ export class FolderTile {
   readonly folder = input.required<FolderRecord>();
   /** Documents at any depth below, excluding `deleting` ones. */
   readonly documentCount = input(0);
-  readonly folderCount = input(0);
   /** A delete failed, leaving `deleting` — ⋮ offers **Retry delete**. */
   readonly deleteFailed = input(false);
 
@@ -69,9 +68,10 @@ export class FolderTile {
       { action: 'delete', label: 'Delete', destructive: true, separated: true },
     ];
   });
-  protected readonly summary = computed(() => {
-    return describeContents(this.documentCount(), this.folderCount());
-  });
+  // Just the deep document count — "N documents in M folders" read like the
+  // documents live inside the subfolders; the delete dialog keeps the full
+  // phrase where the containment detail earns its place.
+  protected readonly summary = computed(() => describeContents(this.documentCount(), 0));
 
   protected onTileClick(): void {
     if (this.openable() && !this.menuOpen()) this.opened.emit();
