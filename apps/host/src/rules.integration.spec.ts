@@ -10,6 +10,7 @@ import { emulatorConfig } from '@klartext/firebase-config';
 import { INTEGRATION_OWNER_EMAIL } from './app/data/testing';
 import type { RulesTestContext, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
+const INTERVIEWER_EMAIL = 'docuware@tester.com';
 let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
@@ -82,6 +83,16 @@ describe('committed rules (issue #27)', () => {
       );
     });
 
+    it('allows the interviewer account to use its own isolated subtree', async () => {
+      const interviewer = testEnv.authenticatedContext('interviewer', {
+        email: INTERVIEWER_EMAIL,
+      });
+      const ref = interviewer.firestore().doc('users/interviewer/documents/demo');
+
+      await assertSucceeds(ref.set({ ownerId: 'interviewer', title: 'Demo' }));
+      await assertSucceeds(ref.get());
+    });
+
     it('users outside the allowlist are denied even on their own subtree', async () => {
       const stranger = testEnv.authenticatedContext('stranger', {
         email: 'stranger@nowhere.dev',
@@ -133,6 +144,16 @@ describe('committed rules (issue #27)', () => {
       await assertFails(
         put(owner.storage().ref('users/owner-a/documents/photo.png'), new Uint8Array([1]), 'image/png'),
       );
+    });
+
+    it('allows the interviewer account to use its own isolated storage path', async () => {
+      const interviewer = testEnv.authenticatedContext('interviewer', {
+        email: INTERVIEWER_EMAIL,
+      });
+      const object = interviewer.storage().ref('users/interviewer/documents/demo.pdf');
+
+      await assertSucceeds(put(object, new Uint8Array([0x25, 0x50, 0x44, 0x46]), 'application/pdf'));
+      await assertSucceeds(object.getMetadata());
     });
 
     it('users outside the allowlist are denied even on their own path', async () => {
