@@ -10,6 +10,8 @@ export interface HostConfig {
   guestOrigin: string;
   /** Connect the Firebase SDKs to the local emulator suite. */
   useEmulators: boolean;
+  /** Offer Email/Password sign-in outside the emulator suite. */
+  emailPasswordSignIn?: boolean;
   /**
    * reCAPTCHA Enterprise site key, pinned to the production Host hostnames
    * (issue #21). Absent outside production.

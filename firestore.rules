@@ -2,11 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User allowlist (#25): the owner's Google email, plus the emulator seed
-    // user pinned to its fixed dev uid — prod can't mint 'seed-test-user',
-    // so the test account can't be forged outside the emulator.
+    // User allowlist (#25): production users, plus the emulator seed user
+    // pinned to its fixed dev uid — prod can't mint 'seed-test-user', so the
+    // test account can't be forged outside the emulator.
     function isAllowedUser() {
-      return request.auth.token.email in ['johnnoon74@gmail.com']
+      return request.auth.token.email in ['johnnoon74@gmail.com', 'docuware@tester.com']
         || (request.auth.uid == 'seed-test-user'
             && request.auth.token.email == 'test-user@test.com');
     }

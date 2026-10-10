@@ -4,7 +4,7 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Same allowlist as firestore.rules — keep the two in sync.
     function isAllowedUser() {
-      return request.auth.token.email in ['johnnoon74@gmail.com']
+      return request.auth.token.email in ['johnnoon74@gmail.com', 'docuware@tester.com']
         || (request.auth.uid == 'seed-test-user'
             && request.auth.token.email == 'test-user@test.com');
     }

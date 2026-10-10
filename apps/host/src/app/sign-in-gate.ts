@@ -4,8 +4,8 @@ import { HOST_CONFIG } from './host-config';
 
 /**
  * Full-screen sign-in gate (issue #10 resolution): a centered Klartext card.
- * Google is always offered; the Email/Password form renders only under
- * `useEmulators` — the dev/Playwright path against the emulator seed user.
+ * Google is always offered; the Email/Password form renders for emulators or
+ * when explicitly enabled for a production account.
  */
 @Component({
   selector: 'app-sign-in-gate',
@@ -14,7 +14,9 @@ import { HOST_CONFIG } from './host-config';
 })
 export class SignInGate {
   protected readonly auth = inject(AuthService);
-  protected readonly showEmailForm = inject(HOST_CONFIG).useEmulators;
+  private readonly config = inject(HOST_CONFIG);
+  protected readonly showEmailForm =
+    this.config.useEmulators || this.config.emailPasswordSignIn === true;
   protected readonly pending = signal(false);
 
   protected signInWithGoogle(): void {

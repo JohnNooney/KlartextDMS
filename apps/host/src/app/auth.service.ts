@@ -50,8 +50,8 @@ export const AUTH_ACTIONS = new InjectionToken<AuthActions>('AUTH_ACTIONS', {
 
 /**
  * Host sign-in (issue #10 resolution): Google for humans — popup first,
- * redirect fallback — and Email/Password rendered only under `useEmulators`
- * for dev and the Playwright suite. The signed-in user maps to the Session's
+ * redirect fallback — and Email/Password for configured accounts. The
+ * signed-in user maps to the Session's
  * `user` payload; identity never crosses the Bus as a credential.
  */
 @Injectable({ providedIn: 'root' })

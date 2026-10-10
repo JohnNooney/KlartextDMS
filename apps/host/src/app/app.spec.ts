@@ -61,7 +61,9 @@ const fakePipeline = {
   reconcile: vi.fn(async () => {}),
 } as unknown as UploadPipeline;
 
-async function setup(options: { useEmulators?: boolean } = {}) {
+async function setup(
+  options: { useEmulators?: boolean; emailPasswordSignIn?: boolean } = {},
+) {
   const auth = new FakeAuth();
   const contexts: HostBusContext[] = [];
   const adapter: HostAdapter = {
@@ -89,6 +91,7 @@ async function setup(options: { useEmulators?: boolean } = {}) {
         useValue: {
           guestOrigin: 'http://localhost:5173',
           useEmulators: options.useEmulators ?? true,
+          emailPasswordSignIn: options.emailPasswordSignIn,
         },
       },
       provideRouter(routes),
@@ -209,8 +212,11 @@ describe('App', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it('shows the Email/Password form only under useEmulators', async () => {
-    const { fixture, auth } = await setup({ useEmulators: true });
+  it.each([
+    { useEmulators: true, emailPasswordSignIn: false },
+    { useEmulators: false, emailPasswordSignIn: true },
+  ])('shows the Email/Password form when configured: %o', async (config) => {
+    const { fixture, auth } = await setup(config);
     auth.user.set(null);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
@@ -218,8 +224,11 @@ describe('App', () => {
     expect(el.querySelector('input[type="password"]')).toBeTruthy();
   });
 
-  it('hides the Email/Password form without useEmulators, keeping Google', async () => {
-    const { fixture, auth } = await setup({ useEmulators: false });
+  it('hides the Email/Password form when not configured, keeping Google', async () => {
+    const { fixture, auth } = await setup({
+      useEmulators: false,
+      emailPasswordSignIn: false,
+    });
     auth.user.set(null);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
