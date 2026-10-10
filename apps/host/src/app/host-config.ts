@@ -10,6 +10,7 @@ export interface HostConfig {
   guestOrigin: string;
   /** Connect the Firebase SDKs to the local emulator suite. */
   useEmulators: boolean;
+  authDomain?: string;
   /** Offer Email/Password sign-in outside the emulator suite. */
   emailPasswordSignIn?: boolean;
   /**

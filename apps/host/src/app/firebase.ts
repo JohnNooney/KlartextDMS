@@ -39,7 +39,9 @@ export function provideKlartextFirebase(): Provider[] {
         if (config.appCheckDebugToken) {
           self.FIREBASE_APPCHECK_DEBUG_TOKEN = config.appCheckDebugToken;
         }
-        const app = initializeApp(firebaseConfig);
+        const app = initializeApp(
+          config.authDomain ? { ...firebaseConfig, authDomain: config.authDomain } : firebaseConfig,
+        );
         // Unconditional in every Environment (issue #21) — only the provider
         // outcome varies: debug flag set → debug exchange; otherwise
         // reCAPTCHA Enterprise with the hostname-pinned site key. In debug
