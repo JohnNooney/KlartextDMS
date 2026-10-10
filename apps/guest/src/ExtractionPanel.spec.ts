@@ -27,6 +27,16 @@ describe('ExtractionPanel', () => {
     expect(wrapper.text()).toContain(fixture.plainEnglishSummary);
   });
 
+  it('truncates a long document title and exposes the full title via tooltip', () => {
+    const longTitle = 'Brief vom Finanzamt ' + '0'.repeat(80);
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, documentTitle: longTitle },
+    });
+    const title = wrapper.find('h1');
+    expect(title.attributes('title')).toBe(longTitle);
+    expect(title.classes()).toContain('truncate');
+  });
+
   it('uses documentTypeLabel for OTHER Extractions', () => {
     const wrapper = mount(ExtractionPanel, {
       props: { extraction: record({}), documentTitle: 'Nebenkosten.pdf' },

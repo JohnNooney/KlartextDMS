@@ -115,7 +115,7 @@ function reanalyze(): void {
           </div>
         </div>
       </div>
-      <h1 class="mt-kt-3 text-kt-lg font-semibold">{{ documentTitle }}</h1>
+      <h1 :title="documentTitle" class="mt-kt-3 truncate text-kt-lg font-semibold">{{ documentTitle }}</h1>
       <p class="mt-kt-1 text-kt-xs text-kt-text-faint">
         Translated from {{ sourceLanguage }} · Analyzed {{ analyzedAt }} · {{ extraction.model }}
       </p>
