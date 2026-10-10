@@ -27,7 +27,7 @@
         <div class="menu path-menu" role="menu" aria-label="Location of this document">
           <div class="menu-item is-current" aria-current="page">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h7L19 9v11.5h-12.5zM13.5 3.5V9H19"/></svg>
-            <span class="title-doc">{{ doc().title }}</span>
+            <span class="title-doc" [attr.title]="doc().title">{{ doc().title }}</span>
           </div>
           @for (folder of pathMenuItems(); track folder.id) {
             <button type="button" class="menu-item" role="menuitem" (click)="openFolder(folder.id)">
