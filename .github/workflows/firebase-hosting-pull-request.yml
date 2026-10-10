@@ -49,6 +49,7 @@ jobs:
           projectId: klartext-b836c
           channelId: pr-${{ github.event.pull_request.number }}
           target: guest
+          expires: 7d
           firebaseToolsVersion: '15.31.0'
 
       # guestOrigin feeds both the iframe src and the Bus's origin allow-list —
@@ -71,4 +72,5 @@ jobs:
           projectId: klartext-b836c
           channelId: pr-${{ github.event.pull_request.number }}
           target: host
+          expires: 7d
           firebaseToolsVersion: '15.31.0'

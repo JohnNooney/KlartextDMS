@@ -1,0 +1,36 @@
+# Delete per-PR preview channels when the PR is closed (merge or close).
+# Channels for fork PRs are never created, so only clean up same-repo PRs.
+name: Clean up preview channels on PR close
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-cleanup-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    name: delete preview channels
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Write Firebase service-account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KLARTEXT_B836C }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+      - name: Delete Host preview channel
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: pnpm exec firebase hosting:channel:delete pr-${{ github.event.pull_request.number }} --site klartext-host --force --non-interactive
+      - name: Delete Guest preview channel
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: pnpm exec firebase hosting:channel:delete pr-${{ github.event.pull_request.number }} --site klartext-guest --force --non-interactive
