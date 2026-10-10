@@ -140,6 +140,18 @@ describe('Reader (issue #29)', () => {
     expect(openDocument.openFolder).toHaveBeenCalledWith(null);
   });
 
+  it('clamps a long document title in the path menu and keeps the full title in a tooltip', async () => {
+    const longTitle = 'Brief vom Finanzamt ' + '0'.repeat(80);
+    const { el, fixture } = await setup(record('d1', longTitle, { folderId: null }));
+    (el.querySelector<HTMLButtonElement>('.path-title-btn'))!.click();
+    fixture.detectChanges();
+
+    const current = el.querySelector('.path-menu .is-current .title-doc');
+    expect(current).toBeTruthy();
+    expect(current!.getAttribute('title')).toBe(longTitle);
+    expect(current!.classList.contains('title-doc')).toBe(true);
+  });
+
   it('walks sibling Documents with the ‹ n of m › stepper', async () => {
     const a = record('a', 'Anmeldung');
     const me = record('me', 'Mietvertrag');
