@@ -7,11 +7,11 @@ Moving to Germany means a flood of contracts and official letters: Mietvertrag, 
 [![CI](https://github.com/JohnNooney/KlartextDMS/actions/workflows/firebase-hosting-merge.yml/badge.svg)](https://github.com/JohnNooney/KlartextDMS/actions/workflows/firebase-hosting-merge.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Live at [klartext-host.web.app](https://klartext-host.web.app) — single-user deployment; sign-in is allowlist-gated.
+Live at [klartext.nooney.dev](https://klartext.nooney.dev) — single-user deployment; sign-in is allowlist-gated.
 
 ![Klartext on desktop and phone — a Document open in the reader beside its Extraction](docs/screenshots/hero.png)
 
-![The library: Folder tree and Document tiles](docs/screenshots/library.png)
+![The library: Folder tree and Document tiles](docs/screenshots/library-framed.png)
 
 Screenshots regenerate deterministically with `pnpm screenshots` — the same seeded-emulator harness as the e2e suite.
 

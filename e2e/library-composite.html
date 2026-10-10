@@ -1,0 +1,69 @@
+<!doctype html>
+<!--
+  The README library frame composite: screenshots.spec.ts loads this page over
+  file://, points the <img> at the raw library shot under test-results/, and
+  screenshots the body at 1440x920 @2x with omitBackground — the baked browser
+  chrome and shadow are what the README gets, since GitHub strips CSS.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; box-sizing: border-box; }
+      html, body { width: 1440px; height: 920px; background: transparent; }
+      body { position: relative; font-family: -apple-system, system-ui, sans-serif; }
+
+      .desktop {
+        position: absolute;
+        left: 80px;
+        top: 80px;
+        width: 1280px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #000;
+        box-shadow:
+          0 40px 90px rgba(0, 0, 0, 0.38),
+          0 6px 20px rgba(0, 0, 0, 0.22);
+      }
+
+      /* Slim browser chrome: traffic dots + a URL pill. */
+      .chrome {
+        height: 46px;
+        background: #26272b;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 18px;
+      }
+      .dot { width: 12px; height: 12px; border-radius: 50%; }
+      .dot:nth-child(1) { background: #ff5f57; }
+      .dot:nth-child(2) { background: #febc2e; }
+      .dot:nth-child(3) { background: #28c840; }
+      .url {
+        flex: 1;
+        max-width: 560px;
+        margin: 0 auto;
+        height: 28px;
+        border-radius: 8px;
+        background: #17181b;
+        color: #8e8e93;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.2px;
+      }
+
+      .screen { display: block; width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div class="desktop">
+      <div class="chrome">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">klartext-host.web.app</span>
+      </div>
+      <img id="library" class="screen" alt="" />
+    </div>
+  </body>
+</html>
