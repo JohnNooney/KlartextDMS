@@ -40,6 +40,15 @@ describe('provideKlartextFirebase', () => {
     expect(self.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
   });
 
+  it('overrides the Auth domain when configured', () => {
+    setup({
+      guestOrigin: 'https://klartext-guest.nooney.dev',
+      useEmulators: false,
+      authDomain: 'klartext.nooney.dev',
+    });
+    expect(TestBed.inject(FIREBASE_APP).options.authDomain).toBe('klartext.nooney.dev');
+  });
+
   it('provides Auth — connected to the emulator under useEmulators', () => {
     setup({
       guestOrigin: 'http://localhost:5173',

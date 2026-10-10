@@ -1,6 +1,7 @@
 {
-  "guestOrigin": "https://klartext-guest.web.app",
+  "guestOrigin": "https://klartext-guest.nooney.dev",
   "useEmulators": false,
+  "authDomain": "klartext.nooney.dev",
   "appCheckSiteKey": "6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF",
   "emailPasswordSignIn": true,
   "allowedEmails": ["johnnoon74@gmail.com", "docuware@tester.com"]
