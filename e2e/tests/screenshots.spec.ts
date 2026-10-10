@@ -49,7 +49,8 @@ test('reader — a Document open beside its Extraction', async () => {
   await page().screenshot({ path: raw('reader'), animations: 'disabled' });
 });
 
-// The library: seeded Folder tree expanded in the sidebar.
+// The library: seeded Folder tree expanded in the sidebar. This raw shot is
+// framed in a browser window by the `library-frame` composite below.
 test('library — the Folder tree with Documents filed', async () => {
   await page().goto('/folder/root');
   await expect(page().getByRole('heading', { level: 1, name: 'Documents' })).toBeVisible();
@@ -60,7 +61,31 @@ test('library — the Folder tree with Documents filed', async () => {
   await expect(page().getByRole('treeitem', { name: 'Internet & Mobilfunk' })).toBeVisible();
   await expect(page().getByRole('treeitem', { name: 'Krankenversicherung' })).toBeVisible();
 
-  await page().screenshot({ path: shot('library'), animations: 'disabled' });
+  await page().screenshot({ path: raw('library'), animations: 'disabled' });
+});
+
+// Library composite: the raw library shot framed in a browser window
+// (e2e/library-composite.html), rendered on a transparent canvas.
+test('library-frame — framed folder library for the README', async ({ browser }) => {
+  const composite = await browser.newPage({
+    viewport: { width: 1440, height: 920 },
+    deviceScaleFactor: 2,
+  });
+  try {
+    await composite.goto(repoFile('e2e/library-composite.html').href);
+    await composite
+      .locator('#library')
+      .evaluate((img, src) => ((img as HTMLImageElement).src = src), rawDataUrl('library'));
+    await composite.locator('#library').evaluate((img) =>
+      (img as HTMLImageElement).complete
+        ? undefined
+        : new Promise((resolve) => ((img as HTMLImageElement).onload = resolve)),
+    );
+
+    await composite.screenshot({ path: shot('library-framed'), omitBackground: true });
+  } finally {
+    await composite.close();
+  }
 });
 
 // Phone viewport: the reader with the insights sheet resting at peek — grab
