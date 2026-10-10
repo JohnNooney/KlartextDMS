@@ -83,9 +83,13 @@
 // The path menu shows the full Document title; clamp it so a very long name
 // doesn't push the menu off-screen or make a single item unwieldy.
 .path-menu {
-  max-width: 360px;
+  max-width: 240px;
 
   .menu-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
     height: auto;
     min-height: 30px;
   }
@@ -97,7 +101,6 @@
     overflow: hidden;
     overflow-wrap: break-word;
     white-space: normal;
-    flex: 1;
     min-width: 0;
   }
 }
@@ -256,7 +259,7 @@ button.menu-item {
   }
 
   .path-menu {
-    max-width: calc(100vw - 32px);
+    max-width: min(240px, calc(100vw - 32px));
   }
 
   // The stepper is a desktop affordance; mobile navigation is push-based.
