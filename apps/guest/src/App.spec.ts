@@ -5,6 +5,7 @@ import type { ExtractionState, Session } from '@klartext/bus-contract';
 import App from './App.vue';
 import {
   currentSession,
+  expandPanelSender,
   presentationMode,
   retrySender,
   sessionProbe,
@@ -24,6 +25,7 @@ beforeEach(() => {
   currentSession.value = null;
   retrySender.value = null;
   showPageSender.value = null;
+  expandPanelSender.value = null;
   presentationMode.value = null;
 });
 
@@ -114,6 +116,28 @@ describe('App', () => {
       quote: 'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.',
       critical: true,
     });
+  });
+
+  // Issue #79: a jump-bar tap in the sheet asks the Host to raise it —
+  // fire-and-forget through the wired Bus sender.
+  it('tapping a jump-bar segment sends GUEST_EXPAND_PANEL through the Bus sender', async () => {
+    const expandPanel = vi.fn();
+    expandPanelSender.value = expandPanel;
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      sessionProbe.sessionApplied(fixtureSession);
+      presentationMode.value = 'sheet';
+      const wrapper = mount(App);
+      const seg = wrapper.findAll('button').find((b) => b.text() === 'Takeaways')!;
+
+      await seg.trigger('click');
+
+      expect(expandPanel).toHaveBeenCalledOnce();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 
   it('Extraction + failed keeps the stored content under a warning banner with Try again', async () => {

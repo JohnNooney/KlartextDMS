@@ -36,6 +36,7 @@ function setup() {
     jobFailedFor: vi.fn(),
     retryRequested: vi.fn(() => false),
     pageRequested: vi.fn(),
+    panelExpandRequested: vi.fn(),
   };
   const adapter = createHostBusAdapter({ source, sink, peerOrigin: PEER_ORIGIN, probe });
   return { source, sink, probe, adapter };
@@ -392,5 +393,58 @@ describe('HostBus adapter — GUEST_SHOW_PAGE (issue #78)', () => {
       source: sink,
     });
     expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #79: GUEST_EXPAND_PANEL is Session-bound — the Host reports it to
+// the app only for the current Session. Which detents honour the raise is
+// the frame's business, not the adapter's.
+describe('HostBus adapter — GUEST_EXPAND_PANEL (issue #79)', () => {
+  const session = { ...goldenFixtureMessages.INIT_SESSION.payload, sessionId: 'sess-open' };
+
+  const expandPanel = (sessionId: string) => ({
+    v: 1,
+    type: 'GUEST_EXPAND_PANEL',
+    sessionId,
+    payload: {},
+  });
+
+  it('reports the request for the current Session', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: expandPanel('sess-open'),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.panelExpandRequested).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: expandPanel(sessionId),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.panelExpandRequested).not.toHaveBeenCalled();
+  });
+
+  it('ignores the message while no Session is open', () => {
+    const { source, sink, probe } = setup();
+    source.emit({
+      data: expandPanel('sess-open'),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+    expect(probe.panelExpandRequested).not.toHaveBeenCalled();
   });
 });

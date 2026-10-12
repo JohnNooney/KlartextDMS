@@ -63,3 +63,15 @@ export const showPageSender = shallowRef<((request: GuestShowPagePayload) => voi
 export function showPage(request: GuestShowPagePayload): void {
   showPageSender.value?.(request);
 }
+
+/**
+ * The Bus adapter's expand sender (issue #79), wired by main.ts once the
+ * adapter exists. A jump-bar tap in the sheet sends `GUEST_EXPAND_PANEL` —
+ * the Guest can't raise its own frame; the Host lifts a peeking sheet to
+ * half and ignores the request at every other detent.
+ */
+export const expandPanelSender = shallowRef<(() => void) | null>(null);
+
+export function expandPanel(): void {
+  expandPanelSender.value?.();
+}

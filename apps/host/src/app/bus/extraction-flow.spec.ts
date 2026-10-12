@@ -30,6 +30,7 @@ import { UploadPipeline } from '../data/upload-pipeline';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
+import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { ExtractionFlow } from './extraction-flow';
 import { HostBus } from './host-bus';
@@ -655,5 +656,20 @@ describe('ExtractionFlow — show-page requests (issue #78)', () => {
     events.pageRequested({ page: 3, quote: 'q', critical: true });
 
     expect(show).toHaveBeenCalledWith({ page: 3, quote: 'q', critical: true });
+  });
+});
+
+// Issue #79: a GUEST_EXPAND_PANEL outcome routes through HostBusEvents to
+// the flow and on to SheetExpand — the Guest frame's seam, since the Guest
+// can't raise its own sheet.
+describe('ExtractionFlow — expand-panel requests (issue #79)', () => {
+  it('hands a wire-valid GUEST_EXPAND_PANEL to SheetExpand', () => {
+    const { events } = setup();
+    const expand = TestBed.inject(SheetExpand);
+    const request = vi.spyOn(expand, 'request');
+
+    events.panelExpandRequested();
+
+    expect(request).toHaveBeenCalledOnce();
   });
 });

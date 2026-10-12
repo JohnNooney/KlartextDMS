@@ -40,6 +40,12 @@ export interface HostProbe {
    * is the app's — only it knows the open Document's page count.
    */
   pageRequested(request: GuestShowPagePayload): void;
+  /**
+   * GUEST_EXPAND_PANEL arrived for the current Session (issue #79): a
+   * jump-bar tap in the sheet asks the Host to raise it — the Guest can't
+   * reach its own frame's detent. Fire-and-forget, no payload to vet.
+   */
+  panelExpandRequested(): void;
 }
 
 export interface HostAdapterContext {
@@ -104,6 +110,12 @@ export interface GuestAdapter {
    * no watchdog.
    */
   showPage(request: GuestShowPagePayload): void;
+  /**
+   * A jump-bar segment was tapped while the sheet may sit at peek (issue
+   * #79): fire-and-forget `GUEST_EXPAND_PANEL` under the current Session —
+   * the Host raises a peeking sheet to half and ignores it everywhere else.
+   */
+  expandPanel(): void;
   dispose(): void;
 }
 
@@ -214,6 +226,7 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         jobSucceeded: vi.fn(),
         jobFailed: vi.fn(),
         pageRequested: vi.fn(),
+        panelExpandRequested: vi.fn(),
       };
       guestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
       jobDeferreds = [];
@@ -460,6 +473,40 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         quote: undefined,
         critical: undefined,
       });
+    });
+
+    it('carries a jump-bar tap to the Host: GUEST_EXPAND_PANEL under the current Session (issue #79)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      guest.expandPanel();
+
+      expect(envelopesOf(wireToHost, 'GUEST_EXPAND_PANEL')).toEqual([
+        { v: 1, type: 'GUEST_EXPAND_PANEL', sessionId: session.sessionId, payload: {} },
+      ]);
+      expect(hostProbe.panelExpandRequested).toHaveBeenCalledOnce();
+    });
+
+    it('expandPanel before INIT_SESSION is silent', () => {
+      makeHost();
+      const guest = makeGuest();
+      guest.expandPanel();
+      expect(envelopesOf(wireToHost, 'GUEST_EXPAND_PANEL')).toEqual([]);
+      expect(hostProbe.panelExpandRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores GUEST_EXPAND_PANEL for a stale sessionId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_EXPAND_PANEL',
+        sessionId: 'sess-stale',
+        payload: {},
+      });
+      expect(hostProbe.panelExpandRequested).not.toHaveBeenCalled();
     });
 
     it('recovers a Guest reload: resends the Session and re-issues the job under a fresh jobId', async () => {

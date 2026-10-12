@@ -8,6 +8,7 @@ import {
   inject,
   linkedSignal,
   NgZone,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
@@ -19,6 +20,7 @@ import { windowBusSource } from './bus/window-bus';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
 import { PageFocus } from './page-focus';
+import { SheetExpand } from './sheet-expand';
 
 /** The sheet's snap heights (issue #50), smallest first. */
 type SheetState = 'peek' | 'half' | 'full';
@@ -27,9 +29,10 @@ const SHEET_ORDER: readonly SheetState[] = ['peek', 'half', 'full'];
 const DRAG_THRESHOLD_PX = 4;
 /** Release speed (px/ms) that moves one detent regardless of height (#62). */
 const FLICK_VELOCITY_PX_MS = 0.35;
-/** Peek's chrome height -- equals --kt-sheet-peek-height (44 + 32); used when
- *  the resolved value can't be measured (jsdom). */
-const PEEK_HEIGHT_FALLBACK_PX = 76;
+/** Peek's chrome height -- equals --kt-sheet-peek-height (2 × 44: handle
+ *  strip plus the Guest's jump bar); used when the resolved value can't be
+ *  measured (jsdom). */
+const PEEK_HEIGHT_FALLBACK_PX = 88;
 /**
  * The lane/sheet breakpoint (issue #77): the same 768px the frame's media
  * queries switch on. The Guest can't tell lane from sheet by its own
@@ -243,6 +246,23 @@ export class GuestFrame {
     effect(() => {
       if (pageFocus.landed() !== null) this.sheetState.set('peek');
     });
+
+    // A landed expand-panel request (issue #79) lifts a peeking sheet to
+    // half — the jump bar can't raise the sheet itself, and there is no
+    // sheet in the lane presentation. Untracked reads keep the request
+    // one-shot: later detent changes must not replay it.
+    const sheetExpand = inject(SheetExpand);
+    effect(() => {
+      if (sheetExpand.requested() === 0) return;
+      untracked(() => {
+        if (this.isMobile() && this.sheetState() === 'peek') this.sheetState.set('half');
+      });
+    });
+  }
+
+  /** Whether the frame presents as the mobile sheet — the #77 breakpoint. */
+  private isMobile(): boolean {
+    return window.matchMedia?.(MOBILE_MEDIA_QUERY)?.matches ?? false;
   }
 
   /**

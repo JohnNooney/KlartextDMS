@@ -262,6 +262,14 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         }
         break;
       }
+      case 'GUEST_EXPAND_PANEL': {
+        // Only the current Session may ask for the raise (issue #79); which
+        // detents honour it is the frame's business, not the adapter's.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          ctx.probe.panelExpandRequested();
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }

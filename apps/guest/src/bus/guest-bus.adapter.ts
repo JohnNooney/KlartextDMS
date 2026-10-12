@@ -93,6 +93,12 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
       if (sessionId === null) return;
       post('GUEST_SHOW_PAGE', sessionId, request);
     },
+    expandPanel(): void {
+      // Session-bound like GUEST_SHOW_PAGE (issue #79): the jump bar only
+      // exists inside a Session, and the Host drops the message otherwise.
+      if (sessionId === null) return;
+      post('GUEST_EXPAND_PANEL', sessionId, {});
+    },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);
     },

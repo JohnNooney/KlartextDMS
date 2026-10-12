@@ -507,3 +507,133 @@ describe('ExtractionPanel outline rail (issue #77)', () => {
     wrapper.unmount();
   });
 });
+
+// Issue #79: the jump bar (prototype variant C2, mobile) — the outline rail
+// as an HIG segmented control pinned at the top of the Guest's content so
+// it stays visible and tappable at every sheet detent, including peek.
+// Rendered only when the Host reports the sheet presentation; a tap scrolls
+// the section and asks the Host to raise the sheet (GUEST_EXPAND_PANEL).
+describe('ExtractionPanel jump bar (issue #79)', () => {
+  const bar = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.find('nav[aria-label="Jump to section"]');
+  const segment = (wrapper: ReturnType<typeof mount>, label: string) =>
+    bar(wrapper)
+      .findAll('button')
+      .find((b) => b.text().includes(label));
+
+  const ex = record({
+    extractionStatus: 'COMPLETE',
+    keyTakeaways: [
+      takeaway({ text: 'c1', importance: 'CRITICAL' }),
+      takeaway({ text: 'n1' }),
+      takeaway({ text: 'c2', importance: 'CRITICAL' }),
+      takeaway({ text: 'n2' }),
+      takeaway({ text: 'n3' }),
+    ],
+  });
+
+  it('renders no bar before the Host reports a presentation', () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    expect(bar(wrapper).exists()).toBe(false);
+  });
+
+  it('renders no bar in the lane presentation', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, presentation: 'lane' },
+    });
+    expect(bar(wrapper).exists()).toBe(false);
+  });
+
+  it('in the sheet presentation shows one segment per section, attention carrying the Critical Warning count', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: ex, presentation: 'sheet' },
+    });
+    expect(bar(wrapper).exists()).toBe(true);
+    expect(segment(wrapper, 'Summary')!.text()).toBe('Summary');
+    expect(segment(wrapper, 'Attention')!.text()).toContain('Attention');
+    expect(segment(wrapper, 'Attention')!.text()).toContain('2');
+    expect(segment(wrapper, 'Takeaways')!.text()).toBe('Takeaways');
+  });
+
+  it('omits the attention segment when nothing is critical', () => {
+    const calm = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [takeaway({ text: 'n1' })],
+    });
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: calm, presentation: 'sheet' },
+    });
+    expect(segment(wrapper, 'Attention')).toBeUndefined();
+    expect(segment(wrapper, 'Takeaways')).toBeDefined();
+  });
+
+  it('tapping a segment scrolls its section and asks the Host to raise the sheet', async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'sheet' },
+      });
+      await segment(wrapper, 'Takeaways')!.trigger('click');
+
+      const section = wrapper.find('[data-section="takeaways"]');
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView.mock.contexts[0]).toBe(section.element);
+      expect(wrapper.emitted('expandPanel')).toHaveLength(1);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('the rail tap never asks for a raise — the lane has no sheet', async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'lane' },
+      });
+      await wrapper
+        .find('nav[aria-label="Insights outline"]')
+        .findAll('button')[0]!
+        .trigger('click');
+      expect(wrapper.emitted('expandPanel')).toBeUndefined();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('scroll-spy marks the segment under the jump bar as current', async () => {
+    const scrollHeight = Object.getOwnPropertyDescriptor(
+      document.documentElement,
+      'scrollHeight',
+    );
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 4000,
+    });
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'sheet' },
+        attachTo: document.body,
+      });
+      const rect = (top: number) => ({ top }) as DOMRect;
+      ['summary', 'attention', 'takeaways']
+        .map((id) => wrapper.find(`[data-section="${id}"]`).element as HTMLElement)
+        .forEach((s, i) =>
+          vi.spyOn(s, 'getBoundingClientRect').mockReturnValue(rect([-700, 50, 600][i]!)),
+        );
+      window.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+
+      expect(segment(wrapper, 'Attention')!.attributes('aria-current')).toBe('location');
+      expect(segment(wrapper, 'Summary')!.attributes('aria-current')).toBeUndefined();
+      wrapper.unmount();
+    } finally {
+      if (scrollHeight) {
+        Object.defineProperty(document.documentElement, 'scrollHeight', scrollHeight);
+      }
+    }
+  });
+});

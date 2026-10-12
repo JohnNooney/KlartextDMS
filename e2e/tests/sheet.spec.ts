@@ -1,10 +1,11 @@
 import { devices, expect, test, type Page } from '@playwright/test';
-import { guestPanel, signedInPage } from './support';
+import { guestPanel, seededExtraction, signedInPage } from './support';
 
 // Journey (issue #50): on a phone-sized viewport the insights sheet rests at
-// peek — the grab-handle strip plus a minimal header over an unobstructed
-// PDF — and the handle cycles it through peek → half → full → peek. The
-// handle never covers Guest content (issue #49).
+// peek — the grab-handle strip plus the top of the Guest frame (its section
+// jump bar, issue #79) over an unobstructed PDF — and the handle cycles it
+// through peek → half → full → peek. The handle never covers Guest content
+// (issue #49).
 const page = signedInPage({ ...devices['iPhone 13'] });
 
 /** The handle strip shares no pixels with the iframe it sits above — one
@@ -48,16 +49,21 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
 
   const frame = page().locator('iframe[title="Klartext insights panel"]');
 
-  // Peek: just the chrome — the strip plus the "Insights" header — so the
-  // PDF stays essentially unobstructed. The iframe stays mounted.
+  // Peek: just the chrome — the strip plus the Guest's jump bar (issue #79)
+  // — so the PDF stays essentially unobstructed. The iframe stays mounted.
   await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
   await expect(expand()).toBeVisible();
   await expect(expand()).toHaveAttribute('aria-expanded', 'false');
-  await expect(page().locator('.sheet-head')).toHaveText('Insights');
+  await expect(page().locator('.sheet-head')).toHaveCount(0);
+  await expect(
+    guestPanel(page()).getByRole('navigation', { name: 'Jump to section' }),
+  ).toBeVisible();
   await expect(frame).toBeAttached();
   await expectNoOverlap(page());
+  // 88px: the 44px handle strip plus the 44px jump bar (the emulator has no
+  // safe-area inset).
+  await expectSheetHeight(84, 96);
   const viewport = page().viewportSize()!;
-  await expectSheetHeight(44, viewport.height * 0.15);
 
   // → half: about half the viewport, the Extraction readable.
   await expand().tap();
@@ -149,4 +155,38 @@ test('opening another Document rests the sheet back at peek', async () => {
 
   await page().goto('/folder/wohnung/doc/doc-mietvertrag');
   await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+});
+
+// Issue #79: the jump bar is the sheet's section navigation — an HIG
+// segmented control pinned at the top of the Guest's content, visible and
+// tappable at every detent including peek. A tap at peek sends
+// GUEST_EXPAND_PANEL (the Guest can't raise its own frame) — the sheet
+// lifts to half and the section scrolls into view.
+test('tapping a jump-bar segment at peek raises the sheet to its section', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+
+  const panel = guestPanel(page());
+  const bar = panel.getByRole('navigation', { name: 'Jump to section' });
+  await expect(bar).toBeVisible();
+
+  // The attention segment carries the seeded Critical Warning count.
+  const critical = seededExtraction('doc-mietvertrag').keyTakeaways.filter(
+    (t) => t.importance === 'CRITICAL',
+  ).length;
+  const attention = bar.getByRole('button', { name: /^Attention/ });
+  await expect(attention).toContainText(String(critical));
+
+  // The tap is inside the peek sliver itself — it must raise the sheet.
+  await attention.tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'half');
+  await expect(panel.locator('[data-section="attention"]')).toBeInViewport();
+
+  // At a raised detent a tap only scrolls — the sheet doesn't move.
+  await bar.getByRole('button', { name: 'Takeaways' }).tap();
+  await expect(sheet()).toHaveAttribute('data-sheet', 'half');
+  await expect(panel.locator('[data-section="takeaways"]')).toBeInViewport();
+  await expect(
+    bar.getByRole('button', { name: 'Takeaways' }),
+  ).toHaveAttribute('aria-current', 'location');
 });
