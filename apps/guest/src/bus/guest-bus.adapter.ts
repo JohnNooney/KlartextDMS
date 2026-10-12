@@ -1,4 +1,9 @@
-import { NO_SESSION, isBusMessage, isExtractionError } from '@klartext/bus-contract';
+import {
+  NO_SESSION,
+  isBusMessage,
+  isExtractionError,
+  isPanelPresentation,
+} from '@klartext/bus-contract';
 import type { BusMessageEvent, GuestToHostMessage } from '@klartext/bus-contract';
 import type { GuestAdapter, GuestAdapterContext } from '@klartext/bus-contract/conformance';
 
@@ -49,6 +54,12 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
                 : { code: 'UNKNOWN', message: 'Extraction failed.', retryable: true },
             }),
         );
+        break;
+      }
+      case 'PANEL_PRESENTATION': {
+        // An invalid `mode` is ignored (issue #77) — the payload is untrusted.
+        const mode = (msg.payload as { mode?: unknown } | null)?.mode;
+        if (isPanelPresentation(mode)) ctx.probe.presentationApplied(mode);
         break;
       }
       default:

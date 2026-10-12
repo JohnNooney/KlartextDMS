@@ -4,7 +4,8 @@ import { BUS_PROTOCOL_VERSION, type Envelope } from './envelope.js';
 /**
  * Bus messages (issue #7, amended by #12). `sessionId` is Host-generated per
  * `INIT_SESSION` and echoed by the Guest; messages outside a Session —
- * `GUEST_READY` and every Extraction Job message — carry `""` (`NO_SESSION`).
+ * `GUEST_READY`, `PANEL_PRESENTATION` (issue #77), and every Extraction Job
+ * message — carry `""` (`NO_SESSION`).
  *
  * Forward-compat rule: both apps ignore envelopes with an unknown `type`
  * (e.g. a v2 `GUEST_SHOW_PAGE` or `AUTH_TOKEN_REFRESHED`). `isEnvelope`
@@ -67,10 +68,24 @@ export interface ExtractDocumentPayload {
   bytes: ArrayBuffer;
 }
 
+/**
+ * How the Host presents the Guest frame (issue #77): the desktop insights
+ * lane or the mobile bottom sheet. The Guest can't tell from its own
+ * viewport — the lane (~440px) and the sheet (~390px) are nearly the same
+ * width — so the Host says so explicitly. Presentation is per-frame, not
+ * per-Session, so `PANEL_PRESENTATION` carries `sessionId: ""` (`NO_SESSION`).
+ */
+export type PanelPresentation = 'lane' | 'sheet';
+
+export function isPanelPresentation(value: unknown): value is PanelPresentation {
+  return value === 'lane' || value === 'sheet';
+}
+
 export type BusMessage =
   // Host → Guest
   | Envelope<'INIT_SESSION', Session>
   | Envelope<'EXTRACT_DOCUMENT', ExtractDocumentPayload>
+  | Envelope<'PANEL_PRESENTATION', { mode: PanelPresentation }>
   // Guest → Host
   | Envelope<'GUEST_READY', EmptyPayload>
   | Envelope<'SESSION_ACK', EmptyPayload>
@@ -79,7 +94,10 @@ export type BusMessage =
   | Envelope<'AI_PROCESSING_ERROR', { jobId: string; error: ExtractionError }>
   | Envelope<'RETRY_EXTRACTION', { documentId: string }>;
 
-export type HostToGuestMessage = Extract<BusMessage, { type: 'INIT_SESSION' | 'EXTRACT_DOCUMENT' }>;
+export type HostToGuestMessage = Extract<
+  BusMessage,
+  { type: 'INIT_SESSION' | 'EXTRACT_DOCUMENT' | 'PANEL_PRESENTATION' }
+>;
 export type GuestToHostMessage = Exclude<BusMessage, HostToGuestMessage>;
 
 /** Host watchdogs (issue #7, amended by #12): all failures surface as `AI_UNAVAILABLE`, retryable. */
@@ -92,6 +110,7 @@ export type MessageType = BusMessage['type'];
 export const MESSAGE_TYPES = [
   'INIT_SESSION',
   'EXTRACT_DOCUMENT',
+  'PANEL_PRESENTATION',
   'GUEST_READY',
   'SESSION_ACK',
   'AI_PROCESSING_STARTED',

@@ -262,3 +262,177 @@ describe('ExtractionPanel', () => {
     expect(wrapper.text()).toContain("Couldn't re-analyze");
   });
 });
+
+// Issue #77: the outline rail (prototype variant C2) — a slim icon rail on
+// the panel's trailing edge, one button per section with count badges.
+// Rendered only when the Host reports the lane presentation; the sheet and
+// the pre-message state render without section navigation.
+describe('ExtractionPanel outline rail (issue #77)', () => {
+  const rail = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.find('nav[aria-label="Insights outline"]');
+  const railButton = (wrapper: ReturnType<typeof mount>, label: string) =>
+    rail(wrapper).findAll('button').find((b) => b.attributes('aria-label') === label);
+
+  const ex = record({
+    extractionStatus: 'COMPLETE',
+    keyTakeaways: [
+      takeaway({ text: 'c1', importance: 'CRITICAL' }),
+      takeaway({ text: 'n1' }),
+      takeaway({ text: 'c2', importance: 'CRITICAL' }),
+      takeaway({ text: 'n2' }),
+      takeaway({ text: 'n3' }),
+    ],
+  });
+
+  it('renders no rail before the Host reports a presentation', () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    expect(rail(wrapper).exists()).toBe(false);
+  });
+
+  it('renders no rail in the sheet presentation', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture, presentation: 'sheet' },
+    });
+    expect(rail(wrapper).exists()).toBe(false);
+  });
+
+  it('in the lane presentation, shows one button per section with count badges', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: ex, presentation: 'lane' },
+    });
+    expect(rail(wrapper).exists()).toBe(true);
+    const buttons = rail(wrapper).findAll('button');
+    expect(buttons.map((b) => b.attributes('aria-label'))).toEqual([
+      'Summary',
+      'Needs your attention',
+      'Key takeaways',
+    ]);
+    expect(railButton(wrapper, 'Summary')!.text()).toBe('');
+    expect(railButton(wrapper, 'Needs your attention')!.text()).toBe('2');
+    expect(railButton(wrapper, 'Key takeaways')!.text()).toBe('3');
+  });
+
+  it('tints the Critical Warnings badge with the warning color', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: ex, presentation: 'lane' },
+    });
+    const badge = railButton(wrapper, 'Needs your attention')!.find('span');
+    expect(badge.classes()).toContain('bg-kt-warning');
+    expect(railButton(wrapper, 'Key takeaways')!.find('span').classes()).not.toContain(
+      'bg-kt-warning',
+    );
+  });
+
+  it('omits rail buttons for sections the Extraction does not render', () => {
+    const calm = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [takeaway({ text: 'n1' })],
+    });
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: calm, presentation: 'lane' },
+    });
+    expect(railButton(wrapper, 'Needs your attention')).toBeUndefined();
+    expect(railButton(wrapper, 'Key takeaways')).toBeDefined();
+  });
+
+  it('clicking a rail button scrolls the matching section into view', async () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'lane' },
+      });
+      await railButton(wrapper, 'Key takeaways')!.trigger('click');
+      const section = wrapper.find('[data-section="takeaways"]');
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView.mock.contexts[0]).toBe(section.element);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it('scroll-spy marks the section under the top edge as current', async () => {
+    const scrollHeight = Object.getOwnPropertyDescriptor(
+      document.documentElement,
+      'scrollHeight',
+    );
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 4000,
+    });
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'lane' },
+        attachTo: document.body,
+      });
+      const rect = (top: number) => ({ top }) as DOMRect;
+      const sections = ['summary', 'attention', 'takeaways'].map(
+        (id) => wrapper.find(`[data-section="${id}"]`).element as HTMLElement,
+      );
+      // Scroll until "Needs your attention" sits under the top edge.
+      const tops = [-700, 20, 600];
+      sections.forEach((s, i) =>
+        vi.spyOn(s, 'getBoundingClientRect').mockReturnValue(rect(tops[i]!)),
+      );
+      window.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+
+      expect(railButton(wrapper, 'Needs your attention')!.classes()).toContain(
+        'text-kt-accent',
+      );
+      expect(railButton(wrapper, 'Summary')!.classes()).not.toContain('text-kt-accent');
+      wrapper.unmount();
+    } finally {
+      if (scrollHeight) {
+        Object.defineProperty(document.documentElement, 'scrollHeight', scrollHeight);
+      }
+    }
+  });
+
+  it('scroll-spy marks the last section while the panel is at the bottom', async () => {
+    const scrollHeight = Object.getOwnPropertyDescriptor(
+      document.documentElement,
+      'scrollHeight',
+    );
+    const scrollY = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 4000,
+    });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 3200 });
+    try {
+      const wrapper = mount(ExtractionPanel, {
+        props: { extraction: ex, presentation: 'lane' },
+      });
+      window.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+      expect(railButton(wrapper, 'Key takeaways')!.classes()).toContain('text-kt-accent');
+      wrapper.unmount();
+    } finally {
+      if (scrollHeight) {
+        Object.defineProperty(document.documentElement, 'scrollHeight', scrollHeight);
+      }
+      if (scrollY) Object.defineProperty(window, 'scrollY', scrollY);
+    }
+  });
+
+  it('does not pin the last section when nothing scrolls', async () => {
+    // scrollY 0 with a document that fits the frame: the bottom-edge rule
+    // must not fire; the top-edge rule picks Summary.
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: ex, presentation: 'lane' },
+      attachTo: document.body,
+    });
+    const rect = (top: number) => ({ top }) as DOMRect;
+    ['summary', 'attention', 'takeaways']
+      .map((id) => wrapper.find(`[data-section="${id}"]`).element as HTMLElement)
+      .forEach((s, i) =>
+        vi.spyOn(s, 'getBoundingClientRect').mockReturnValue(rect([20, 600, 1200][i]!)),
+      );
+    window.dispatchEvent(new Event('scroll'));
+    await wrapper.vm.$nextTick();
+    expect(railButton(wrapper, 'Summary')!.classes()).toContain('text-kt-accent');
+    wrapper.unmount();
+  });
+});

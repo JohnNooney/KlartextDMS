@@ -21,6 +21,7 @@ import type {
 import {
   isBusMessage,
   isExtractionError,
+  isPanelPresentation,
   JOB_RESULT_TIMEOUT_MS,
   JOB_START_TIMEOUT_MS,
   SESSION_ACK_TIMEOUT_MS,
@@ -32,6 +33,7 @@ import type {
   ExtractionError,
   ExtractDocumentPayload,
   JobDocument,
+  PanelPresentation,
   Session,
 } from './messages.js';
 
@@ -139,12 +141,21 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
   let jobSeq = 0;
   let currentSession: Session | null = null;
   let sessionAckTimer: ReturnType<typeof setTimeout> | null = null;
+  let presentation: PanelPresentation | null = null;
   const knownDocuments = new Map<string, QueuedJob>();
   const queue: QueuedJob[] = [];
   let activeJob: ActiveJob | null = null;
 
   const failSession = (): void => {
     if (currentSession) ctx.probe.sessionFailed(currentSession.sessionId, AI_UNAVAILABLE);
+  };
+
+  const sendPresentation = (): void => {
+    if (presentation === null) return;
+    ctx.sink.postMessage(
+      { v: 1, type: 'PANEL_PRESENTATION', sessionId: NO_SESSION, payload: { mode: presentation } },
+      ctx.peerOrigin,
+    );
   };
 
   const sendSession = (): void => {
@@ -222,6 +233,7 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
           currentSession = { ...currentSession, sessionId: `sess_${++sessionSeq}` };
         }
         sendSession();
+        sendPresentation();
         if (activeJob !== null) {
           // Re-issue the in-flight job under a fresh jobId; stale results are discarded.
           clearTimeout(activeJob.watchdog);
@@ -309,6 +321,11 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         pumpQueue();
       }
     },
+    setPresentation(mode: PanelPresentation): void {
+      if (mode === presentation) return;
+      presentation = mode;
+      if (guestReady) sendPresentation();
+    },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);
       if (sessionAckTimer !== null) clearTimeout(sessionAckTimer);
@@ -351,6 +368,12 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
                 : { code: 'UNKNOWN', message: 'Extraction failed.', retryable: true },
             }),
         );
+        break;
+      }
+      case 'PANEL_PRESENTATION': {
+        // An invalid `mode` is ignored (issue #77) — the payload is untrusted.
+        const mode = (msg.payload as { mode?: unknown } | null)?.mode;
+        if (isPanelPresentation(mode)) ctx.probe.presentationApplied(mode);
         break;
       }
       default:

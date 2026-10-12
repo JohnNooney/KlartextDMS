@@ -54,6 +54,10 @@ _Avoid_: message, event
 The context the Host hands the Guest when a Document is opened: which Document, its stored Extraction or how producing one stands, and who the user is. A Session never carries the Document's bytes and never starts an Extraction. Each Session has an id the Guest echoes so the Host can discard replies to a Session it has moved past.
 _Avoid_: context, init data
 
+**Presentation**:
+How the Host displays the Guest frame — the desktop insights lane or the mobile bottom sheet — told to the Guest over the Bus (`PANEL_PRESENTATION`) because the Guest can't tell them apart from its own viewport. Per-frame state, never part of a Session; the lane mode is what renders the Guest's section outline rail.
+_Avoid_: layout, breakpoint
+
 ### Deployment
 
 **Environment**:

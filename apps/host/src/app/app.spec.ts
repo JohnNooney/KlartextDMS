@@ -70,6 +70,7 @@ async function setup(
     openSession: vi.fn(),
     requestExtraction: vi.fn(),
     cancelJobs: vi.fn(),
+    setPresentation: vi.fn(),
     dispose: vi.fn(),
   };
   TestBed.overrideComponent(Library, {

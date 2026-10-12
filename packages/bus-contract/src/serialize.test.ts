@@ -19,10 +19,11 @@ describe('golden fixtures', () => {
       'EXTRACT_DOCUMENT',
       'GUEST_READY',
       'INIT_SESSION',
+      'PANEL_PRESENTATION',
       'RETRY_EXTRACTION',
       'SESSION_ACK',
     ]);
-    expect(new Set(types).size).toBe(8);
+    expect(new Set(types).size).toBe(9);
   });
 
   it.each(Object.entries(goldenFixtures))('%s round-trips through the reference serializer', (type, json) => {

@@ -28,6 +28,12 @@ const FLICK_VELOCITY_PX_MS = 0.35;
 /** Peek's chrome height -- equals --kt-sheet-peek-height (44 + 32); used when
  *  the resolved value can't be measured (jsdom). */
 const PEEK_HEIGHT_FALLBACK_PX = 76;
+/**
+ * The lane/sheet breakpoint (issue #77): the same 768px the frame's media
+ * queries switch on. The Guest can't tell lane from sheet by its own
+ * viewport — the widths are within ~50px — so the Host reports it.
+ */
+const MOBILE_MEDIA_QUERY = '(max-width: 768px)';
 
 /** One in-flight handle drag. */
 interface SheetDrag {
@@ -63,6 +69,8 @@ export class GuestFrame {
   private drag: SheetDrag | null = null;
   /** A release after a real drag still fires `click` — it must not cycle. */
   private suppressClick = false;
+  /** Removes the breakpoint listener wired by {@link watchPresentation}. */
+  private unwatchPresentation: (() => void) | null = null;
 
   protected readonly guestUrl: SafeResourceUrl;
   /** Whether a Document is open — the frame displays only then (#28). */
@@ -215,13 +223,31 @@ export class GuestFrame {
           probe: events,
         });
         bus.attach(this.adapter);
+        this.watchPresentation();
       });
     });
 
     inject(DestroyRef).onDestroy(() => {
+      this.unwatchPresentation?.();
+      this.unwatchPresentation = null;
       if (this.adapter) bus.detach(this.adapter);
       this.adapter?.dispose();
       this.adapter = null;
     });
+  }
+
+  /**
+   * Reports the lane/sheet presentation (issue #77): once now — the adapter
+   * buffers it until GUEST_READY — then on every breakpoint crossing.
+   * `matchMedia` fires `change` only on crossings, never per-resize.
+   */
+  private watchPresentation(): void {
+    const media = window.matchMedia?.(MOBILE_MEDIA_QUERY);
+    if (!media) return;
+    const report = (): void =>
+      this.adapter?.setPresentation(media.matches ? 'sheet' : 'lane');
+    report();
+    media.addEventListener('change', report);
+    this.unwatchPresentation = () => media.removeEventListener('change', report);
   }
 }
