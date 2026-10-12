@@ -1,4 +1,4 @@
-<div class="reader">
+<div class="reader" [class.lane-hidden]="insightsLaneHidden()">
   <header class="reader-toolbar">
     <button
       type="button"
@@ -69,6 +69,20 @@
           </div>
         }
       }
+      <!-- The macOS-style sidebar toggle (issue #76): shows or hides the
+           Guest's insights lane. Pressed while the lane is visible; a
+           desktop affordance — mobile's sheet detents already cover it. -->
+      <button
+        type="button"
+        class="icon-btn lane-toggle"
+        [class.is-on]="!insightsLaneHidden()"
+        (click)="openDocument.toggleInsightsLane()"
+        [attr.aria-pressed]="!insightsLaneHidden()"
+        [attr.aria-label]="insightsLaneHidden() ? 'Show insights' : 'Hide insights'"
+        [attr.title]="insightsLaneHidden() ? 'Show insights' : 'Hide insights'"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M15 4.5v15"/></svg>
+      </button>
     </div>
   </header>
 
@@ -76,6 +90,6 @@
     <div class="pdf-pane">
       <app-pdf-viewer [doc]="doc()" />
     </div>
-    <div class="insights-slot" aria-label="Insights panel"></div>
+    <div class="insights-slot" aria-label="Insights panel" [hidden]="insightsLaneHidden()"></div>
   </div>
 </div>

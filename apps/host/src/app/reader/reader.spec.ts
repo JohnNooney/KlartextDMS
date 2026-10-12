@@ -65,9 +65,11 @@ class FakeStore {
 class FakeOpenDocument {
   readonly docId = signal<string | null>(null);
   readonly folderId = signal<string | null>(null);
+  readonly insightsLaneHidden = signal(false);
   open = vi.fn();
   openFolder = vi.fn();
   close = vi.fn();
+  toggleInsightsLane = vi.fn();
 }
 
 async function setup(doc: DocumentRecord, siblings: DocumentRecord[] = []) {
@@ -171,6 +173,26 @@ describe('Reader (issue #29)', () => {
     const doc = record('only', 'Allein');
     const { el } = await setup(doc, [doc]);
     expect(el.querySelector('.stepper')).toBeNull();
+  });
+
+  it('the toolbar toggle mirrors and drives the insights lane (#76)', async () => {
+    const { el, fixture, openDocument } = await setup(record('d1', 'Brief'));
+    const toggle = () => el.querySelector<HTMLButtonElement>('.lane-toggle')!;
+
+    // Lane shown: the button is pressed and offers to hide it.
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    expect(toggle().getAttribute('aria-label')).toBe('Hide insights');
+    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(false);
+
+    toggle().click();
+    expect(openDocument.toggleInsightsLane).toHaveBeenCalled();
+
+    // Lane hidden: the slot collapses and the button offers to show it.
+    openDocument.insightsLaneHidden.set(true);
+    fixture.detectChanges();
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    expect(toggle().getAttribute('aria-label')).toBe('Show insights');
+    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(true);
   });
 
   it('exposes goToPage, forwarded to the viewer for the Session layer', async () => {

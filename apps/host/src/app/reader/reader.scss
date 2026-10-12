@@ -222,6 +222,17 @@ button.menu-item {
   font-variant-numeric: tabular-nums;
 }
 
+// The sidebar toggle (issue #76): pressed = accent while the lane shows.
+.lane-toggle.is-on {
+  color: kt.$kt-accent;
+  background: kt.$kt-accent-tint;
+}
+
+// Hiding the lane gives the PDF view — toolbar included — the full width.
+.reader.lane-hidden .reader-toolbar {
+  margin-right: 0;
+}
+
 .split {
   flex: 1;
   display: flex;
@@ -242,6 +253,10 @@ button.menu-item {
   width: kt.$kt-insights-width;
   flex-shrink: 0;
   border-left: 1px solid kt.$kt-border;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 // ---------- Mobile (≤768px): push navigation ----------
@@ -266,6 +281,11 @@ button.menu-item {
 
   // The stepper is a desktop affordance; mobile navigation is push-based.
   .stepper {
+    display: none;
+  }
+
+  // So is the lane toggle (issue #76) — the sheet's detents cover show/hide.
+  .lane-toggle {
     display: none;
   }
 

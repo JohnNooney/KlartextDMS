@@ -16,6 +16,15 @@
   &[hidden] {
     display: none;
   }
+
+  // The toolbar toggle's hide is a desktop affair (issue #76): scoped off
+  // mobile so a hidden lane can't strand the sheet — its detents govern
+  // show/hide there.
+  @media (min-width: 769px) {
+    &.lane-hidden {
+      display: none;
+    }
+  }
 }
 
 .guest-frame {

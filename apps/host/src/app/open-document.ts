@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, linkedSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
@@ -22,6 +22,16 @@ export class OpenDocument {
   readonly docId = signal<string | null>(null);
   /** The Folder being browsed (`null` = root, "Documents"). */
   readonly folderId = signal<string | null>(null);
+  /**
+   * Whether the Host hides the Guest's insights lane (issue #76) — a
+   * Host-only concern, never a Bus message; the Guest frame stays mounted so
+   * background Extraction Jobs keep running (ADR 0003). Linked to the open
+   * Document: every opened Document starts with the lane shown.
+   */
+  readonly insightsLaneHidden = linkedSignal<string | null, boolean>({
+    source: this.docId,
+    computation: () => false,
+  });
 
   constructor() {
     this.router.events
@@ -66,6 +76,11 @@ export class OpenDocument {
     this.docId.set(null);
     this.folderId.set(folderId);
     void this.router.navigate(browseCommands(folderId));
+  }
+
+  /** Shows or hides the insights lane — the reader toolbar's toggle (#76). */
+  toggleInsightsLane(): void {
+    this.insightsLaneHidden.update((hidden) => !hidden);
   }
 
   private readRoute(): void {
