@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   linkedSignal,
@@ -17,6 +18,7 @@ import { HostBus } from './bus/host-bus';
 import { windowBusSource } from './bus/window-bus';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
+import { PageFocus } from './page-focus';
 
 /** The sheet's snap heights (issue #50), smallest first. */
 type SheetState = 'peek' | 'half' | 'full';
@@ -233,6 +235,13 @@ export class GuestFrame {
       if (this.adapter) bus.detach(this.adapter);
       this.adapter?.dispose();
       this.adapter = null;
+    });
+
+    // A landed show-page request (issue #78) drops the sheet to peek so the
+    // jumped-to page is visible; on desktop the detent is inert.
+    const pageFocus = inject(PageFocus);
+    effect(() => {
+      if (pageFocus.landed() !== null) this.sheetState.set('peek');
     });
   }
 

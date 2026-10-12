@@ -236,6 +236,30 @@ describe('PdfViewer (issue #29)', () => {
     expect(fixture.componentInstance.page()).toBe(1);
   });
 
+  // Issue #78: a jump flash-marks the page briefly — the Guest asked for it.
+  it('goToPage briefly flash-marks the jumped-to page', async () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, el } = await setup({ numPages: 3 });
+      await settle(fixture);
+      const sheet = el.querySelector('.pdf-sheet')!;
+
+      fixture.componentInstance.goToPage(2);
+      expect(sheet.classList.contains('flash-mark')).toBe(true);
+
+      vi.advanceTimersByTime(2000);
+      expect(sheet.classList.contains('flash-mark')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('exposes the open Document’s pageCount for the show-page range check', async () => {
+    const { fixture } = await setup({ numPages: 5 });
+    await settle(fixture);
+    expect(fixture.componentInstance.pageCount()).toBe(5);
+  });
+
   it('exposes an Open in browser link backed by the Document bytes', async () => {
     const { fixture, el } = await setup();
     await settle(fixture);

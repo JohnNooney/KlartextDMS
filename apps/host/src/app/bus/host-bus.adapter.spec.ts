@@ -35,6 +35,7 @@ function setup() {
     jobStarted: vi.fn(),
     jobFailedFor: vi.fn(),
     retryRequested: vi.fn(() => false),
+    pageRequested: vi.fn(),
   };
   const adapter = createHostBusAdapter({ source, sink, peerOrigin: PEER_ORIGIN, probe });
   return { source, sink, probe, adapter };
@@ -285,5 +286,111 @@ describe('HostBus adapter — app-side probe hooks (issue #31)', () => {
       .filter((d) => d.type === 'EXTRACT_DOCUMENT');
     expect(dispatches).toHaveLength(2);
     expect(dispatches[1]!.payload.jobId).not.toBe(firstJobId);
+  });
+});
+
+// Issue #78: GUEST_SHOW_PAGE is Session-bound — the Host reports it to the
+// app only for the current Session and only with a usable page; a malformed
+// `quote`/`critical` is stripped rather than killing the request.
+describe('HostBus adapter — GUEST_SHOW_PAGE (issue #78)', () => {
+  const session = { ...goldenFixtureMessages.INIT_SESSION.payload, sessionId: 'sess-open' };
+
+  const showPage = (sessionId: string, payload: unknown) => ({
+    v: 1,
+    type: 'GUEST_SHOW_PAGE',
+    sessionId,
+    payload,
+  });
+
+  it('reports a valid request for the current Session', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', { page: 3, quote: 'Frist drei Monate', critical: true }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).toHaveBeenCalledWith({
+      page: 3,
+      quote: 'Frist drei Monate',
+      critical: true,
+    });
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage(sessionId, { page: 2 }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it('ignores the message while no Session is open', () => {
+    const { source, sink, probe } = setup();
+    source.emit({
+      data: showPage('sess-open', { page: 2 }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a fractional page', { page: 2.5 }],
+    ['a string page', { page: '2' }],
+    ['page zero', { page: 0 }],
+    ['a negative page', { page: -2 }],
+    ['a missing page', { quote: 'q' }],
+    ['a non-object payload', 'page 2'],
+    ['a null payload', null],
+  ])('ignores %s', (_label, payload) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', payload),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it('strips a non-string quote and non-boolean critical but honours the page', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', { page: 3, quote: 42, critical: 'yes' }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).toHaveBeenCalledWith({
+      page: 3,
+      quote: undefined,
+      critical: undefined,
+    });
+  });
+
+  it('ignores the message from an origin other than the Peer Origin', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+    source.emit({
+      data: showPage('sess-open', { page: 2 }),
+      origin: 'http://evil.test',
+      source: sink,
+    });
+    expect(probe.pageRequested).not.toHaveBeenCalled();
   });
 });

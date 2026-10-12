@@ -29,6 +29,7 @@ import {
 import { UploadPipeline } from '../data/upload-pipeline';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { ToastService } from '../toasts/toast.service';
 import { ExtractionFlow } from './extraction-flow';
 import { HostBus } from './host-bus';
@@ -639,5 +640,20 @@ describe('ExtractionFlow — notification actions and re-analysis (issue #32)', 
       extraction: record,
       extractionState: 'failed',
     });
+  });
+});
+
+// Issue #78: a GUEST_SHOW_PAGE outcome routes through HostBusEvents to the
+// flow and on to PageFocus — the app seam that knows the open Document's
+// page count.
+describe('ExtractionFlow — show-page requests (issue #78)', () => {
+  it('hands a wire-valid GUEST_SHOW_PAGE to PageFocus', () => {
+    const { events } = setup();
+    const focus = TestBed.inject(PageFocus);
+    const show = vi.spyOn(focus, 'show');
+
+    events.pageRequested({ page: 3, quote: 'q', critical: true });
+
+    expect(show).toHaveBeenCalledWith({ page: 3, quote: 'q', critical: true });
   });
 });

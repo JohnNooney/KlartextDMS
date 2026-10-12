@@ -1,5 +1,10 @@
 import { Injectable } from '@angular/core';
-import type { ExtractionCandidate, ExtractionError, JobDocument } from '@klartext/bus-contract';
+import type {
+  ExtractionCandidate,
+  ExtractionError,
+  GuestShowPagePayload,
+  JobDocument,
+} from '@klartext/bus-contract';
 import type { HostBusProbe } from './host-bus.adapter';
 
 /**
@@ -59,5 +64,9 @@ export class HostBusEvents implements HostBusProbe {
 
   retryRequested(documentId: string): boolean {
     return this.delegate?.retryRequested?.(documentId) ?? false;
+  }
+
+  pageRequested(request: GuestShowPagePayload): void {
+    this.delegate?.pageRequested(request);
   }
 }

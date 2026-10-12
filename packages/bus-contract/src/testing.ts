@@ -22,6 +22,7 @@ import {
   isBusMessage,
   isExtractionError,
   isPanelPresentation,
+  sanitizeShowPage,
   JOB_RESULT_TIMEOUT_MS,
   JOB_START_TIMEOUT_MS,
   SESSION_ACK_TIMEOUT_MS,
@@ -32,6 +33,7 @@ import { isExtractionCandidate, type ExtractionCandidate } from './extraction.js
 import type {
   ExtractionError,
   ExtractDocumentPayload,
+  GuestShowPagePayload,
   JobDocument,
   PanelPresentation,
   Session,
@@ -291,6 +293,15 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         }
         break;
       }
+      case 'GUEST_SHOW_PAGE': {
+        // Only the current Session may steer the reader (issue #78); a bad
+        // page kills the message, a bad quote/critical is merely stripped.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeShowPage(msg.payload);
+          if (request) ctx.probe.pageRequested(request);
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -340,6 +351,10 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
  * `AI_PROCESSING_STARTED` followed by the result of `ctx.runJob`.
  */
 export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapter {
+  // The current Session's id — echoed on SESSION_ACK and carried by
+  // GUEST_SHOW_PAGE (issue #78), which only exists inside a Session.
+  let sessionId: string | null = null;
+
   const post = (type: string, sessionId: string, payload: unknown): void => {
     ctx.sink.postMessage({ v: 1, type, sessionId, payload }, ctx.peerOrigin);
   };
@@ -351,6 +366,7 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
     const msg = event.data;
     switch (msg.type) {
       case 'INIT_SESSION': {
+        sessionId = msg.sessionId;
         post('SESSION_ACK', msg.sessionId, {});
         ctx.probe.sessionApplied(msg.payload);
         break;
@@ -389,6 +405,11 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
     },
     requestRetry(documentId: string): void {
       post('RETRY_EXTRACTION', NO_SESSION, { documentId });
+    },
+    showPage(request: GuestShowPagePayload): void {
+      // Session-bound: no Session, no send — the Host would drop it anyway.
+      if (sessionId === null) return;
+      post('GUEST_SHOW_PAGE', sessionId, request);
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

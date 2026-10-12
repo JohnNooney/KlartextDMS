@@ -17,7 +17,7 @@ import { createGuestBusAdapter } from './bus/guest-bus.adapter';
 describe('bus-contract (source-level import)', () => {
   it('exposes the protocol and golden fixtures', () => {
     expect(BUS_PROTOCOL_VERSION).toBe(1);
-    expect(Object.keys(goldenFixtures)).toHaveLength(9);
+    expect(Object.keys(goldenFixtures)).toHaveLength(10);
   });
 
   it('round-trips every golden fixture through the reference serializer', () => {

@@ -160,6 +160,77 @@ describe('ExtractionPanel', () => {
     expect(wrapper.text()).not.toContain(critical.sourceQuote);
   });
 
+  // Issue #78: selecting a row carrying a page asks the Host to show it —
+  // page, sourceQuote, and the Critical Warning flag ride in the payload.
+  // Rows without a page stay silent.
+
+  it('emits showPage with page, sourceQuote, and critical for a Critical Warning row', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [
+        takeaway({
+          text: 'deadline',
+          sourceQuote: 'Frist drei Monate',
+          importance: 'CRITICAL',
+          page: 3,
+        }),
+        takeaway({ text: 'rent', sourceQuote: 'dritten Werktag', page: 2 }),
+      ],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    const row = wrapper.findAll('button').find((b) => b.text().includes('deadline'))!;
+
+    await row.trigger('click');
+
+    expect(wrapper.emitted('showPage')).toEqual([
+      [{ page: 3, quote: 'Frist drei Monate', critical: true }],
+    ]);
+  });
+
+  it('marks an ordinary takeaway as not critical', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [takeaway({ text: 'rent', sourceQuote: 'dritten Werktag', page: 2 })],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    const row = wrapper.findAll('button').find((b) => b.text().includes('rent'))!;
+
+    await row.trigger('click');
+
+    expect(wrapper.emitted('showPage')).toEqual([
+      [{ page: 2, quote: 'dritten Werktag', critical: false }],
+    ]);
+  });
+
+  it('emits nothing for a row without a page', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [takeaway({ text: 'unpaged' })],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    const row = wrapper.findAll('button').find((b) => b.text().includes('unpaged'))!;
+
+    await row.trigger('click');
+
+    expect(wrapper.emitted('showPage')).toBeUndefined();
+  });
+
+  it('stays silent when the click deselects the row', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      keyTakeaways: [takeaway({ text: 'rent', sourceQuote: 'q', page: 2 })],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    const row = wrapper.findAll('button').find((b) => b.text().includes('rent'))!;
+
+    await row.trigger('click'); // selects — sends
+    await row.trigger('click'); // deselects — silent
+
+    expect(wrapper.emitted('showPage')).toEqual([
+      [{ page: 2, quote: 'q', critical: false }],
+    ]);
+  });
+
   it('collapses the previously selected row when another is selected', async () => {
     const ex = record({
       extractionStatus: 'COMPLETE',

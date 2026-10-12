@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "type": "GUEST_SHOW_PAGE",
+  "sessionId": "sess_7f3a9c2e",
+  "payload": {
+    "page": 3,
+    "quote": "Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.",
+    "critical": true
+  }
+}

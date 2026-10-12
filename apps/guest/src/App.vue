@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import ExtractionPanel from './ExtractionPanel.vue';
-import { currentSession, presentationMode, requestRetry } from './session-store';
+import { currentSession, presentationMode, requestRetry, showPage } from './session-store';
 
 // Guest shell (issue #26): the insights panel driven by the Session the Host
 // sends over the Bus. The (job state × Extraction) matrix is issue #15's —
 // a stored Extraction always renders under the current indicator; without
 // one, each job state gets its own block. "Analyze document"/"Try again"
-// both send RETRY_EXTRACTION — the Guest's only write-back (issue #31).
+// send RETRY_EXTRACTION and a selected takeaway row sends GUEST_SHOW_PAGE
+// (issue #78) — the Guest's only write-backs.
 const extraction = computed(() => currentSession.value?.extraction ?? null);
 const extractionState = computed(() => currentSession.value?.extractionState ?? 'none');
 
@@ -25,6 +26,7 @@ function reanalyze(): void {
       :extraction-state="extractionState"
       :presentation="presentationMode"
       @reanalyze="reanalyze"
+      @show-page="showPage"
     />
     <div v-else class="flex h-screen items-center justify-center">
       <div class="rounded-kt-lg bg-kt-surface p-kt-8 text-center shadow-kt-panel">

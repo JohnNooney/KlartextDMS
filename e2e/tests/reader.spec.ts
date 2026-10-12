@@ -110,6 +110,24 @@ test('the toolbar toggle hides and re-shows the insights lane', async () => {
   await expect(lane).toBeVisible();
 });
 
+// Journey (issue #78): selecting a Key Takeaway with a page sends
+// GUEST_SHOW_PAGE — the Host's PDF jumps to the referenced page.
+test('a Key Takeaway jumps the PDF to its page', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
+  const panel = guestPanel(page());
+  await expect(panel.getByRole('heading', { name: 'Tenancy agreement' })).toBeVisible();
+
+  // The first Critical Warning points at page 3 (seeded fixture).
+  await panel.getByRole('button', { name: /three months' notice/ }).click();
+  await expect(page().locator('.pdf-pageno')).toHaveText('3 / 4');
+  await expect(page().getByRole('img', { name: 'Page 3 of 4' })).toBeVisible();
+
+  // A normal takeaway lands too — "small repairs" points at page 4.
+  await panel.getByRole('button', { name: /small repairs/ }).click();
+  await expect(page().locator('.pdf-pageno')).toHaveText('4 / 4');
+});
+
 // Journey (issue #66): a page zoomed wider than the stage must keep its left
 // edge on-screen — the sheet start-aligns once it overflows, so the stage
 // scrolls right instead of centring the overflow off the reachable region.

@@ -6,6 +6,7 @@ import { HOST_BUS_ADAPTER_FACTORY } from './bus/host-bus.adapter';
 import { GuestFrame } from './guest-frame';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
+import { PageFocus } from './page-focus';
 
 class FakeOpenDocument {
   readonly docId = signal<string | null>('doc-1');
@@ -206,6 +207,35 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(sheet.classList.contains('lane-hidden')).toBe(true);
     expect(sheet.hasAttribute('hidden')).toBe(false);
     expect(el.querySelector('iframe.guest-frame')).toBeTruthy();
+  });
+
+  // Issue #78: a landed show-page request drops the sheet to peek so the
+  // jumped-to page stays visible; a request that never lands leaves it alone.
+  it('a landed page request rests the sheet at peek', async () => {
+    const { fixture, el } = await setup();
+    tap(fixture, el);
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
+
+    const focus = TestBed.inject(PageFocus);
+    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.show({ page: 3 });
+    fixture.detectChanges();
+
+    expect(detent(el)).toBe('peek');
+  });
+
+  it('an out-of-range page request leaves the sheet alone', async () => {
+    const { fixture, el } = await setup();
+    tap(fixture, el);
+    expect(detent(el)).toBe('half');
+
+    const focus = TestBed.inject(PageFocus);
+    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.show({ page: 99 });
+    fixture.detectChanges();
+
+    expect(detent(el)).toBe('half');
   });
 
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {
