@@ -4,6 +4,7 @@ import {
   guestPanel,
   makePdf,
   seededExtraction,
+  seededPdf,
   signedInPage,
   toast,
   tile,
@@ -58,6 +59,55 @@ test('the viewer pages through a multi-page Document', async () => {
 
   await prev.click();
   await expect(pageNo).toHaveText('2 / 3');
+});
+
+// Journey (issue #76): the toolbar's sidebar toggle hides the Guest's
+// insights lane — the PDF reflows to the window's right edge — and shows it
+// again. The iframe stays mounted so an in-flight Extraction Job still
+// lands; and hiding is forgotten — the next Document opens with the lane.
+test('the toolbar toggle hides and re-shows the insights lane', async () => {
+  const title = unique('E2E lane');
+  await browseRoot(page());
+  await uploadViaDialog(page(), [
+    { name: `${title}.pdf`, buffer: seededPdf('mietvertrag-2024.pdf') },
+  ]);
+  await expect(toast(page(), `Uploaded ${title}.pdf`)).toBeVisible();
+
+  await tile(page(), title).click();
+  const lane = page().locator('.guest-frame-host');
+  const hide = page().getByRole('button', { name: 'Hide insights' });
+  await expect(hide).toBeVisible();
+  await expect(hide).toHaveAttribute('aria-pressed', 'true');
+  await expect(lane).toBeVisible();
+
+  // Hide: the lane collapses and the PDF pane takes its width — its right
+  // edge lands on the reader's own edge, grown by the lane's 400px.
+  const paneRight = () =>
+    page().locator('.pdf-pane').evaluate((el) => el.getBoundingClientRect().right);
+  const before = await paneRight();
+  await hide.click();
+  await expect(lane).toBeHidden();
+  const show = page().getByRole('button', { name: 'Show insights' });
+  await expect(show).toHaveAttribute('aria-pressed', 'false');
+  const readerRight = await page()
+    .locator('.reader')
+    .evaluate((el) => el.getBoundingClientRect().right);
+  expect(await paneRight()).toBeGreaterThanOrEqual(readerRight - 1);
+  expect((await paneRight()) - before).toBeGreaterThanOrEqual(390); // ≈ the 400px lane
+
+  // The frame stays mounted — an in-flight Extraction Job still lands.
+  await expect(page().locator('iframe[title="Klartext insights panel"]')).toBeAttached();
+  await expect(toast(page(), `"${title}" is ready`)).toBeVisible();
+
+  // Show: the lane returns…
+  await show.click();
+  await expect(lane).toBeVisible();
+
+  // …and hiding is forgotten: the next Document opens with the lane shown.
+  await page().getByRole('button', { name: 'Hide insights' }).click();
+  await expect(lane).toBeHidden();
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(lane).toBeVisible();
 });
 
 // Journey (issue #66): a page zoomed wider than the stage must keep its left

@@ -26,6 +26,9 @@ export class Reader {
   private readonly store = inject(LibraryStore);
   private readonly viewer = viewChild(PdfViewer);
 
+  /** The toolbar toggle's read on the shared lane state (issue #76). */
+  protected readonly insightsLaneHidden = this.openDocument.insightsLaneHidden;
+
   protected readonly pathMenuOpen = signal(false);
 
   /** The back button's target: the open Document's own Folder. */

@@ -115,6 +115,14 @@ test('dragging the handle snaps the sheet to the nearest detent', async () => {
   await expect(expand()).toHaveAttribute('aria-expanded', 'false');
 });
 
+// Issue #76: the sidebar toggle is a desktop affordance — on mobile the
+// sheet's detents already cover show/hide, so the button is never offered.
+test('the insights lane toggle stays off mobile', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  await expect(page().getByRole('button', { name: 'Hide insights' })).toBeHidden();
+});
+
 test('opening another Document rests the sheet back at peek', async () => {
   await page().goto('/folder/kranken/doc/doc-versicherungsschein');
   await expand().tap();

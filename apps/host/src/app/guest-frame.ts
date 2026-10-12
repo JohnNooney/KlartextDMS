@@ -68,6 +68,12 @@ export class GuestFrame {
   /** Whether a Document is open — the frame displays only then (#28). */
   protected readonly docOpen = inject(OpenDocument).docId;
   /**
+   * Whether the toolbar toggle hides the lane (issue #76): desktop-only —
+   * the mobile sheet's detents already cover show/hide. Hidden by class so
+   * the iframe stays mounted for background Extraction Jobs (ADR 0003).
+   */
+  protected readonly laneHidden = inject(OpenDocument).insightsLaneHidden;
+  /**
    * Mobile bottom-sheet detent (issue #50): rests at peek so the PDF stays
    * primary, cycles peek → half → full → peek on handle taps, and tracks
    * the finger while dragging — snapping to the nearest detent on release

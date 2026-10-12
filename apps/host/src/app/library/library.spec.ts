@@ -84,9 +84,11 @@ class FakeStore {
 class FakeOpenDocument {
   readonly docId = signal<string | null>(null);
   readonly folderId = signal<string | null>(null);
+  readonly insightsLaneHidden = signal(false);
   open = vi.fn();
   openFolder = vi.fn();
   close = vi.fn();
+  toggleInsightsLane = vi.fn();
 }
 
 const fakePdfEngine = {

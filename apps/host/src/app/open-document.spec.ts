@@ -110,6 +110,36 @@ describe('OpenDocument (issue #29 navigation seam)', () => {
     await vi.waitFor(() => expect(open.docId()).toBeNull());
   });
 
+  it('toggleInsightsLane hides and re-shows the Guest insights lane (#76)', async () => {
+    const { open } = await setup();
+    expect(open.insightsLaneHidden()).toBe(false);
+
+    open.toggleInsightsLane();
+    expect(open.insightsLaneHidden()).toBe(true);
+
+    open.toggleInsightsLane();
+    expect(open.insightsLaneHidden()).toBe(false);
+  });
+
+  it('the lane is shown for every opened Document — hidden is not remembered (#76)', async () => {
+    const { open, stable } = await setup();
+    open.open({ id: 'doc-1', folderId: null });
+    await stable();
+    open.toggleInsightsLane();
+    expect(open.insightsLaneHidden()).toBe(true);
+
+    // Stepping to a sibling Document shows the lane again.
+    open.open({ id: 'doc-2', folderId: null });
+    expect(open.insightsLaneHidden()).toBe(false);
+
+    // So does closing and reopening the same Document.
+    open.toggleInsightsLane();
+    open.close();
+    await stable();
+    open.open({ id: 'doc-1', folderId: null });
+    expect(open.insightsLaneHidden()).toBe(false);
+  });
+
   it('an unrecognized URL falls back to the library root', async () => {
     const { router, open } = await setup();
     await router.navigateByUrl('/nowhere/at/all');

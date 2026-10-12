@@ -10,9 +10,11 @@ import { OpenDocument } from './open-document';
 class FakeOpenDocument {
   readonly docId = signal<string | null>('doc-1');
   readonly folderId = signal<string | null>(null);
+  readonly insightsLaneHidden = signal(false);
   open = vi.fn();
   openFolder = vi.fn();
   close = vi.fn();
+  toggleInsightsLane = vi.fn();
 }
 
 const fakeAdapter: HostAdapter = {
@@ -188,6 +190,21 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     pointer(el, 'pointerup', vh - 73, 150);
     tap(fixture, el);
     expect(detent(el)).toBe('half');
+  });
+
+  it('a hidden lane hides the frame but keeps it mounted — jobs run on (#76)', async () => {
+    const { fixture, el, openDocument } = await setup();
+    expect(host(el).classList.contains('lane-hidden')).toBe(false);
+
+    openDocument.insightsLaneHidden.set(true);
+    fixture.detectChanges();
+
+    // Hidden like "no Document open" — but by class, not `hidden`, so the
+    // mobile sheet's detents aren't stranded by a desktop hide.
+    const sheet = host(el);
+    expect(sheet.classList.contains('lane-hidden')).toBe(true);
+    expect(sheet.hasAttribute('hidden')).toBe(false);
+    expect(el.querySelector('iframe.guest-frame')).toBeTruthy();
   });
 
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {
