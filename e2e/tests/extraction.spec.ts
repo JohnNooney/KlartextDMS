@@ -31,7 +31,10 @@ test('an uploaded PDF is analyzed in the background and opens beside its Extract
   await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
   const panel = guestPanel(page());
   const fixture = goldenExtraction();
-  await expect(panel.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  // The panel titles itself by document type — the Host toolbar names the Document.
+  await expect(
+    panel.getByRole('heading', { level: 1, name: 'Service charge statement' }),
+  ).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
   for (const takeaway of fixture.keyTakeaways) {
     await expect(panel.getByText(takeaway.text)).toBeVisible();

@@ -22,7 +22,6 @@ function reanalyze(): void {
     <ExtractionPanel
       v-if="currentSession && extraction"
       :extraction="extraction"
-      :document-title="currentSession.documentTitle"
       :extraction-state="extractionState"
       @reanalyze="reanalyze"
     />

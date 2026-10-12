@@ -29,7 +29,8 @@ describe('App', () => {
   it('renders the Extraction once a Session is applied', () => {
     sessionProbe.sessionApplied(fixtureSession);
     const wrapper = mount(App);
-    expect(wrapper.text()).toContain(fixtureSession.documentTitle);
+    // The panel titles itself by document type — the Host owns the filename.
+    expect(wrapper.find('h1').text()).toBe('Tenancy agreement');
     expect(wrapper.text()).toContain(fixtureSession.extraction!.plainEnglishSummary);
   });
 

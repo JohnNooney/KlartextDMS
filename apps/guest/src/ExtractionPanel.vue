@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { DocumentType, ExtractionRecord, ExtractionState } from '@klartext/bus-contract';
-import KeyTakeawayCard from './KeyTakeawayCard.vue';
+import TakeawaySection from './TakeawaySection.vue';
 
-// The insights panel (issue #26, layout per the ui-host-guest prototype):
-// document-type label and provenance line, the plain-English summary,
-// warning-tinted "Needs your attention" cards for CRITICAL Key Takeaways,
-// then the normal Key Takeaways. A neutral block stands in for the sections
+// The insights panel as one continuous scroll (issue #75, layout settled by
+// the reader-insights prototype's variant C2): the document-type label is
+// the title — the Host toolbar already names the Document — with a muted
+// language/date meta line (the model moved into the ⋯ menu). The summary,
+// a tinted "things need your attention" callout that scrolls to the
+// Critical Warnings, then HIG inset grouped lists of Key Takeaway rows
+// numbered by their place in the Extraction; a row's German source quote
+// expands on selection. Sections carry data-section anchors so later
+// navigation can target them. A neutral block stands in for the sections
 // when the Extraction came back INSUFFICIENT_CONTENT / UNSUPPORTED_DOCUMENT.
 //
 // Issue #15/#31: the stored Extraction stays readable whatever the job is
@@ -18,7 +23,6 @@ import KeyTakeawayCard from './KeyTakeawayCard.vue';
 const props = withDefaults(
   defineProps<{
     extraction: ExtractionRecord;
-    documentTitle: string;
     extractionState?: ExtractionState;
   }>(),
   { extractionState: 'none' },
@@ -26,6 +30,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ reanalyze: [] }>();
 const menuOpen = ref(false);
+const root = ref<HTMLElement>();
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   TENANCY_AGREEMENT: 'Tenancy agreement',
@@ -55,12 +60,42 @@ const analyzedAt = computed(() =>
 );
 
 const isComplete = computed(() => props.extraction.extractionStatus === 'COMPLETE');
+
+// Rows keep their number across both sections: `number` is the Key
+// Takeaway's one-based place in the Extraction, `index` its position for
+// selection.
+const numberedTakeaways = computed(() =>
+  props.extraction.keyTakeaways.map((takeaway, index) => ({
+    takeaway,
+    index,
+    number: index + 1,
+  })),
+);
 const criticalTakeaways = computed(() =>
-  props.extraction.keyTakeaways.filter((t) => t.importance === 'CRITICAL'),
+  numberedTakeaways.value.filter((row) => row.takeaway.importance === 'CRITICAL'),
 );
 const normalTakeaways = computed(() =>
-  props.extraction.keyTakeaways.filter((t) => t.importance !== 'CRITICAL'),
+  numberedTakeaways.value.filter((row) => row.takeaway.importance !== 'CRITICAL'),
 );
+
+// A selected row shows its source quote; selection is single — picking
+// another row collapses the first, re-picking collapses it too.
+const selectedTakeaway = ref<number | null>(null);
+function toggleTakeaway(index: number): void {
+  selectedTakeaway.value = selectedTakeaway.value === index ? null : index;
+}
+watch(
+  () => props.extraction,
+  () => {
+    selectedTakeaway.value = null;
+  },
+);
+
+function scrollToSection(section: string): void {
+  root.value
+    ?.querySelector(`[data-section="${section}"]`)
+    ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
 
 const jobInFlight = computed(
   () => props.extractionState === 'queued' || props.extractionState === 'running',
@@ -83,42 +118,40 @@ function reanalyze(): void {
 </script>
 
 <template>
-  <article class="min-h-screen bg-kt-canvas px-kt-5 py-kt-6 font-sans text-kt-text">
-    <header>
-      <div class="flex items-start justify-between gap-kt-3">
-        <span
-          class="inline-block rounded-kt-sm bg-kt-fill px-kt-2 py-kt-1 text-kt-xs font-medium uppercase tracking-wide text-kt-text-muted"
+  <article ref="root" class="min-h-screen bg-kt-canvas px-kt-5 py-kt-6 font-sans text-kt-text">
+    <header class="flex items-start justify-between gap-kt-3">
+      <div class="min-w-0">
+        <h1 class="text-kt-lg font-semibold">{{ typeLabel }}</h1>
+        <p class="mt-kt-1 text-kt-xs text-kt-text-muted">
+          Translated from {{ sourceLanguage }} · Analyzed {{ analyzedAt }}
+        </p>
+      </div>
+      <div v-if="isComplete" class="relative shrink-0">
+        <button
+          type="button"
+          aria-label="More actions"
+          class="rounded-kt-sm px-kt-2 py-kt-1 text-kt-base leading-none text-kt-text-muted hover:bg-kt-fill"
+          @click="menuOpen = !menuOpen"
         >
-          {{ typeLabel }}
-        </span>
-        <div v-if="isComplete" class="relative">
+          ⋯
+        </button>
+        <div
+          v-if="menuOpen"
+          class="absolute right-0 z-10 mt-kt-1 min-w-48 rounded-kt-md bg-kt-surface py-kt-1 shadow-kt-popover"
+        >
+          <p class="whitespace-nowrap px-kt-4 pb-kt-1 pt-kt-2 text-kt-xs text-kt-text-faint">
+            Analyzed with {{ extraction.model }}
+          </p>
           <button
             type="button"
-            aria-label="More actions"
-            class="rounded-kt-sm px-kt-2 py-kt-1 text-kt-base leading-none text-kt-text-muted hover:bg-kt-fill"
-            @click="menuOpen = !menuOpen"
+            class="block w-full px-kt-4 py-kt-2 text-left text-kt-sm hover:bg-kt-fill disabled:opacity-50"
+            :disabled="jobInFlight"
+            @click="reanalyze"
           >
-            ⋯
+            Re-analyze document
           </button>
-          <div
-            v-if="menuOpen"
-            class="absolute right-0 z-10 mt-kt-1 min-w-40 rounded-kt-md bg-kt-surface py-kt-1 shadow-kt-panel"
-          >
-            <button
-              type="button"
-              class="block w-full px-kt-4 py-kt-2 text-left text-kt-sm hover:bg-kt-fill disabled:opacity-50"
-              :disabled="jobInFlight"
-              @click="reanalyze"
-            >
-              Re-analyze document
-            </button>
-          </div>
         </div>
       </div>
-      <h1 :title="documentTitle" class="mt-kt-3 truncate text-kt-lg font-semibold">{{ documentTitle }}</h1>
-      <p class="mt-kt-1 text-kt-xs text-kt-text-faint">
-        Translated from {{ sourceLanguage }} · Analyzed {{ analyzedAt }} · {{ extraction.model }}
-      </p>
     </header>
 
     <p
@@ -154,7 +187,19 @@ function reanalyze(): void {
       </div>
     </div>
 
-    <p class="mt-kt-4 text-kt-base leading-relaxed">{{ extraction.plainEnglishSummary }}</p>
+    <section data-section="summary" class="mt-kt-4 scroll-mt-kt-2">
+      <p class="text-kt-base leading-relaxed">{{ extraction.plainEnglishSummary }}</p>
+      <button
+        v-if="isComplete && criticalTakeaways.length"
+        type="button"
+        class="mt-kt-5 flex w-full items-center gap-kt-3 rounded-kt-lg bg-kt-warning-tint px-kt-4 py-kt-3 text-left text-kt-sm font-medium"
+        @click="scrollToSection('attention')"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-kt-warning" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
+        <span class="flex-1">{{ criticalTakeaways.length }} things need your attention</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+      </button>
+    </section>
 
     <div
       v-if="!isComplete"
@@ -164,28 +209,23 @@ function reanalyze(): void {
     </div>
 
     <template v-else>
-      <section v-if="criticalTakeaways.length" class="mt-kt-6">
-        <h2 class="text-kt-sm font-semibold">Needs your attention</h2>
-        <ul class="mt-kt-2 space-y-kt-3">
-          <KeyTakeawayCard
-            v-for="(takeaway, i) in criticalTakeaways"
-            :key="i"
-            :takeaway="takeaway"
-            critical
-          />
-        </ul>
-      </section>
-
-      <section v-if="normalTakeaways.length" class="mt-kt-6">
-        <h2 class="text-kt-sm font-semibold">Key takeaways</h2>
-        <ul class="mt-kt-2 space-y-kt-2">
-          <KeyTakeawayCard
-            v-for="(takeaway, i) in normalTakeaways"
-            :key="i"
-            :takeaway="takeaway"
-          />
-        </ul>
-      </section>
+      <TakeawaySection
+        v-if="criticalTakeaways.length"
+        section="attention"
+        title="Needs your attention"
+        :rows="criticalTakeaways"
+        critical
+        :selected-index="selectedTakeaway"
+        @select="toggleTakeaway"
+      />
+      <TakeawaySection
+        v-if="normalTakeaways.length"
+        section="takeaways"
+        title="Key takeaways"
+        :rows="normalTakeaways"
+        :selected-index="selectedTakeaway"
+        @select="toggleTakeaway"
+      />
     </template>
   </article>
 </template>
