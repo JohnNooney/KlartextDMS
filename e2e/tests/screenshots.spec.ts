@@ -28,7 +28,7 @@ test('reader — a Document open beside its Extraction', async () => {
 
   const panel = guestPanel(page());
   const fixture = seededExtraction('doc-mietvertrag');
-  await expect(panel.getByRole('heading', { level: 1, name: 'Mietvertrag 2024' })).toBeVisible();
+  await expect(panel.getByRole('heading', { level: 1, name: 'Tenancy agreement' })).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
   await expect(panel.getByRole('heading', { name: 'Needs your attention' })).toBeVisible();
   for (const takeaway of fixture.keyTakeaways.filter((t) => t.importance === 'CRITICAL')) {

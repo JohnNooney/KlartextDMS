@@ -25,7 +25,7 @@ test('a filed Document opens with its stored Extraction beside the PDF', async (
   await expect(page().getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
   const panel = guestPanel(page());
   const fixture = seededExtraction('doc-mietvertrag');
-  await expect(panel.getByRole('heading', { level: 1, name: 'Mietvertrag 2024' })).toBeVisible();
+  await expect(panel.getByRole('heading', { level: 1, name: 'Tenancy agreement' })).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
   await expect(panel.getByRole('heading', { name: 'Needs your attention' })).toBeVisible();
 

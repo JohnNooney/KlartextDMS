@@ -65,7 +65,7 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
   await expect(expandFull()).toHaveAttribute('aria-expanded', 'true');
   await expectSheetHeight(viewport.height * 0.4, viewport.height * 0.6);
   await expectNoOverlap(page());
-  await expect(guestPanel(page()).getByRole('heading', { name: 'Mietvertrag 2024' })).toBeVisible();
+  await expect(guestPanel(page()).getByRole('heading', { name: 'Tenancy agreement' })).toBeVisible();
 
   // → full: the sheet fills the viewport.
   await expandFull().tap();
@@ -73,7 +73,7 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
   await expect(collapse()).toHaveAttribute('aria-expanded', 'true');
   await expectSheetHeight(viewport.height * 0.9, viewport.height);
   await expectNoOverlap(page());
-  await expect(guestPanel(page()).getByRole('heading', { name: 'Mietvertrag 2024' })).toBeVisible();
+  await expect(guestPanel(page()).getByRole('heading', { name: 'Tenancy agreement' })).toBeVisible();
 
   // → back to peek.
   await collapse().tap();
