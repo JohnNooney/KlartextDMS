@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages } from '@klartext/bus-contract';
 import type { ExtractionState, Session } from '@klartext/bus-contract';
 import App from './App.vue';
-import { currentSession, presentationMode, retrySender, sessionProbe } from './session-store';
+import {
+  currentSession,
+  presentationMode,
+  retrySender,
+  sessionProbe,
+  showPageSender,
+} from './session-store';
 
 const fixtureSession = goldenFixtureMessages.INIT_SESSION.payload;
 
@@ -17,6 +23,7 @@ function session(
 beforeEach(() => {
   currentSession.value = null;
   retrySender.value = null;
+  showPageSender.value = null;
   presentationMode.value = null;
 });
 
@@ -87,6 +94,26 @@ describe('App', () => {
     const wrapper = mount(App);
     expect(wrapper.text()).toContain(fixtureSession.extraction!.plainEnglishSummary);
     expect(wrapper.text()).toContain(copy);
+  });
+
+  // Issue #78: a selected Key Takeaway row carrying a page asks the Host to
+  // show it — fire-and-forget through the wired Bus sender.
+  it('selecting a takeaway row sends GUEST_SHOW_PAGE through the Bus sender', async () => {
+    const showPage = vi.fn();
+    showPageSender.value = showPage;
+    sessionProbe.sessionApplied(fixtureSession);
+    const wrapper = mount(App);
+    const row = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes("three months' notice"))!;
+
+    await row.trigger('click');
+
+    expect(showPage).toHaveBeenCalledWith({
+      page: 3,
+      quote: 'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.',
+      critical: true,
+    });
   });
 
   it('Extraction + failed keeps the stored content under a warning banner with Try again', async () => {

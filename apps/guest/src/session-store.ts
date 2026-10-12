@@ -1,6 +1,7 @@
 import { shallowRef } from 'vue';
 import {
   goldenFixtureMessages,
+  type GuestShowPagePayload,
   type PanelPresentation,
   type Session,
 } from '@klartext/bus-contract';
@@ -49,4 +50,16 @@ export const retrySender = shallowRef<((documentId: string) => void) | null>(nul
 
 export function requestRetry(documentId: string): void {
   retrySender.value?.(documentId);
+}
+
+/**
+ * The Bus adapter's page sender (issue #78), wired by main.ts once the
+ * adapter exists. A selected Key Takeaway row with a `page` turns into
+ * `GUEST_SHOW_PAGE` — fire-and-forget; standalone dev has no Host and sends
+ * nothing.
+ */
+export const showPageSender = shallowRef<((request: GuestShowPagePayload) => void) | null>(null);
+
+export function showPage(request: GuestShowPagePayload): void {
+  showPageSender.value?.(request);
 }

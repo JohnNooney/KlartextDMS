@@ -5,11 +5,12 @@ import { BUS_PROTOCOL_VERSION, type Envelope } from './envelope.js';
  * Bus messages (issue #7, amended by #12). `sessionId` is Host-generated per
  * `INIT_SESSION` and echoed by the Guest; messages outside a Session —
  * `GUEST_READY`, `PANEL_PRESENTATION` (issue #77), and every Extraction Job
- * message — carry `""` (`NO_SESSION`).
+ * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78) travels
+ * inside the Session: the Host drops it for any other `sessionId`.
  *
  * Forward-compat rule: both apps ignore envelopes with an unknown `type`
- * (e.g. a v2 `GUEST_SHOW_PAGE` or `AUTH_TOKEN_REFRESHED`). `isEnvelope`
- * accepts them, `isBusMessage` does not.
+ * (e.g. a v2 `AUTH_TOKEN_REFRESHED`). `isEnvelope` accepts them,
+ * `isBusMessage` does not.
  */
 
 /** Payload shape for messages with no payload: `{}` on the wire. */
@@ -81,6 +82,20 @@ export function isPanelPresentation(value: unknown): value is PanelPresentation 
   return value === 'lane' || value === 'sheet';
 }
 
+/**
+ * The Guest asks the Host to show a page of the open Document (issue #78):
+ * a selected Key Takeaway row's one-based `page`, its `sourceQuote` as
+ * `quote`, and `critical` for Critical Warnings. `quote`/`critical` ride
+ * along for the passage highlight (issue #80) — this ticket only jumps the
+ * viewer and flash-marks the page.
+ */
+export interface GuestShowPagePayload {
+  /** One-based page of the open Document. */
+  page: number;
+  quote?: string;
+  critical?: boolean;
+}
+
 export type BusMessage =
   // Host → Guest
   | Envelope<'INIT_SESSION', Session>
@@ -92,7 +107,8 @@ export type BusMessage =
   | Envelope<'AI_PROCESSING_STARTED', { jobId: string }>
   | Envelope<'AI_PROCESSING_SUCCESS', { jobId: string; extraction: ExtractionCandidate }>
   | Envelope<'AI_PROCESSING_ERROR', { jobId: string; error: ExtractionError }>
-  | Envelope<'RETRY_EXTRACTION', { documentId: string }>;
+  | Envelope<'RETRY_EXTRACTION', { documentId: string }>
+  | Envelope<'GUEST_SHOW_PAGE', GuestShowPagePayload>;
 
 export type HostToGuestMessage = Extract<
   BusMessage,
@@ -117,7 +133,28 @@ export const MESSAGE_TYPES = [
   'AI_PROCESSING_SUCCESS',
   'AI_PROCESSING_ERROR',
   'RETRY_EXTRACTION',
+  'GUEST_SHOW_PAGE',
 ] as const satisfies readonly MessageType[];
+
+/**
+ * Wire-level check for `GUEST_SHOW_PAGE` (issue #78): the `page` is an
+ * integer ≥ 1 — the `..pageCount` end of the range is the app's, which alone
+ * knows the open Document. A non-string `quote` or non-boolean `critical`
+ * is stripped rather than killing an otherwise valid request. Returns the
+ * sanitized payload, or `null` when the page itself can't be honoured.
+ */
+export function sanitizeShowPage(payload: unknown): GuestShowPagePayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const page = (payload as Record<string, unknown>)['page'];
+  if (typeof page !== 'number' || !Number.isInteger(page) || page < 1) return null;
+  const quote = (payload as Record<string, unknown>)['quote'];
+  const critical = (payload as Record<string, unknown>)['critical'];
+  return {
+    page,
+    quote: typeof quote === 'string' ? quote : undefined,
+    critical: typeof critical === 'boolean' ? critical : undefined,
+  };
+}
 
 /** Spine check only — accepts unknown `type`s so forward compat holds. */
 export function isEnvelope(value: unknown): value is Envelope<string, unknown> {

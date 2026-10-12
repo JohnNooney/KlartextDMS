@@ -6,6 +6,7 @@ import {
   SESSION_ACK_TIMEOUT_MS,
   isBusMessage,
   isExtractionCandidate,
+  sanitizeShowPage,
 } from '@klartext/bus-contract';
 import type {
   BusMessageEvent,
@@ -249,6 +250,15 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         if (known) {
           queue.push(known);
           pumpQueue();
+        }
+        break;
+      }
+      case 'GUEST_SHOW_PAGE': {
+        // Only the current Session may steer the reader (issue #78); a bad
+        // page kills the message, a bad quote/critical is merely stripped.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeShowPage(msg.payload);
+          if (request) ctx.probe.pageRequested(request);
         }
         break;
       }

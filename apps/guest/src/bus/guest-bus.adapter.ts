@@ -4,7 +4,11 @@ import {
   isExtractionError,
   isPanelPresentation,
 } from '@klartext/bus-contract';
-import type { BusMessageEvent, GuestToHostMessage } from '@klartext/bus-contract';
+import type {
+  BusMessageEvent,
+  GuestShowPagePayload,
+  GuestToHostMessage,
+} from '@klartext/bus-contract';
 import type { GuestAdapter, GuestAdapterContext } from '@klartext/bus-contract/conformance';
 
 /**
@@ -19,8 +23,14 @@ import type { GuestAdapter, GuestAdapterContext } from '@klartext/bus-contract/c
  * Every `INIT_SESSION` is acked with `SESSION_ACK` echoing the envelope's
  * `sessionId` and applied to the probe; `EXTRACT_DOCUMENT` answers with an
  * immediate `AI_PROCESSING_STARTED` followed by the `runJob` outcome.
+ * `showPage` sends `GUEST_SHOW_PAGE` (issue #78) under the current Session —
+ * fire-and-forget, and silent while no Session exists.
  */
 export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
+  // The applied Session's id — SESSION_ACK echoes it and GUEST_SHOW_PAGE
+  // travels under it (issue #78).
+  let sessionId: string | null = null;
+
   const post = (
     type: GuestToHostMessage['type'],
     sessionId: string,
@@ -36,6 +46,7 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
     const msg = event.data;
     switch (msg.type) {
       case 'INIT_SESSION': {
+        sessionId = msg.sessionId;
         post('SESSION_ACK', msg.sessionId, {});
         ctx.probe.sessionApplied(msg.payload);
         break;
@@ -75,6 +86,12 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
     },
     requestRetry(documentId: string): void {
       post('RETRY_EXTRACTION', NO_SESSION, { documentId });
+    },
+    showPage(request: GuestShowPagePayload): void {
+      // Session-bound: with no Session there is no Host side listening — and
+      // no takeaway rows to select anyway.
+      if (sessionId === null) return;
+      post('GUEST_SHOW_PAGE', sessionId, request);
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

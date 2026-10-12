@@ -6,6 +6,7 @@ import type { DocumentRecord } from '../data/document';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { PDF_ENGINE, type PdfDocumentRef, type PdfEngine, type PdfPageRef } from './pdf-engine';
 import { Reader } from './reader';
 
@@ -201,5 +202,23 @@ describe('Reader (issue #29)', () => {
     for (let i = 0; i < 20; i++) await Promise.resolve();
     fixture.detectChanges();
     expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 2 of 4');
+  });
+
+  // Issue #78: the Reader registers its viewer as the PageFocus navigator —
+  // a GUEST_SHOW_PAGE lands inside the open Document's range and is ignored
+  // outside it.
+  it('a show-page request jumps the viewer within 1..pageCount', async () => {
+    const { fixture, el } = await setup(record('d1', 'Brief'));
+    const focus = TestBed.inject(PageFocus);
+
+    focus.show({ page: 3 });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    fixture.detectChanges();
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
+
+    focus.show({ page: 99 });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    fixture.detectChanges();
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
   });
 });

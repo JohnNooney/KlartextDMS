@@ -4,6 +4,7 @@ import type {
   DocumentType,
   ExtractionRecord,
   ExtractionState,
+  GuestShowPagePayload,
   PanelPresentation,
 } from '@klartext/bus-contract';
 import TakeawaySection from './TakeawaySection.vue';
@@ -35,7 +36,11 @@ const props = withDefaults(
   { extractionState: 'none', presentation: null },
 );
 
-const emit = defineEmits<{ reanalyze: [] }>();
+const emit = defineEmits<{
+  reanalyze: [];
+  /** A paged Key Takeaway row was selected (issue #78) — the Host jumps. */
+  showPage: [request: GuestShowPagePayload];
+}>();
 const menuOpen = ref(false);
 const root = ref<HTMLElement>();
 
@@ -170,7 +175,18 @@ onUnmounted(() => window.removeEventListener('scroll', updateScrollSpy));
 // another row collapses the first, re-picking collapses it too.
 const selectedTakeaway = ref<number | null>(null);
 function toggleTakeaway(index: number): void {
-  selectedTakeaway.value = selectedTakeaway.value === index ? null : index;
+  const selecting = selectedTakeaway.value !== index;
+  selectedTakeaway.value = selecting ? index : null;
+  // Selecting a paged row also asks the Host to show that page (issue #78);
+  // deselecting stays silent.
+  const takeaway = props.extraction.keyTakeaways[index];
+  if (selecting && takeaway?.page !== undefined) {
+    emit('showPage', {
+      page: takeaway.page,
+      quote: takeaway.sourceQuote,
+      critical: takeaway.importance === 'CRITICAL',
+    });
+  }
 }
 watch(
   () => props.extraction,

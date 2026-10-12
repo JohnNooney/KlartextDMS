@@ -111,6 +111,21 @@
   canvas {
     display: block;
   }
+
+  // The flash-mark for a Guest-driven page jump (issue #78): an accent ring
+  // layered over the raised shadow, fading over ~1 s.
+  &.flash-mark {
+    animation: kt-page-flash 1s ease-out;
+  }
+}
+
+@keyframes kt-page-flash {
+  0% {
+    box-shadow: kt.$kt-shadow-raised, 0 0 0 4px kt.$kt-accent;
+  }
+  100% {
+    box-shadow: kt.$kt-shadow-raised, 0 0 0 4px transparent;
+  }
 }
 
 // ---------- Loading ----------

@@ -69,6 +69,12 @@ describe('BusMessage union', () => {
         sessionId: NO_SESSION,
         payload: { mode: 'lane' },
       },
+      {
+        v: 1,
+        type: 'GUEST_SHOW_PAGE',
+        sessionId: 'sess-1',
+        payload: { page: 3, quote: 'Die Kündigungsfrist beträgt drei Monate.', critical: true },
+      },
     ];
     for (const m of messages) expect(isBusMessage(m)).toBe(true);
   });
@@ -154,7 +160,7 @@ describe('isEnvelope', () => {
 
 describe('isBusMessage', () => {
   it('rejects unknown types so both apps ignore them (forward compat)', () => {
-    const v2 = { v: BUS_PROTOCOL_VERSION, type: 'GUEST_SHOW_PAGE', sessionId: 's', payload: { page: 3 } };
+    const v2 = { v: BUS_PROTOCOL_VERSION, type: 'AUTH_TOKEN_REFRESHED', sessionId: 's', payload: { token: 'x' } };
     expect(isEnvelope(v2)).toBe(true);
     expect(isBusMessage(v2)).toBe(false);
   });

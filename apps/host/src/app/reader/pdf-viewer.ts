@@ -45,6 +45,11 @@ export class PdfViewer {
   readonly page = signal(1);
 
   protected readonly numPages = signal(0);
+  /**
+   * The open Document's page count — the `1..pageCount` ceiling the
+   * `GUEST_SHOW_PAGE` range check reads (issue #78).
+   */
+  readonly pageCount = this.numPages.asReadonly();
   protected readonly state = signal<'loading' | 'ready' | 'error'>('loading');
   /** Parse progress in percent, `null` while the total is unknown. */
   protected readonly progress = signal<number | null>(null);
@@ -62,6 +67,7 @@ export class PdfViewer {
   private readonly repository = inject(DOCUMENT_REPOSITORY);
   private readonly stage = viewChild<ElementRef<HTMLElement>>('stage');
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly sheet = viewChild<ElementRef<HTMLElement>>('sheet');
 
   private pdf: PdfDocumentRef | null = null;
   /** Guards async renders against Document switches mid-flight. */
@@ -75,6 +81,8 @@ export class PdfViewer {
   private renderActive = false;
   /** The page the queue is aiming at — stepping continues from here. */
   private target = 1;
+  /** Clears the flash-mark class once the animation has played out (#78). */
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // The Document drives the load pipeline; `untracked` keeps the load's own
@@ -86,18 +94,34 @@ export class PdfViewer {
     inject(DestroyRef).onDestroy(() => {
       this.generation++;
       this.renderQueued = null;
+      if (this.flashTimer !== null) clearTimeout(this.flashTimer);
       this.teardownDocument();
     });
   }
 
   /**
-   * Jumps to a page — the Host-side `goToPage(n)` that `GUEST_SHOW_PAGE` (#19)
-   * will drive. Clamps into range.
+   * Jumps to a page — the Host-side `goToPage(n)` that `GUEST_SHOW_PAGE`
+   * drives (issue #78). Clamps into range and briefly flash-marks the sheet.
    */
   goToPage(n: number): void {
     const total = this.numPages();
     if (total === 0) return;
     this.requestRender(Math.min(Math.max(1, Math.round(n)), total));
+    this.flashSheet();
+  }
+
+  /**
+   * The flash-mark (issue #78): an accent ring around the jumped-to page
+   * that fades over ~1 s. Re-adding the class mid-animation restarts it.
+   */
+  private flashSheet(): void {
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet) return;
+    sheet.classList.remove('flash-mark');
+    void sheet.offsetWidth; // let the removal land so the animation restarts
+    sheet.classList.add('flash-mark');
+    if (this.flashTimer !== null) clearTimeout(this.flashTimer);
+    this.flashTimer = setTimeout(() => sheet.classList.remove('flash-mark'), 1100);
   }
 
   protected prevPage(): void {
