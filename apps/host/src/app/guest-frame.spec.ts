@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HostAdapter } from '@klartext/bus-contract/conformance';
 import { HOST_BUS_ADAPTER_FACTORY } from './bus/host-bus.adapter';
 import { GuestFrame } from './guest-frame';
@@ -21,6 +21,7 @@ const fakeAdapter: HostAdapter = {
   openSession: vi.fn(),
   requestExtraction: vi.fn(),
   cancelJobs: vi.fn(),
+  setPresentation: vi.fn(),
   dispose: vi.fn(),
 };
 
@@ -216,5 +217,62 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(
       button.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// Issue #77: the frame reports its lane/sheet presentation over the Bus —
+// on mount (buffered until GUEST_READY by the adapter) and on every
+// crossing of the same 768px mobile breakpoint the frame's CSS uses.
+describe('GuestFrame panel presentation (issue #77)', () => {
+  // jsdom has no matchMedia — a stubbed MediaQueryList drives the tests.
+  let fakeMedia: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
+  let crossing: (() => void) | null;
+
+  beforeEach(() => {
+    crossing = null;
+    fakeMedia = {
+      matches: false,
+      addEventListener: vi.fn((_type: string, listener: () => void) => {
+        crossing = listener;
+      }),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn(() => fakeMedia));
+    vi.mocked(fakeAdapter.setPresentation).mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('reports the lane mode on mount at desktop widths', async () => {
+    await setup();
+    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 768px)');
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledWith('lane');
+  });
+
+  it('reports the sheet mode on mount under the mobile breakpoint', async () => {
+    fakeMedia.matches = true;
+    await setup();
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledWith('sheet');
+  });
+
+  it('reports each breakpoint crossing', async () => {
+    await setup();
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledTimes(1);
+
+    fakeMedia.matches = true;
+    crossing!();
+    expect(fakeAdapter.setPresentation).toHaveBeenLastCalledWith('sheet');
+
+    fakeMedia.matches = false;
+    crossing!();
+    expect(fakeAdapter.setPresentation).toHaveBeenLastCalledWith('lane');
+  });
+
+  it('stops listening on destroy', async () => {
+    const { fixture } = await setup();
+    fixture.destroy();
+    expect(fakeMedia.removeEventListener).toHaveBeenCalledWith('change', crossing);
   });
 });

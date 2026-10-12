@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import ExtractionPanel from './ExtractionPanel.vue';
-import { currentSession, requestRetry } from './session-store';
+import { currentSession, presentationMode, requestRetry } from './session-store';
 
 // Guest shell (issue #26): the insights panel driven by the Session the Host
 // sends over the Bus. The (job state × Extraction) matrix is issue #15's —
@@ -23,6 +23,7 @@ function reanalyze(): void {
       v-if="currentSession && extraction"
       :extraction="extraction"
       :extraction-state="extractionState"
+      :presentation="presentationMode"
       @reanalyze="reanalyze"
     />
     <div v-else class="flex h-screen items-center justify-center">

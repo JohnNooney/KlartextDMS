@@ -8,6 +8,7 @@ import type {
   ExtractionError,
   JobDocument,
   ExtractDocumentPayload,
+  PanelPresentation,
   Session,
 } from './index.js';
 import {
@@ -52,12 +53,21 @@ export interface HostAdapter {
    * in-flight job is discarded, and RETRY_EXTRACTION no longer re-queues it.
    */
   cancelJobs(documentId: string): void;
+  /**
+   * The frame's presentation changed (issue #77): the Host's reader crossed
+   * the mobile breakpoint, or the adapter is (re)asserting the mode ahead of
+   * the Guest's readiness — buffered until `GUEST_READY`, sent again on each
+   * crossing, and resent when the Guest reloads.
+   */
+  setPresentation(mode: PanelPresentation): void;
   dispose(): void;
 }
 
 /** How the suite observes Guest adapter outcomes. */
 export interface GuestProbe {
   sessionApplied(session: Session): void;
+  /** A `PANEL_PRESENTATION` with a valid `mode` was applied (issue #77). */
+  presentationApplied(mode: PanelPresentation): void;
 }
 
 export interface GuestAdapterContext {
@@ -186,7 +196,7 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       pair.guest.source.addEventListener('message', (e) => wireToGuest.push(e.data));
       pair.host.source.addEventListener('message', (e) => wireToHost.push(e.data));
       hostProbe = { sessionFailed: vi.fn(), jobSucceeded: vi.fn(), jobFailed: vi.fn() };
-      guestProbe = { sessionApplied: vi.fn() };
+      guestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
       jobDeferreds = [];
       jobPayloads = [];
       disposers = [];
@@ -447,6 +457,43 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       injectToHost({ v: 1, type: 'AI_PROCESSING_SUCCESS', sessionId: '', payload: { jobId, extraction } });
       await flush();
       expect(hostProbe.jobSucceeded).not.toHaveBeenCalled();
+    });
+
+    it('delivers the panel presentation once the Guest is ready, and on every crossing (issue #77)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      host.setPresentation('lane');
+      // Presentation is per-frame state: buffered until GUEST_READY like the Session.
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toEqual([]);
+      guest.mount();
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toEqual([
+        { v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'lane' } },
+      ]);
+      expect(guestProbe.presentationApplied).toHaveBeenCalledWith('lane');
+
+      // A breakpoint crossing reports the new mode; re-asserting it does not.
+      host.setPresentation('sheet');
+      host.setPresentation('sheet');
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toHaveLength(2);
+      expect(guestProbe.presentationApplied).toHaveBeenLastCalledWith('sheet');
+    });
+
+    it('resends the presentation when the Guest reloads', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      host.setPresentation('lane');
+      guest.mount();
+      guest.mount(); // iframe reloaded: GUEST_READY re-announced
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toHaveLength(2);
+    });
+
+    it('the Guest ignores a presentation carrying an invalid mode', () => {
+      const guest = makeGuest();
+      guest.mount();
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'drawer' } });
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: {} });
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: 'lane' });
+      expect(guestProbe.presentationApplied).not.toHaveBeenCalled();
     });
 
     it('ignores envelopes with an unknown type on both sides', async () => {

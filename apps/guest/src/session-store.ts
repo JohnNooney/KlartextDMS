@@ -1,5 +1,9 @@
 import { shallowRef } from 'vue';
-import { goldenFixtureMessages, type Session } from '@klartext/bus-contract';
+import {
+  goldenFixtureMessages,
+  type PanelPresentation,
+  type Session,
+} from '@klartext/bus-contract';
 import type { GuestProbe } from '@klartext/bus-contract/conformance';
 
 /**
@@ -10,10 +14,20 @@ import type { GuestProbe } from '@klartext/bus-contract/conformance';
  */
 export const currentSession = shallowRef<Session | null>(null);
 
+/**
+ * How the Host presents the Guest frame (issue #77): `lane` renders the
+ * outline rail, `sheet` — and the time before the first PANEL_PRESENTATION
+ * arrives — renders without section navigation.
+ */
+export const presentationMode = shallowRef<PanelPresentation | null>(null);
+
 /** The Bus adapter's probe: an applied Session replaces the panel's content. */
 export const sessionProbe: GuestProbe = {
   sessionApplied(session: Session): void {
     currentSession.value = session;
+  },
+  presentationApplied(mode: PanelPresentation): void {
+    presentationMode.value = mode;
   },
 };
 

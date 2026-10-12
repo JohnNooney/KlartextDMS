@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages } from '@klartext/bus-contract';
 import type { ExtractionState, Session } from '@klartext/bus-contract';
 import App from './App.vue';
-import { currentSession, retrySender, sessionProbe } from './session-store';
+import { currentSession, presentationMode, retrySender, sessionProbe } from './session-store';
 
 const fixtureSession = goldenFixtureMessages.INIT_SESSION.payload;
 
@@ -17,6 +17,7 @@ function session(
 beforeEach(() => {
   currentSession.value = null;
   retrySender.value = null;
+  presentationMode.value = null;
 });
 
 describe('App', () => {

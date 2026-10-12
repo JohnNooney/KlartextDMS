@@ -74,6 +74,46 @@ describe('HostBus adapter — receive-side checks', () => {
   });
 });
 
+describe('HostBus adapter — panel presentation (issue #77)', () => {
+  const presentations = (sink: BusSink) =>
+    (sink.postMessage as ReturnType<typeof vi.fn>).mock.calls
+      .map(([data]) => data)
+      .filter((d): d is { type: 'PANEL_PRESENTATION'; payload: { mode: string } } =>
+        (d as { type?: string }).type === 'PANEL_PRESENTATION',
+      );
+
+  it('buffers the presentation until GUEST_READY, then sends it sessionless', () => {
+    const { source, sink, adapter } = setup();
+    adapter.setPresentation('lane');
+    expect(sink.postMessage).not.toHaveBeenCalled();
+
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    expect(presentations(sink)).toEqual([
+      { v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'lane' } },
+    ]);
+  });
+
+  it('sends on each crossing, not on every re-assertion', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.setPresentation('lane');
+    adapter.setPresentation('lane');
+    expect(presentations(sink)).toHaveLength(1);
+
+    adapter.setPresentation('sheet');
+    expect(presentations(sink)).toHaveLength(2);
+    expect(presentations(sink)[1]!.payload.mode).toBe('sheet');
+  });
+
+  it('resends the current presentation when the Guest reloads', () => {
+    const { source, sink, adapter } = setup();
+    adapter.setPresentation('sheet');
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    expect(presentations(sink)).toHaveLength(2);
+  });
+});
+
 describe('HostBus adapter — app-side probe hooks (issue #31)', () => {
   const document = { documentId: 'doc-1', documentTitle: 'Mietvertrag', contentType: 'application/pdf' };
 
