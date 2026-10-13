@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './auth.service';
 import { GuestFrame } from './guest-frame';
+import { OpenDocument } from './open-document';
 import { SignInGate } from './sign-in-gate';
 import { ToastOutlet } from './toasts/toast-outlet';
 
@@ -17,6 +18,9 @@ import { ToastOutlet } from './toasts/toast-outlet';
 export class App {
   protected readonly auth = inject(AuthService);
   protected readonly user = this.auth.user;
+  /** A Document is open — the mobile reader goes full-bleed (no brand bar, no inset). */
+  private readonly openDocId = inject(OpenDocument).docId;
+  protected readonly reading = computed(() => this.openDocId() !== null);
 
   protected signOut(): void {
     void this.auth.signOut();

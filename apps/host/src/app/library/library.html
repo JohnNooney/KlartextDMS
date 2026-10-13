@@ -1,6 +1,6 @@
 @if (store.openDoc(); as openDoc) {
-  <!-- Open-Document view (issue #29): the Guest iframe displays over the
-       reader's .insights-slot while a Document is open (issue #16). -->
+  <!-- Open-Document view (issue #29): the Guest iframe floats beside this
+       card while a Document is open (issue #16). -->
   <app-reader [doc]="openDoc" />
 } @else {
   <div class="browse">

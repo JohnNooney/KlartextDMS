@@ -92,7 +92,7 @@
   flex-direction: column;
   align-items: center;
   padding: kt.$kt-space-5;
-  background: #ececf0;
+  background: kt.$kt-canvas;
 }
 
 .pdf-sheet {
@@ -286,12 +286,29 @@
 
 // ---------- Mobile (≤768px): clear the peeking insights sheet (issue #50) ----------
 @media (max-width: 768px) {
+  // The chrome floats as a pill above the peeking sheet — the reader toolbar
+  // is the only bar on top. The raised sheet (z-index 20) covers it.
   .pdf-chrome {
-    padding: 0 kt.$kt-space-2;
+    position: fixed;
+    left: 50%;
+    bottom: calc(#{kt.$kt-sheet-peek-height} + env(safe-area-inset-bottom, 0px) + #{kt.$kt-space-3});
+    transform: translateX(-50%);
+    z-index: 15;
+    min-height: 0;
+    padding: 0 kt.$kt-space-1;
+    border-bottom: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: kt.$kt-shadow-popover;
+  }
+
+  .pdf-chrome-flex {
+    display: none;
   }
 
   // 44px touch targets at phone widths (issue #64); the trimmed padding and
-  // page number keep the row inside 320px.
+  // page number keep the pill inside 320px.
   .pdf-chrome .icon-btn {
     width: kt.$kt-touch-target;
     height: kt.$kt-touch-target;
@@ -302,7 +319,14 @@
   }
 
   .pdf-stage {
-    // The extra gap keeps the last page's tail from resting under the peek chrome.
-    padding-bottom: calc(#{kt.$kt-sheet-peek-height} + #{kt.$kt-space-4});
+    // Slim gutters widen the page; the bottom clears the pill and the peek chrome.
+    padding: kt.$kt-space-2 kt.$kt-space-2
+      calc(#{kt.$kt-sheet-peek-height} + #{kt.$kt-touch-target} + #{kt.$kt-space-6});
+  }
+}
+
+@media (max-width: 359px) {
+  .pdf-chrome-sep {
+    display: none;
   }
 }

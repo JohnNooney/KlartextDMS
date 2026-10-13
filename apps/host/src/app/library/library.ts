@@ -56,6 +56,9 @@ type DialogState =
   ],
   host: {
     '(document:keydown.escape)': 'closeAddMenu()',
+    '[class.reading]': 'openDocument.docId() !== null',
+    // Desktop: the card makes room for the floating insights lane beside it.
+    '[class.lane-open]': 'openDocument.docId() !== null && !openDocument.insightsLaneHidden()',
   },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
