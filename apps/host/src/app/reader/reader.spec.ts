@@ -112,11 +112,10 @@ function backButton(el: HTMLElement): HTMLButtonElement {
 }
 
 describe('Reader (issue #29)', () => {
-  it('renders the split view: PDF pane plus the insights slot', async () => {
+  it('renders the PDF pane — the insights lane floats beside it, outside the reader', async () => {
     const { el } = await setup(record('d1', 'Mietvertrag 2024'));
-    expect(el.querySelector('app-pdf-viewer')).toBeTruthy();
+    expect(el.querySelector('.pdf-pane app-pdf-viewer')).toBeTruthy();
     expect(el.querySelector('canvas')).toBeTruthy();
-    expect(el.querySelector('.insights-slot')).toBeTruthy();
   });
 
   it('backs out to the root Folder label for a root Document', async () => {
@@ -192,17 +191,17 @@ describe('Reader (issue #29)', () => {
     // Lane shown: the button is pressed and offers to hide it.
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     expect(toggle().getAttribute('aria-label')).toBe('Hide insights');
-    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(false);
+    expect(el.querySelector('.reader')!.classList.contains('lane-hidden')).toBe(false);
 
     toggle().click();
     expect(openDocument.toggleInsightsLane).toHaveBeenCalled();
 
-    // Lane hidden: the slot collapses and the button offers to show it.
+    // Lane hidden: the button offers to show it.
     openDocument.insightsLaneHidden.set(true);
     fixture.detectChanges();
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
     expect(toggle().getAttribute('aria-label')).toBe('Show insights');
-    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(true);
+    expect(el.querySelector('.reader')!.classList.contains('lane-hidden')).toBe(true);
   });
 
   // Issue #78: the Reader registers its viewer as the PageFocus navigator —

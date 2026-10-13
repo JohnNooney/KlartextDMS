@@ -11,6 +11,21 @@
   overflow: hidden;
 }
 
+// The reader card and the Guest's insights lane float as two cards with a
+// gap between them (desktop). On mobile the reader drops the card entirely.
+@media (min-width: 769px) {
+  :host(.lane-open) {
+    margin-right: calc(#{kt.$kt-insights-width} + #{kt.$kt-space-3});
+  }
+}
+
+@media (max-width: 768px) {
+  :host(.reading) {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 .browse {
   flex: 1;
   display: flex;

@@ -20,8 +20,6 @@
   align-items: center;
   gap: kt.$kt-space-3;
   padding: 0 kt.$kt-space-3 0 kt.$kt-space-4;
-  // Keeps the stepper clear of the fixed Guest insights lane on the right.
-  margin-right: kt.$kt-insights-width;
   border-bottom: 1px solid kt.$kt-border;
   flex-shrink: 0;
 }
@@ -228,11 +226,6 @@ button.menu-item {
   background: kt.$kt-accent-tint;
 }
 
-// Hiding the lane gives the PDF view — toolbar included — the full width.
-.reader.lane-hidden .reader-toolbar {
-  margin-right: 0;
-}
-
 .split {
   flex: 1;
   display: flex;
@@ -245,26 +238,17 @@ button.menu-item {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #ececf0;
-}
-
-// Reserves the right-hand lane the visible Guest frame overlays.
-.insights-slot {
-  width: kt.$kt-insights-width;
-  flex-shrink: 0;
-  border-left: 1px solid kt.$kt-border;
-
-  &[hidden] {
-    display: none;
-  }
+  background: kt.$kt-canvas;
 }
 
 // ---------- Mobile (≤768px): push navigation ----------
 @media (max-width: 768px) {
+  // The app's brand bar is hidden while reading, so this is the nav bar —
+  // its surface extends under the status bar (viewport-fit=cover).
   .reader-toolbar {
-    padding: 0 kt.$kt-space-2;
+    min-height: calc(#{kt.$kt-toolbar-height} + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) kt.$kt-space-2 0;
     gap: kt.$kt-space-1;
-    margin-right: 0;
   }
 
   .back-btn .back-label {
@@ -286,11 +270,6 @@ button.menu-item {
 
   // So is the lane toggle (issue #76) — the sheet's detents cover show/hide.
   .lane-toggle {
-    display: none;
-  }
-
-  // The insights lane becomes the Guest's bottom sheet — no slot needed.
-  .insights-slot {
     display: none;
   }
 }

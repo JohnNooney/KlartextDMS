@@ -1,7 +1,7 @@
 @if (user() === undefined) {
   <div class="boot"><span class="spinner" role="status" aria-label="Loading"></span></div>
 } @else if (user(); as user) {
-  <div class="layout">
+  <div class="layout" [class.reading]="reading()">
     <header class="toolbar">
       <span class="brand-mark">K</span>
       <span class="brand-name">Klartext</span>
