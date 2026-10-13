@@ -1,10 +1,11 @@
 /**
- * Regenerates the Host's browser icons in apps/host/public/ (issue #94) from
- * the in-app K mark (.brand-mark: a white K on --kt-accent). The K is an
- * outlined path, so every rendering is font-independent.
+ * Regenerates the Host's browser icons in apps/host/public/ (issue #94). They
+ * redraw the in-app K mark — .brand-mark in app.html / sign-in-gate.html, a
+ * bold system-font "K" on --kt-accent — as a hand-outlined path, so every
+ * rendering is font-independent. Keep ACCENT in step with packages/theme/tokens.css.
  *
  *   icon.svg              rounded square, transparent corners (tab favicon)
- *   favicon.ico           16/32/48 PNGs of icon.svg (legacy fallback)
+ *   favicon.ico           16/32 PNGs of icon.svg (legacy fallback)
  *   apple-touch-icon.png  180, full-bleed (iOS applies its own mask)
  *   icon-192/512.png      full-bleed, maskable (glyph inside the 80% safe zone)
  *
@@ -60,7 +61,7 @@ const fullBleed = svg({ rounded: false });
 
 writeFileSync(out('icon.svg'), rounded);
 const icoPngs = [];
-for (const size of [16, 32, 48]) icoPngs.push({ size, data: await render(rounded, size) });
+for (const size of [16, 32]) icoPngs.push({ size, data: await render(rounded, size) });
 writeFileSync(out('favicon.ico'), ico(icoPngs));
 writeFileSync(out('apple-touch-icon.png'), await render(fullBleed, 180));
 for (const size of [192, 512]) writeFileSync(out(`icon-${size}.png`), await render(fullBleed, size));
