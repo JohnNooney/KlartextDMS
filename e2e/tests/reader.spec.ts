@@ -183,10 +183,13 @@ test('a Key Takeaway highlights its quoted passage on the page', async () => {
     });
   expect(await overlap()).toEqual({ nonEmpty: true, insideSheet: true, overlapsText: true });
 
-  // Zoom re-fits the layer — the highlight stays over its passage.
+  // Zoom re-fits the layer — the highlight stays over its passage. The
+  // rebuild wipes and repours the layer async, so poll the geometry
+  // instead of sampling between teardown and repour (#90).
   await page().getByRole('button', { name: 'Zoom in' }).click();
-  await expect(page().locator('.pdf-text-layer .pdf-hit').first()).toBeVisible();
-  expect(await overlap()).toEqual({ nonEmpty: true, insideSheet: true, overlapsText: true });
+  await expect(async () => {
+    expect(await overlap()).toEqual({ nonEmpty: true, insideSheet: true, overlapsText: true });
+  }).toPass();
 });
 
 // Journey (issue #66): a page zoomed wider than the stage must keep its left
