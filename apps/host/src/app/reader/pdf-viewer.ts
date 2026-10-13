@@ -32,7 +32,8 @@ const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.2;
 /** pdf.js fit-to-width cap, per the prototype's paged viewer (issue #17). */
 const MAX_FIT = 1.4;
-const STAGE_PADDING = 48;
+/** Fit slack beyond the stage's own padding — room for a classic scrollbar. */
+const FIT_SLACK = 8;
 
 /**
  * The Host's paged PDF viewer (issues #17, #29; prototype variant B): one page
@@ -269,8 +270,11 @@ export class PdfViewer {
     try {
       const pdfPage = await pdf.page(n);
       if (generation !== this.generation) return;
-      const fit =
-        stage.clientWidth > STAGE_PADDING ? (stage.clientWidth - STAGE_PADDING) / pdfPage.width : 1;
+      // Fit to the stage's real padding, so the slim mobile gutters widen the page.
+      const style = getComputedStyle(stage);
+      const gutter =
+        (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0) + FIT_SLACK;
+      const fit = stage.clientWidth > gutter ? (stage.clientWidth - gutter) / pdfPage.width : 1;
       const scale = Math.min(fit, MAX_FIT) * this.zoom();
       await pdfPage.render(canvas, scale);
       if (generation !== this.generation) return;
