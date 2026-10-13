@@ -159,7 +159,7 @@ export class ExtractionFlow implements HostBusProbe {
   /**
    * GUEST_SHOW_PAGE (issue #78): the adapter has already vetted the Session
    * and the wire shape; PageFocus owns the range check against the open
-   * Document and drives the viewer — the sheet drops to peek on a landing.
+   * Document and drives the viewer — the sheet rests at half on a landing.
    */
   pageRequested(request: GuestShowPagePayload): void {
     this.pageFocus.show(request);

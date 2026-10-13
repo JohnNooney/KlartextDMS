@@ -21,8 +21,8 @@ export interface PageFocusRequest extends GuestShowPagePayload {
  * Where the Guest's "show page" requests land (issue #78). The Bus adapter
  * reports a session-bound, wire-valid request; this service owns the
  * `1..pageCount` range check only the open Document can answer, drives the
- * registered navigator, and publishes `landed` — the mobile sheet drops to
- * peek on each landing, and the carried `quote`/`critical` are here for the
+ * registered navigator, and publishes `landed` — the mobile sheet rests at
+ * half on each landing, and the carried `quote`/`critical` are here for the
  * passage highlight (issue #80).
  */
 @Injectable({ providedIn: 'root' })

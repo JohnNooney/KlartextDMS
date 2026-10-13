@@ -3,8 +3,8 @@ import { PageFocus } from './page-focus';
 
 // Issue #78: the Guest's "show page" requests land here — the service owns
 // the `1..pageCount` range check only the open Document can answer, drives
-// the registered viewer, and publishes `landed` so the mobile sheet can drop
-// to peek. #80's quote rides the same request through `showPage`.
+// the registered viewer, and publishes `landed` so the mobile sheet can rest
+// at half. #80's quote rides the same request through `showPage`.
 describe('PageFocus', () => {
   const navigator = (numPages = 4) => ({
     pageCount: vi.fn(() => numPages),
