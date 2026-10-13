@@ -19,6 +19,22 @@ export interface PdfPageRef {
   readonly height: number;
   /** Paints the page at `cssScale × devicePixelRatio`, sizing the canvas. */
   render(canvas: HTMLCanvasElement, cssScale: number): Promise<void>;
+  /**
+   * Pours the page's pdf.js text layer into `container` at `cssScale`
+   * (issue #80) — the invisible, item-aligned overlay the quote matcher
+   * searches and the highlight wraps.
+   */
+  renderTextLayer(container: HTMLElement, cssScale: number): Promise<PdfTextLayerRef>;
+}
+
+/** A rendered text layer (issue #80): item-aligned strings and spans. */
+export interface PdfTextLayerRef {
+  /** The per-item strings the quote matcher searches (`textContentItemsStr`). */
+  readonly itemsStr: readonly string[];
+  /** The per-item spans the highlight wraps (`textDivs`). */
+  readonly divs: readonly HTMLElement[];
+  /** Re-fits the layer after a zoom re-render — same page, new cssScale. */
+  update(cssScale: number): void;
 }
 
 /** A loaded PDF: fixed page count, per-page handles, and teardown. */

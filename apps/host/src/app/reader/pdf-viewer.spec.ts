@@ -10,6 +10,7 @@ import {
   type PdfDocumentRef,
   type PdfEngine,
   type PdfPageRef,
+  type PdfTextLayerRef,
 } from './pdf-engine';
 import { PdfViewer } from './pdf-viewer';
 
@@ -34,9 +35,35 @@ class FakePdfPage implements PdfPageRef {
   readonly renders: number[] = [];
   readonly width = 600;
   readonly height = 800;
+  layerRenders = 0;
+  layerUpdates = 0;
+  /** Set to simulate a text layer that fails to pour. */
+  failTextLayer = false;
+
+  /** `items` is the page's text — poured into spans like pdf.js's TextLayer. */
+  constructor(public items: string[] = []) {}
 
   async render(_canvas: HTMLCanvasElement, cssScale: number): Promise<void> {
     this.renders.push(cssScale);
+  }
+
+  async renderTextLayer(container: HTMLElement): Promise<PdfTextLayerRef> {
+    this.layerRenders++;
+    if (this.failTextLayer) throw new Error('text layer failed');
+    const itemsStr = [...this.items];
+    const divs = itemsStr.map((str) => {
+      const div = document.createElement('span');
+      div.textContent = str;
+      container.append(div);
+      return div;
+    });
+    return {
+      itemsStr,
+      divs,
+      update: () => {
+        this.layerUpdates++;
+      },
+    };
   }
 }
 
@@ -44,11 +71,15 @@ class FakePdfDoc implements PdfDocumentRef {
   readonly pages = new Map<number, FakePdfPage>();
   destroyed = false;
 
-  constructor(public readonly numPages: number) {}
+  /** `items` seeds every lazily-created page's text. */
+  constructor(
+    public readonly numPages: number,
+    public items: string[] = [],
+  ) {}
 
   async page(n: number): Promise<PdfPageRef> {
     let page = this.pages.get(n);
-    if (!page) this.pages.set(n, (page = new FakePdfPage()));
+    if (!page) this.pages.set(n, (page = new FakePdfPage(this.items)));
     return page;
   }
 
@@ -78,9 +109,11 @@ const fakeRepository = {
   getBytes: vi.fn(async () => new Uint8Array(8).buffer),
 };
 
-async function setup(opts: { numPages?: number; sizeBytes?: number } = {}) {
+async function setup(
+  opts: { numPages?: number; sizeBytes?: number; items?: string[] } = {},
+) {
   const engine = new FakeEngine();
-  engine.doc = new FakePdfDoc(opts.numPages ?? 3);
+  engine.doc = new FakePdfDoc(opts.numPages ?? 3, opts.items ?? []);
   Object.assign(URL, {
     createObjectURL: vi.fn(() => 'blob:fake-url'),
     revokeObjectURL: vi.fn(),
@@ -252,6 +285,149 @@ describe('PdfViewer (issue #29)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // Issue #80: a show-page request carrying a `quote` highlights the quoted
+  // passage in the page's text layer — warning tint for a Critical Warning,
+  // accent otherwise. No match falls back to the page flash.
+  it('a show-page request with a quote highlights the passage, no flash', async () => {
+    const { fixture, engine, el } = await setup({ numPages: 4 });
+    await settle(fixture);
+    // Pages are created lazily — seed page 3's text before it first renders.
+    const items = [
+      'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei',
+      'Monate.',
+    ];
+    await engine.doc.page(3);
+    engine.doc.pages.get(3)!.items = items;
+
+    fixture.componentInstance.showPage({
+      page: 3,
+      quote: 'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.',
+      critical: true,
+    });
+    await settle(fixture);
+
+    const hits = [...el.querySelectorAll<HTMLElement>('.pdf-text-layer .pdf-hit')];
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.map((h) => h.textContent).join('')).toContain('Kündigung bedarf der Schriftform');
+    expect(hits.every((h) => h.classList.contains('pdf-hit--critical'))).toBe(true);
+    expect(el.querySelector('.pdf-sheet')!.classList.contains('flash-mark')).toBe(false);
+  });
+
+  it('a non-critical quote highlights in the accent tint', async () => {
+    const { fixture, el } = await setup({
+      numPages: 2,
+      items: ['Die Miete ist monatlich zu zahlen.'],
+    });
+    await settle(fixture);
+
+    fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+    await settle(fixture);
+
+    const hit = el.querySelector<HTMLElement>('.pdf-hit');
+    expect(hit?.textContent).toBe('Miete ist monatlich');
+    expect(hit?.classList.contains('pdf-hit--critical')).toBe(false);
+  });
+
+  it('falls back to the page flash when the quote is not on the page', async () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, el } = await setup({
+        numPages: 2,
+        items: ['Ganz andere Worte hier.'],
+      });
+      await settle(fixture);
+
+      fixture.componentInstance.showPage({ page: 1, quote: 'nicht vorhanden' });
+      await settle(fixture);
+
+      expect(el.querySelector('.pdf-hit')).toBeNull();
+      expect(el.querySelector('.pdf-sheet')!.classList.contains('flash-mark')).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to the page flash when the text layer fails to render', async () => {
+    vi.useFakeTimers();
+    try {
+      const { fixture, el, engine } = await setup({
+        numPages: 2,
+        items: ['Die Miete ist monatlich zu zahlen.'],
+      });
+      await settle(fixture);
+      engine.doc.pages.get(1)!.failTextLayer = true;
+
+      fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+      await settle(fixture);
+
+      expect(el.querySelector('.pdf-hit')).toBeNull();
+      expect(el.querySelector('.pdf-sheet')!.classList.contains('flash-mark')).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears the highlight on the next jump or page change', async () => {
+    const { fixture, el } = await setup({
+      numPages: 3,
+      items: ['Die Miete ist monatlich zu zahlen.'],
+    });
+    await settle(fixture);
+
+    fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeTruthy();
+
+    // A plain jump clears it…
+    fixture.componentInstance.goToPage(1);
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeNull();
+
+    // …and paging away does too (the text layer is rebuilt per page).
+    fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeTruthy();
+    chromeButton(el, 'Next page').click();
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeNull();
+  });
+
+  it('clears the highlight on a Document switch', async () => {
+    const { fixture, el } = await setup({
+      items: ['Die Miete ist monatlich zu zahlen.'],
+    });
+    await settle(fixture);
+
+    fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeTruthy();
+
+    fixture.componentRef.setInput('doc', record({ id: 'doc-2', title: 'Second' }));
+    fixture.detectChanges();
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeNull();
+  });
+
+  it('keeps the highlight through zoom — rebuilt and re-applied', async () => {
+    const { fixture, engine, el } = await setup({
+      numPages: 1,
+      items: ['Die Miete ist monatlich zu zahlen.'],
+    });
+    await settle(fixture);
+    const page = engine.doc.pages.get(1)!;
+
+    fixture.componentInstance.showPage({ page: 1, quote: 'Miete ist monatlich' });
+    await settle(fixture);
+    expect(el.querySelector('.pdf-hit')).toBeTruthy();
+
+    chromeButton(el, 'Zoom in').click();
+    await settle(fixture);
+
+    expect(page.layerRenders).toBeGreaterThanOrEqual(2);
+    expect(el.querySelector('.pdf-hit')).toBeTruthy();
+    expect(el.querySelector('.pdf-hit')?.textContent).toBe('Miete ist monatlich');
   });
 
   it('exposes the open Document’s pageCount for the show-page range check', async () => {

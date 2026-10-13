@@ -240,11 +240,12 @@ export class GuestFrame {
       this.adapter = null;
     });
 
-    // A landed show-page request (issue #78) drops the sheet to peek so the
-    // jumped-to page is visible; on desktop the detent is inert.
+    // A landed show-page request (issue #78) rests the sheet at half: the
+    // jumped-to page shows above it while the takeaways stay in reach for
+    // the next tap. On desktop the detent is inert.
     const pageFocus = inject(PageFocus);
     effect(() => {
-      if (pageFocus.landed() !== null) this.sheetState.set('peek');
+      if (pageFocus.landed() !== null) this.sheetState.set('half');
     });
 
     // A landed expand-panel request (issue #79) lifts a peeking sheet to

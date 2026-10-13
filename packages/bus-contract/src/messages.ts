@@ -86,9 +86,8 @@ export function isPanelPresentation(value: unknown): value is PanelPresentation 
 /**
  * The Guest asks the Host to show a page of the open Document (issue #78):
  * a selected Key Takeaway row's one-based `page`, its `sourceQuote` as
- * `quote`, and `critical` for Critical Warnings. `quote`/`critical` ride
- * along for the passage highlight (issue #80) — this ticket only jumps the
- * viewer and flash-marks the page.
+ * `quote`, and `critical` for Critical Warnings. `quote`/`critical` feed
+ * the Host's passage highlight (issue #80) — its target and its tint.
  */
 export interface GuestShowPagePayload {
   /** One-based page of the open Document. */

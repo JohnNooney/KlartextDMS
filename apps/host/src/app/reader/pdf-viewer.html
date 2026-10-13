@@ -86,6 +86,7 @@
 
     <div class="pdf-sheet" #sheet [hidden]="state() !== 'ready'">
       <canvas #canvas role="img" [attr.aria-label]="'Page ' + page() + ' of ' + numPages()"></canvas>
+      <div class="pdf-text-layer" #textLayer></div>
     </div>
   </div>
 </div>

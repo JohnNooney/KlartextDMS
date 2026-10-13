@@ -209,33 +209,42 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(el.querySelector('iframe.guest-frame')).toBeTruthy();
   });
 
-  // Issue #78: a landed show-page request drops the sheet to peek so the
-  // jumped-to page stays visible; a request that never lands leaves it alone.
-  it('a landed page request rests the sheet at peek', async () => {
+  // Issue #78: a landed show-page request rests the sheet at half — the
+  // jumped-to page shows above it while the takeaways stay in reach; a
+  // request that never lands leaves it alone.
+  it('a landed page request rests the sheet at half', async () => {
     const { fixture, el } = await setup();
     tap(fixture, el);
     tap(fixture, el);
     expect(detent(el)).toBe('full');
 
     const focus = TestBed.inject(PageFocus);
-    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
     focus.show({ page: 3 });
     fixture.detectChanges();
+    expect(detent(el)).toBe('half');
 
+    // From peek too — the same request lifts it to half.
+    tap(fixture, el);
+    tap(fixture, el);
     expect(detent(el)).toBe('peek');
+    focus.show({ page: 2 });
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
   });
 
   it('an out-of-range page request leaves the sheet alone', async () => {
     const { fixture, el } = await setup();
     tap(fixture, el);
-    expect(detent(el)).toBe('half');
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
 
     const focus = TestBed.inject(PageFocus);
-    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
     focus.show({ page: 99 });
     fixture.detectChanges();
 
-    expect(detent(el)).toBe('half');
+    expect(detent(el)).toBe('full');
   });
 
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {

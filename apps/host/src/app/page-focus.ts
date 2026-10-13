@@ -8,7 +8,8 @@ import type { GuestShowPagePayload } from '@klartext/bus-contract';
 export interface PageNavigator {
   /** One-based page count of the open Document — the range check's ceiling. */
   pageCount(): number;
-  goToPage(page: number): void;
+  /** The whole request drives the viewer — `quote`/`critical` ride along (#80). */
+  showPage(request: GuestShowPagePayload): void;
 }
 
 /** A request that landed — `seq` distinguishes repeats of the same page. */
@@ -20,8 +21,8 @@ export interface PageFocusRequest extends GuestShowPagePayload {
  * Where the Guest's "show page" requests land (issue #78). The Bus adapter
  * reports a session-bound, wire-valid request; this service owns the
  * `1..pageCount` range check only the open Document can answer, drives the
- * registered navigator, and publishes `landed` — the mobile sheet drops to
- * peek on each landing, and the carried `quote`/`critical` are here for the
+ * registered navigator, and publishes `landed` — the mobile sheet rests at
+ * half on each landing, and the carried `quote`/`critical` are here for the
  * passage highlight (issue #80).
  */
 @Injectable({ providedIn: 'root' })
@@ -50,7 +51,7 @@ export class PageFocus {
     if (!navigator || !Number.isInteger(page) || page < 1 || page > navigator.pageCount()) {
       return;
     }
-    navigator.goToPage(page);
+    navigator.showPage(request);
     this.landed.set({ ...request, seq: ++this.seq });
   }
 }

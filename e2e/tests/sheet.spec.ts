@@ -129,10 +129,10 @@ test('the insights lane toggle stays off mobile', async () => {
   await expect(page().getByRole('button', { name: 'Hide insights' })).toBeHidden();
 });
 
-// Issue #78: a landed GUEST_SHOW_PAGE drops the sheet to peek so the
-// jumped-to page is visible — a tap on a takeaway inside the sheet both
-// navigates the PDF and collapses the panel.
-test('selecting a Key Takeaway drops the sheet to peek', async () => {
+// Issue #78: a landed GUEST_SHOW_PAGE rests the sheet at half — a tap on a
+// takeaway inside the sheet navigates the PDF, which shows above the
+// half-open panel, and the takeaways stay in reach.
+test('selecting a Key Takeaway rests the sheet at half', async () => {
   await page().goto('/folder/wohnung/doc/doc-mietvertrag');
   await expand().tap();
   await expandFull().tap();
@@ -143,7 +143,7 @@ test('selecting a Key Takeaway drops the sheet to peek', async () => {
   // The first Critical Warning points at page 3 (seeded fixture).
   await panel.getByRole('button', { name: /three months' notice/ }).tap();
 
-  await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  await expect(sheet()).toHaveAttribute('data-sheet', 'half');
   await expect(page().locator('.pdf-pageno')).toHaveText('3 / 4');
 });
 
