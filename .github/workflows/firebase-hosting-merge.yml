@@ -23,6 +23,8 @@ jobs:
   deploy:
     name: live deploy
     needs: gates
+    # Skipped on docs-only pushes — nothing user-facing changed (#88).
+    if: needs.gates.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

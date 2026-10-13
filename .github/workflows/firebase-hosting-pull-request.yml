@@ -22,8 +22,9 @@ jobs:
   preview:
     name: preview deploy (Guest first)
     needs: gates
-    # Preview deploys need the service-account secret — same-repo PRs only.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Preview deploys need the service-account secret — same-repo PRs only —
+    # and the whole job is skipped when the diff is docs-only (#88).
+    if: needs.gates.outputs.code == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       # App Check debug tokens (#21), injected at the preview build once the

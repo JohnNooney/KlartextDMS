@@ -26,11 +26,15 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KLARTEXT_B836C }}
         run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+      # Best-effort: docs-only PRs never create a channel (#88), and deleting
+      # a channel that doesn't exist errors — don't fail the run over it.
       - name: Delete Host preview channel
+        continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
         run: pnpm exec firebase hosting:channel:delete pr-${{ github.event.pull_request.number }} --site klartext-host --force --non-interactive
       - name: Delete Guest preview channel
+        continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
         run: pnpm exec firebase hosting:channel:delete pr-${{ github.event.pull_request.number }} --site klartext-guest --force --non-interactive

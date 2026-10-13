@@ -3,14 +3,61 @@
 # accumulate in place: the bus-contract conformance suite joins `checks` (#24),
 # emulator-backed repository tests and the @firebase/rules-unit-testing suite
 # join `rules+integration` (#27), and the Playwright suite runs in `e2e` (#34).
+#
+# Docs-only changes skip everything (#88): `changes` classifies the diff first
+# and each gate job is skipped (a pass for required checks) when nothing
+# build-affecting changed. Detection must live here rather than as
+# `paths-ignore` on the callers — branch protection requires these inner job
+# names, so the workflow must always run for them to report.
 name: CI gates
 
 on:
   workflow_call:
+    outputs:
+      code:
+        description: "true when the diff touches a build-affecting path"
+        value: ${{ jobs.changes.outputs.code }}
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # paths-filter uses the PR files API on pull_request events; on push it
+      # diffs locally against the before-sha, so it needs the history.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          # Denylist: every file counts as code unless it matches an exclusion,
+          # so unanticipated file types fail toward running CI. Requires
+          # 'some-with-excludes' — under the default 'some' quantifier the '!'
+          # patterns are OR-ed alongside '**' and exclude nothing. Deliberately
+          # still triggering: emulator-data (fixtures drive e2e and preview
+          # content) and .github (workflow/setup changes must exercise CI).
+          predicate-quantifier: 'some-with-excludes'
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!**/*.md'
+              - '!LICENSE'
+              - '!prototype/**'
+              - '!.devin/**'
+              - '!.agents/**'
+              - '!environment.yaml'
+              - '!skills-lock.json'
+              - '!firestore-debug.log'
+              - '!.gitignore'
+
   checks:
     name: checks
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +70,8 @@ jobs:
 
   rules-integration:
     name: rules+integration
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +87,8 @@ jobs:
 
   e2e:
     name: e2e
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       # App Check debug tokens (#21), baked into the e2e builds by
