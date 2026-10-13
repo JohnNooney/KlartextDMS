@@ -2,7 +2,8 @@
      Extraction Jobs (issues #16, #25); displays while a Document is open —
      right-hand lane on desktop, a bottom sheet on mobile (#29) with three
      snap detents — peek, half, full — resting at peek so the PDF stays
-     primary (issue #50). -->
+     primary (issue #50). At peek the iframe's top sliver is the Guest's
+     jump bar — there is no Host-side header (issue #79). -->
 <div
   class="guest-frame-host"
   #host
@@ -23,7 +24,6 @@
   >
     <span class="handle-pill" aria-hidden="true"></span>
   </button>
-  <div class="sheet-head">Insights</div>
   <iframe
     #frame
     class="guest-frame"

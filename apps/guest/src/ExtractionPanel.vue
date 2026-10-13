@@ -40,6 +40,8 @@ const emit = defineEmits<{
   reanalyze: [];
   /** A paged Key Takeaway row was selected (issue #78) — the Host jumps. */
   showPage: [request: GuestShowPagePayload];
+  /** A jump-bar segment was tapped (issue #79) — the Host raises the sheet. */
+  expandPanel: [];
 }>();
 const menuOpen = ref(false);
 const root = ref<HTMLElement>();
@@ -98,7 +100,22 @@ const normalTakeaways = computed(() =>
 // continuous page).
 const showOutline = computed(() => props.presentation === 'lane');
 
+// The jump bar (issue #79, prototype variant C2 mobile): the same outline
+// as an HIG segmented control pinned at the top of the Guest's content —
+// visible and tappable at every sheet detent including peek, where the
+// Host clips the frame to its top sliver. A tap scrolls the section and
+// emits `expandPanel` so the Host can raise a peeking sheet; the same
+// scroll-spy marks the current segment.
+const showJumpBar = computed(() => props.presentation === 'sheet');
+
 type SectionId = 'summary' | 'attention' | 'takeaways';
+
+/** Short labels for the segmented control — the rail uses the full ones. */
+const JUMP_LABELS: Record<SectionId, string> = {
+  summary: 'Summary',
+  attention: 'Attention',
+  takeaways: 'Takeaways',
+};
 
 const OUTLINE_ICONS: Record<SectionId, string> = {
   summary: 'M4 6h16M4 10h11M4 14h16M4 18h9',
@@ -138,15 +155,23 @@ const outlineItems = computed<OutlineItem[]>(() => {
   return items;
 });
 
+const jumpItems = computed(() =>
+  outlineItems.value.map((item) => ({ ...item, label: JUMP_LABELS[item.id] })),
+);
+
 const activeSection = ref<string | null>(null);
 /** How far past the top edge a section counts as "current". */
 const SCROLL_SPY_TOP_PX = 40;
+/** Sections scrolled under the jump bar (52px scroll-margin) count as
+ *  current — +1px for scrollIntoView's sub-pixel landing. */
+const SHEET_SPY_TOP_PX = 53;
 
 function updateScrollSpy(): void {
   const sections = root.value
     ? [...root.value.querySelectorAll<HTMLElement>('[data-section]')]
     : [];
   if (!sections.length) return;
+  const spyTop = showJumpBar.value ? SHEET_SPY_TOP_PX : SCROLL_SPY_TOP_PX;
   // scrollY > 0 too: a document that never overflows the frame shouldn't pin
   // the last section as "current".
   const atBottom =
@@ -157,7 +182,7 @@ function updateScrollSpy(): void {
     active = sections.at(-1)!.dataset['section']!;
   } else {
     for (const s of sections) {
-      if (s.getBoundingClientRect().top <= SCROLL_SPY_TOP_PX) {
+      if (s.getBoundingClientRect().top <= spyTop) {
         active = s.dataset['section']!;
       }
     }
@@ -208,6 +233,13 @@ function scrollToSection(section: SectionId): void {
     ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
+function jumpToSection(section: SectionId): void {
+  // The sheet may sit at peek — the Guest can't raise its own frame, so the
+  // Host hears every tap and lifts a peeking sheet to half (issue #79).
+  emit('expandPanel');
+  scrollToSection(section);
+}
+
 const jobInFlight = computed(
   () => props.extractionState === 'queued' || props.extractionState === 'running',
 );
@@ -229,8 +261,35 @@ function reanalyze(): void {
 </script>
 
 <template>
-  <article ref="root" class="flex min-h-screen bg-kt-canvas font-sans text-kt-text">
+  <article
+    ref="root"
+    class="flex min-h-screen bg-kt-canvas font-sans text-kt-text"
+    :class="{ 'in-sheet': showJumpBar }"
+  >
     <div class="min-w-0 flex-1 px-kt-5 py-kt-6">
+      <nav
+        v-if="showJumpBar"
+        aria-label="Jump to section"
+        class="sticky top-0 z-10 -mx-kt-5 -mt-kt-6 mb-kt-4 flex h-kt-touch items-center border-b border-kt-border bg-kt-canvas px-kt-4"
+      >
+        <div class="flex w-full rounded-[9px] bg-kt-fill p-[2px]">
+          <button
+            v-for="item in jumpItems"
+            :key="item.id"
+            type="button"
+            class="flex h-7 flex-1 items-center justify-center gap-kt-1 rounded-[7px] text-kt-sm font-medium"
+            :class="{ 'bg-kt-bg shadow-sm': activeSection === item.id }"
+            :aria-current="activeSection === item.id ? 'location' : undefined"
+            @click="jumpToSection(item.id)"
+          >
+            {{ item.label }}
+            <span
+              v-if="item.critical && item.count"
+              class="flex h-4 min-w-4 items-center justify-center rounded-full bg-kt-warning px-1 text-[10px] font-bold leading-none text-kt-canvas"
+            >{{ item.count }}</span>
+          </button>
+        </div>
+      </nav>
       <header class="flex items-start justify-between gap-kt-3">
         <div class="min-w-0">
           <h1 class="text-kt-lg font-semibold">{{ typeLabel }}</h1>
@@ -372,3 +431,11 @@ function reanalyze(): void {
     </nav>
   </article>
 </template>
+
+<style scoped>
+/* The pinned jump bar (44px) plus a small gap — a segment's scrollIntoView
+   must not land the section under the bar (issue #79). */
+.in-sheet :deep([data-section]) {
+  scroll-margin-top: 52px;
+}
+</style>

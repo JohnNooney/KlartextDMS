@@ -5,8 +5,9 @@ import { BUS_PROTOCOL_VERSION, type Envelope } from './envelope.js';
  * Bus messages (issue #7, amended by #12). `sessionId` is Host-generated per
  * `INIT_SESSION` and echoed by the Guest; messages outside a Session —
  * `GUEST_READY`, `PANEL_PRESENTATION` (issue #77), and every Extraction Job
- * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78) travels
- * inside the Session: the Host drops it for any other `sessionId`.
+ * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78) and
+ * `GUEST_EXPAND_PANEL` (issue #79) travel inside the Session: the Host drops
+ * them for any other `sessionId`.
  *
  * Forward-compat rule: both apps ignore envelopes with an unknown `type`
  * (e.g. a v2 `AUTH_TOKEN_REFRESHED`). `isEnvelope` accepts them,
@@ -108,7 +109,8 @@ export type BusMessage =
   | Envelope<'AI_PROCESSING_SUCCESS', { jobId: string; extraction: ExtractionCandidate }>
   | Envelope<'AI_PROCESSING_ERROR', { jobId: string; error: ExtractionError }>
   | Envelope<'RETRY_EXTRACTION', { documentId: string }>
-  | Envelope<'GUEST_SHOW_PAGE', GuestShowPagePayload>;
+  | Envelope<'GUEST_SHOW_PAGE', GuestShowPagePayload>
+  | Envelope<'GUEST_EXPAND_PANEL', EmptyPayload>;
 
 export type HostToGuestMessage = Extract<
   BusMessage,
@@ -134,6 +136,7 @@ export const MESSAGE_TYPES = [
   'AI_PROCESSING_ERROR',
   'RETRY_EXTRACTION',
   'GUEST_SHOW_PAGE',
+  'GUEST_EXPAND_PANEL',
 ] as const satisfies readonly MessageType[];
 
 /**

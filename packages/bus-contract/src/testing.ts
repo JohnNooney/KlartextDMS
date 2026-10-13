@@ -302,6 +302,14 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         }
         break;
       }
+      case 'GUEST_EXPAND_PANEL': {
+        // Only the current Session may ask for the raise (issue #79) — the
+        // same sessionId check as every Session-bound Guest message.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          ctx.probe.panelExpandRequested();
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -410,6 +418,12 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
       // Session-bound: no Session, no send — the Host would drop it anyway.
       if (sessionId === null) return;
       post('GUEST_SHOW_PAGE', sessionId, request);
+    },
+    expandPanel(): void {
+      // Session-bound like GUEST_SHOW_PAGE (issue #79): silent before the
+      // first INIT_SESSION.
+      if (sessionId === null) return;
+      post('GUEST_EXPAND_PANEL', sessionId, {});
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

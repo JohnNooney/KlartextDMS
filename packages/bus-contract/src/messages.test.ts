@@ -75,6 +75,7 @@ describe('BusMessage union', () => {
         sessionId: 'sess-1',
         payload: { page: 3, quote: 'Die Kündigungsfrist beträgt drei Monate.', critical: true },
       },
+      { v: 1, type: 'GUEST_EXPAND_PANEL', sessionId: 'sess-1', payload: {} },
     ];
     for (const m of messages) expect(isBusMessage(m)).toBe(true);
   });

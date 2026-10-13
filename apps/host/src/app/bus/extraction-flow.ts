@@ -17,6 +17,7 @@ import { DOCUMENT_REPOSITORY, EXTRACTION_REPOSITORY } from '../data/providers';
 import { LibraryStore, type ExtractionJobState } from '../library/library.store';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
+import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
@@ -54,6 +55,7 @@ export class ExtractionFlow implements HostBusProbe {
   private readonly store = inject(LibraryStore);
   private readonly open = inject(OpenDocument);
   private readonly pageFocus = inject(PageFocus);
+  private readonly sheetExpand = inject(SheetExpand);
   private readonly auth = inject(AuthService);
   private readonly bus = inject(HostBus);
   private readonly toasts = inject(ToastService);
@@ -161,6 +163,15 @@ export class ExtractionFlow implements HostBusProbe {
    */
   pageRequested(request: GuestShowPagePayload): void {
     this.pageFocus.show(request);
+  }
+
+  /**
+   * GUEST_EXPAND_PANEL (issue #79): the adapter has already vetted the
+   * Session; SheetExpand publishes the request so the Guest frame can lift
+   * a peeking sheet — it alone knows the detent.
+   */
+  panelExpandRequested(): void {
+    this.sheetExpand.request();
   }
 
   // -- Job queue feeders ----------------------------------------------------

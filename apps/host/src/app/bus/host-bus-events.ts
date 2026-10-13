@@ -69,4 +69,8 @@ export class HostBusEvents implements HostBusProbe {
   pageRequested(request: GuestShowPagePayload): void {
     this.delegate?.pageRequested(request);
   }
+
+  panelExpandRequested(): void {
+    this.delegate?.panelExpandRequested();
+  }
 }
