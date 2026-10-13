@@ -218,7 +218,7 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(detent(el)).toBe('full');
 
     const focus = TestBed.inject(PageFocus);
-    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
     focus.show({ page: 3 });
     fixture.detectChanges();
 
@@ -231,7 +231,7 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(detent(el)).toBe('half');
 
     const focus = TestBed.inject(PageFocus);
-    focus.registerNavigator({ pageCount: () => 4, goToPage: vi.fn() });
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
     focus.show({ page: 99 });
     fixture.detectChanges();
 

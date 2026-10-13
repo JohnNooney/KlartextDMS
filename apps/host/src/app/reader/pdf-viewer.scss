@@ -103,6 +103,10 @@
   background: #fff;
   box-shadow: kt.$kt-shadow-raised;
   border-radius: 2px;
+  // The text layer's positioning context and scale-var scope (issue #80).
+  position: relative;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
 
   &[hidden] {
     display: none;
@@ -116,6 +120,73 @@
   // layered over the raised shadow, fading over ~1 s.
   &.flash-mark {
     animation: kt-page-flash 1s ease-out;
+  }
+}
+
+// ---------- Text layer (issue #80) ----------
+// The pdf.js text layer over the canvas: invisible, selectable spans laid
+// out in % of the page — `--total-scale-factor` (set by the engine per
+// render, viewport.scale incl. userUnit) keeps it aligned through zoom.
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  transform-origin: 0 0;
+
+  // Rotated pages: pdf.js stamps the rotation on the container — mirror it.
+  &[data-main-rotation='90'] {
+    transform: rotate(90deg) translateY(-100%);
+  }
+  &[data-main-rotation='180'] {
+    transform: rotate(180deg) translate(-100%, -100%);
+  }
+  &[data-main-rotation='270'] {
+    transform: rotate(270deg) translateX(-100%);
+  }
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+
+  :is(span, br) {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+  }
+
+  > :not(.markedContent),
+  .markedContent span:not(.markedContent):not(.pdf-hit) {
+    z-index: 1;
+    --font-height: 0;
+    font-size: calc(var(--text-scale-factor) * var(--font-height));
+    --scale-x: 1;
+    --rotate: 0deg;
+    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+  }
+
+  .markedContent {
+    display: contents;
+  }
+
+  // A matched quote passage (issue #80): an inline tint inside the
+  // positioned item span — accent, or warning for a Critical Warning.
+  .pdf-hit {
+    position: static;
+    margin: -1px;
+    padding: 1px;
+    border-radius: 3px;
+    background: kt.$kt-accent-tint;
+
+    &--critical {
+      background: kt.$kt-warning-tint;
+    }
   }
 }
 

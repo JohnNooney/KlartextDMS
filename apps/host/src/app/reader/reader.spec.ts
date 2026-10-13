@@ -7,7 +7,13 @@ import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
-import { PDF_ENGINE, type PdfDocumentRef, type PdfEngine, type PdfPageRef } from './pdf-engine';
+import {
+  PDF_ENGINE,
+  type PdfDocumentRef,
+  type PdfEngine,
+  type PdfPageRef,
+  type PdfTextLayerRef,
+} from './pdf-engine';
 import { Reader } from './reader';
 
 function record(id: string, title: string, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
@@ -36,6 +42,9 @@ class FakePage implements PdfPageRef {
   readonly width = 600;
   readonly height = 800;
   async render(): Promise<void> {}
+  async renderTextLayer(container: HTMLElement): Promise<PdfTextLayerRef> {
+    return { itemsStr: [], divs: [], update: () => {} };
+  }
 }
 
 class FakeDoc implements PdfDocumentRef {
@@ -194,14 +203,6 @@ describe('Reader (issue #29)', () => {
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
     expect(toggle().getAttribute('aria-label')).toBe('Show insights');
     expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(true);
-  });
-
-  it('exposes goToPage, forwarded to the viewer for the Session layer', async () => {
-    const { fixture, el } = await setup(record('d1', 'Brief'));
-    fixture.componentInstance.goToPage(2);
-    for (let i = 0; i < 20; i++) await Promise.resolve();
-    fixture.detectChanges();
-    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 2 of 4');
   });
 
   // Issue #78: the Reader registers its viewer as the PageFocus navigator —

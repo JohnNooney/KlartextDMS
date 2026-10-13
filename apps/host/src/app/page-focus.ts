@@ -8,7 +8,8 @@ import type { GuestShowPagePayload } from '@klartext/bus-contract';
 export interface PageNavigator {
   /** One-based page count of the open Document — the range check's ceiling. */
   pageCount(): number;
-  goToPage(page: number): void;
+  /** The whole request drives the viewer — `quote`/`critical` ride along (#80). */
+  showPage(request: GuestShowPagePayload): void;
 }
 
 /** A request that landed — `seq` distinguishes repeats of the same page. */
@@ -50,7 +51,7 @@ export class PageFocus {
     if (!navigator || !Number.isInteger(page) || page < 1 || page > navigator.pageCount()) {
       return;
     }
-    navigator.goToPage(page);
+    navigator.showPage(request);
     this.landed.set({ ...request, seq: ++this.seq });
   }
 }

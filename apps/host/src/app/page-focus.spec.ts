@@ -4,11 +4,11 @@ import { PageFocus } from './page-focus';
 // Issue #78: the Guest's "show page" requests land here — the service owns
 // the `1..pageCount` range check only the open Document can answer, drives
 // the registered viewer, and publishes `landed` so the mobile sheet can drop
-// to peek (and #80 can later highlight the quoted passage).
+// to peek. #80's quote rides the same request through `showPage`.
 describe('PageFocus', () => {
   const navigator = (numPages = 4) => ({
     pageCount: vi.fn(() => numPages),
-    goToPage: vi.fn(),
+    showPage: vi.fn(),
   });
 
   it('jumps the registered navigator and publishes the landed request', () => {
@@ -18,7 +18,7 @@ describe('PageFocus', () => {
 
     focus.show({ page: 3, quote: 'q', critical: true });
 
-    expect(nav.goToPage).toHaveBeenCalledWith(3);
+    expect(nav.showPage).toHaveBeenCalledWith({ page: 3, quote: 'q', critical: true });
     expect(focus.landed()).toEqual({ page: 3, quote: 'q', critical: true, seq: 1 });
   });
 
@@ -37,7 +37,7 @@ describe('PageFocus', () => {
 
       focus.show({ page });
 
-      expect(nav.goToPage).not.toHaveBeenCalled();
+      expect(nav.showPage).not.toHaveBeenCalled();
       expect(focus.landed()).toBeNull();
     },
   );
@@ -50,7 +50,7 @@ describe('PageFocus', () => {
     focus.show({ page: 2 });
     focus.show({ page: 2 });
 
-    expect(nav.goToPage).toHaveBeenCalledTimes(2);
+    expect(nav.showPage).toHaveBeenCalledTimes(2);
     expect(focus.landed()?.seq).toBe(2);
   });
 
@@ -63,7 +63,7 @@ describe('PageFocus', () => {
     unregister();
     focus.show({ page: 1 });
 
-    expect(nav.goToPage).toHaveBeenCalledTimes(1);
+    expect(nav.showPage).toHaveBeenCalledTimes(1);
     expect(focus.landed()?.seq).toBe(1);
   });
 });

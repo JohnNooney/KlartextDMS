@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, input, signal, viewChild } from '@angular/core';
+import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { LibraryStore } from '../library/library.store';
@@ -29,12 +30,13 @@ export class Reader {
 
   /**
    * The open Document's page navigator for `GUEST_SHOW_PAGE` (issue #78):
-   * PageFocus owns the `1..pageCount` check and drives `goToPage`.
+   * PageFocus owns the `1..pageCount` check and hands the whole request —
+   * quote and all (issue #80) — to the viewer.
    */
   constructor() {
     const unregister = inject(PageFocus).registerNavigator({
       pageCount: () => this.viewer()?.pageCount() ?? 0,
-      goToPage: (n) => this.goToPage(n),
+      showPage: (request) => this.showPage(request),
     });
     inject(DestroyRef).onDestroy(unregister);
   }
@@ -78,11 +80,8 @@ export class Reader {
     if (doc) this.store.open(doc.id);
   }
 
-  /**
-   * Page awareness for the Session layer: `GUEST_SHOW_PAGE` (#78) drives the
-   * viewer through this — jump to a page and flash-mark it.
-   */
-  goToPage(n: number): void {
-    this.viewer()?.goToPage(n);
+  /** A `GUEST_SHOW_PAGE` request — the page jump plus its quote's passage. */
+  showPage(request: GuestShowPagePayload): void {
+    this.viewer()?.showPage(request);
   }
 }
