@@ -143,6 +143,17 @@ test('a Key Takeaway highlights its quoted passage on the page', async () => {
 
   const hits = page().locator('.pdf-text-layer .pdf-hit');
   await expect(hits.first()).toBeVisible();
+
+  // The layer is invisible and laid out by pdf.js — runtime-created spans
+  // must pick up its styles (absolute, transparent), not flow as body text.
+  const layout = await page().evaluate(() =>
+    [...document.querySelectorAll('.pdf-text-layer > span')].map((s) => {
+      const cs = getComputedStyle(s);
+      return `${cs.position} ${cs.color}`;
+    }),
+  );
+  expect(layout.length).toBeGreaterThan(0);
+  expect(new Set(layout)).toEqual(new Set(['absolute rgba(0, 0, 0, 0)']));
   // The passage belongs to a Critical Warning — warning tint, not accent.
   await expect(hits.first()).toHaveClass(/pdf-hit--critical/);
 

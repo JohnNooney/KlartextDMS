@@ -152,40 +152,45 @@
   --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
   --min-font-size-inv: calc(1 / var(--min-font-size));
 
-  :is(span, br) {
-    color: transparent;
-    position: absolute;
-    white-space: pre;
-    cursor: text;
-    transform-origin: 0% 0%;
-    user-select: text;
-  }
+  // pdf.js (and wrapMatch) create the layer's children at runtime, so they
+  // never carry this component's _ngcontent attribute — the descendant
+  // rules must pierce encapsulation, still scoped under .pdf-text-layer.
+  ::ng-deep {
+    :is(span, br) {
+      color: transparent;
+      position: absolute;
+      white-space: pre;
+      cursor: text;
+      transform-origin: 0% 0%;
+      user-select: text;
+    }
 
-  > :not(.markedContent),
-  .markedContent span:not(.markedContent):not(.pdf-hit) {
-    z-index: 1;
-    --font-height: 0;
-    font-size: calc(var(--text-scale-factor) * var(--font-height));
-    --scale-x: 1;
-    --rotate: 0deg;
-    transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
-  }
+    > :not(.markedContent),
+    .markedContent span:not(.markedContent):not(.pdf-hit) {
+      z-index: 1;
+      --font-height: 0;
+      font-size: calc(var(--text-scale-factor) * var(--font-height));
+      --scale-x: 1;
+      --rotate: 0deg;
+      transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+    }
 
-  .markedContent {
-    display: contents;
-  }
+    .markedContent {
+      display: contents;
+    }
 
-  // A matched quote passage (issue #80): an inline tint inside the
-  // positioned item span — accent, or warning for a Critical Warning.
-  .pdf-hit {
-    position: static;
-    margin: -1px;
-    padding: 1px;
-    border-radius: 3px;
-    background: kt.$kt-accent-tint;
+    // A matched quote passage (issue #80): an inline tint inside the
+    // positioned item span — accent, or warning for a Critical Warning.
+    .pdf-hit {
+      position: static;
+      margin: -1px;
+      padding: 1px;
+      border-radius: 3px;
+      background: kt.$kt-accent-tint;
 
-    &--critical {
-      background: kt.$kt-warning-tint;
+      &--critical {
+        background: kt.$kt-warning-tint;
+      }
     }
   }
 }
