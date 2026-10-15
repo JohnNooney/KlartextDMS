@@ -1,5 +1,10 @@
 @use 'tokens' as kt;
 
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .picker {
   list-style: none;
   margin: 0;
@@ -12,6 +17,7 @@
 
 .picker-row {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;
@@ -22,6 +28,17 @@
   text-align: left;
   font-size: kt.$kt-text-sm;
   cursor: pointer;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   &:hover:not(:disabled) {
     background: kt.$kt-fill;
