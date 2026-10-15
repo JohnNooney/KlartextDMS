@@ -48,11 +48,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: kt.$kt-space-3;
 
   h2 {
     margin: 0;
     font-size: kt.$kt-text-lg;
     font-weight: 700;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -61,6 +64,7 @@
   font-size: kt.$kt-text-sm;
   color: kt.$kt-text-muted;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 
   strong {
     color: kt.$kt-text;
