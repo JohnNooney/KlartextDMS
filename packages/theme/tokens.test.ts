@@ -30,9 +30,19 @@ const SPEC_VALUES: Record<string, string> = {
   '--kt-danger': '#ff3b30',
   '--kt-success': '#34c759',
   '--kt-space-1': '4px',
-  '--kt-control-height': '32px',
+  '--kt-control-height': '36px',
   '--kt-touch-target': '44px',
 };
+
+const TEXT_TOKENS = [
+  '--kt-text-xs',
+  '--kt-text-sm',
+  '--kt-text-base',
+  '--kt-text-lg',
+  '--kt-text-xl',
+  '--kt-text-2xl',
+  '--kt-text-3xl',
+];
 
 describe('theme tokens', () => {
   it.each(TOKENS)('defines %s', (token) => {
@@ -41,5 +51,11 @@ describe('theme tokens', () => {
 
   it.each(Object.entries(SPEC_VALUES))('pins %s to its spec value %s', (token, value) => {
     expect(css).toMatch(new RegExp(`${token.replaceAll('-', '\\-')}:\\s*${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*;`));
+  });
+
+  it.each(TEXT_TOKENS)('keeps %s at or above the 12px (0.75rem) accessibility floor', (token) => {
+    const match = css.match(new RegExp(`${token.replaceAll('-', '\\-')}:\\s*([0-9.]+)rem\\s*;`));
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThanOrEqual(0.75);
   });
 });

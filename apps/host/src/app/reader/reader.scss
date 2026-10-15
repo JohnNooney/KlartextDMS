@@ -27,7 +27,7 @@
 .back-btn {
   display: inline-flex;
   align-items: center;
-  height: 32px;
+  height: kt.$kt-control-height;
   padding: 0 kt.$kt-space-2 0 0;
   border: 0;
   border-radius: kt.$kt-radius-sm;
@@ -52,7 +52,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 32px;
+  height: kt.$kt-control-height;
   padding: 0 8px;
   border: 0;
   border-radius: kt.$kt-radius-sm;
@@ -91,7 +91,7 @@
     align-items: center;
     gap: 10px;
     height: auto;
-    min-height: 30px;
+    min-height: 34px;
   }
 
   .title-doc {
@@ -143,7 +143,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 30px;
+  height: 34px;
   padding: 0 10px;
   border: 0;
   border-radius: 6px;

@@ -35,8 +35,8 @@
 }
 
 .tree-new {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
 .tree {
@@ -49,7 +49,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  min-height: 28px;
+  min-height: 32px;
   padding-right: 8px;
   border-radius: kt.$kt-radius-sm;
   font-size: kt.$kt-text-sm;
@@ -77,8 +77,8 @@
 }
 
 .tree-chevron {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   padding: 0;
 
   svg {
@@ -91,7 +91,7 @@
 }
 
 .tree-chevron-gap {
-  width: 16px;
+  width: 20px;
   flex-shrink: 0;
 }
 
@@ -105,9 +105,9 @@
 
 .tree-badge {
   flex-shrink: 0;
-  min-width: 18px;
-  padding: 0 6px;
-  border-radius: 9px;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
   background: kt.$kt-fill;
   color: kt.$kt-text-muted;
   font-size: kt.$kt-text-xs;
