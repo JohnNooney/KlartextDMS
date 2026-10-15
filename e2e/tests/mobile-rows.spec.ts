@@ -83,6 +83,7 @@ test('adjacent Folder rows keep clear vertical separation and row padding around
   expect(firstIcon).not.toBeNull();
   expect(secondRow).not.toBeNull();
   expect(secondIcon).not.toBeNull();
+  expect({ width: firstIcon!.width, height: firstIcon!.height }).toEqual({ width: 44, height: 36 });
 
   // Adjacent Folder rows and their icons stay clearly separated vertically.
   expect(secondRow!.y).toBeGreaterThanOrEqual(firstRow!.y + firstRow!.height);
