@@ -20,17 +20,17 @@ const emit = defineEmits<{ select: [] }>();
     <span
       v-if="divider"
       aria-hidden="true"
-      class="absolute left-12 right-0 top-0 h-px bg-kt-border"
+      class="absolute left-13 right-0 top-0 h-px bg-kt-border"
     ></span>
     <button
       type="button"
-      class="grid w-full grid-cols-[20px_1fr_auto] items-start gap-kt-3 px-kt-4 py-kt-3 text-left"
+      class="grid w-full grid-cols-[24px_1fr_auto] items-start gap-kt-3 px-kt-4 py-kt-3 text-left"
       :class="selected ? 'bg-kt-accent-tint' : 'hover:bg-kt-fill'"
       :aria-expanded="selected"
       @click="emit('select')"
     >
       <span
-        class="mt-px grid h-kt-5 w-kt-5 place-items-center rounded-full text-kt-xs font-semibold"
+        class="mt-px grid size-6 place-items-center rounded-full text-kt-xs font-semibold"
         :class="critical ? 'bg-kt-warning text-kt-bg' : 'bg-kt-fill text-kt-text-muted'"
         >{{ number }}</span
       >
@@ -39,7 +39,7 @@ const emit = defineEmits<{ select: [] }>();
         <blockquote
           v-if="selected"
           lang="de"
-          class="mt-kt-2 border-l-2 pl-kt-3 text-kt-xs italic text-kt-text-muted"
+          class="mt-kt-2 border-l-2 pl-kt-3 text-kt-sm italic text-kt-text-muted"
           :class="critical ? 'border-kt-warning' : 'border-kt-border-strong'"
         >
           “{{ takeaway.sourceQuote }}”

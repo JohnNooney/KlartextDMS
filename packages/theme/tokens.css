@@ -31,13 +31,13 @@
   /* Type (SF Pro on Apple platforms) */
   --kt-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
   --kt-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
-  --kt-text-xs: 0.6875rem; /* 11 caption2 */
-  --kt-text-sm: 0.8125rem; /* 13 footnote */
-  --kt-text-base: 0.9375rem; /* 15 subheadline/body-ish */
-  --kt-text-lg: 1.0625rem; /* 17 body/headline */
-  --kt-text-xl: 1.375rem; /* 22 title2 */
-  --kt-text-2xl: 1.75rem; /* 28 title1 */
-  --kt-text-3xl: 2.125rem; /* 34 large title (mobile header) */
+  --kt-text-xs: 0.8125rem; /* 13 caption2 */
+  --kt-text-sm: 0.9375rem; /* 15 footnote */
+  --kt-text-base: 1.0625rem; /* 17 subheadline/body */
+  --kt-text-lg: 1.25rem; /* 20 headline */
+  --kt-text-xl: 1.625rem; /* 26 title2 */
+  --kt-text-2xl: 2rem; /* 32 title1 */
+  --kt-text-3xl: 2.375rem; /* 38 large title (mobile header) */
 
   /* Spacing (4pt grid) */
   --kt-space-1: 4px;
@@ -60,11 +60,11 @@
   --kt-shadow-popover: 0 10px 38px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.1);
 
   /* Layout */
-  --kt-sidebar-width: 240px;
+  --kt-sidebar-width: 260px;
   --kt-list-width: 280px;
-  --kt-insights-width: 440px;
-  --kt-toolbar-height: 52px;
-  --kt-control-height: 32px;
+  --kt-insights-width: 480px;
+  --kt-toolbar-height: 56px;
+  --kt-control-height: 36px;
   --kt-touch-target: 44px;
   /* Mobile sheet's peek detent: grab-handle strip plus the top of the
      Guest frame — its section jump bar (issue #79). */

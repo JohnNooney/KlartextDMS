@@ -277,7 +277,7 @@ function reanalyze(): void {
             v-for="item in jumpItems"
             :key="item.id"
             type="button"
-            class="flex h-7 flex-1 items-center justify-center gap-kt-1 rounded-[7px] text-kt-sm font-medium"
+            class="flex h-8 flex-1 items-center justify-center gap-kt-1 rounded-[7px] text-kt-sm font-medium"
             :class="{ 'bg-kt-bg shadow-sm': activeSection === item.id }"
             :aria-current="activeSection === item.id ? 'location' : undefined"
             @click="jumpToSection(item.id)"
@@ -285,7 +285,7 @@ function reanalyze(): void {
             {{ item.label }}
             <span
               v-if="item.critical && item.count"
-              class="flex h-4 min-w-4 items-center justify-center rounded-full bg-kt-warning px-1 text-[10px] font-bold leading-none text-kt-canvas"
+              class="flex h-5 min-w-5 items-center justify-center rounded-full bg-kt-warning px-1.5 text-[12px] font-bold leading-none text-kt-canvas"
             >{{ item.count }}</span>
           </button>
         </div>
@@ -301,7 +301,7 @@ function reanalyze(): void {
           <button
             type="button"
             aria-label="More actions"
-            class="rounded-kt-sm px-kt-2 py-kt-1 text-kt-base leading-none text-kt-text-muted hover:bg-kt-fill"
+            class="rounded-kt-sm px-kt-2 py-kt-1 text-kt-lg leading-none text-kt-text-muted hover:bg-kt-fill"
             @click="menuOpen = !menuOpen"
           >
             ⋯
@@ -350,10 +350,10 @@ function reanalyze(): void {
           <button
             type="button"
             aria-label="Dismiss warning"
-            class="rounded-kt-sm px-kt-1 text-kt-text-muted hover:bg-kt-fill"
+            class="rounded-kt-sm p-kt-1 text-kt-text-muted hover:bg-kt-fill"
             @click="bannerDismissed = true"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
           </button>
         </div>
       </div>
@@ -366,9 +366,9 @@ function reanalyze(): void {
           class="mt-kt-5 flex w-full items-center gap-kt-3 rounded-kt-lg bg-kt-warning-tint px-kt-4 py-kt-3 text-left text-kt-sm font-medium"
           @click="scrollToSection('attention')"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-kt-warning" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-kt-warning" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
           <span class="flex-1">{{ criticalTakeaways.length }} things need your attention</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
         </button>
       </section>
 
@@ -416,7 +416,7 @@ function reanalyze(): void {
         :aria-current="activeSection === item.id ? 'location' : undefined"
         @click="scrollToSection(item.id)"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="item.icon" /></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="item.icon" /></svg>
         <span
           v-if="activeSection === item.id"
           class="absolute -left-[6px] bottom-[10px] top-[10px] w-[3px] rounded-full bg-kt-accent"
@@ -424,7 +424,7 @@ function reanalyze(): void {
         ></span>
         <span
           v-if="item.count"
-          class="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none"
+          class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[12px] font-bold leading-none"
           :class="item.critical ? 'bg-kt-warning text-kt-canvas' : 'bg-kt-fill-strong text-kt-text'"
         >{{ item.count }}</span>
       </button>
