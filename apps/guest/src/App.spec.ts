@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages } from '@klartext/bus-contract';
 import type { ExtractionState, Session } from '@klartext/bus-contract';
 import App from './App.vue';
-import { currentSession, retrySender, sessionProbe } from './session-store';
+import {
+  currentSession,
+  expandPanelSender,
+  presentationMode,
+  retrySender,
+  sessionProbe,
+  showPageSender,
+} from './session-store';
 
 const fixtureSession = goldenFixtureMessages.INIT_SESSION.payload;
 
@@ -17,6 +24,9 @@ function session(
 beforeEach(() => {
   currentSession.value = null;
   retrySender.value = null;
+  showPageSender.value = null;
+  expandPanelSender.value = null;
+  presentationMode.value = null;
 });
 
 describe('App', () => {
@@ -86,6 +96,48 @@ describe('App', () => {
     const wrapper = mount(App);
     expect(wrapper.text()).toContain(fixtureSession.extraction!.plainEnglishSummary);
     expect(wrapper.text()).toContain(copy);
+  });
+
+  // Issue #78: a selected Key Takeaway row carrying a page asks the Host to
+  // show it — fire-and-forget through the wired Bus sender.
+  it('selecting a takeaway row sends GUEST_SHOW_PAGE through the Bus sender', async () => {
+    const showPage = vi.fn();
+    showPageSender.value = showPage;
+    sessionProbe.sessionApplied(fixtureSession);
+    const wrapper = mount(App);
+    const row = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes("three months' notice"))!;
+
+    await row.trigger('click');
+
+    expect(showPage).toHaveBeenCalledWith({
+      page: 3,
+      quote: 'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.',
+      critical: true,
+    });
+  });
+
+  // Issue #79: a jump-bar tap in the sheet asks the Host to raise it —
+  // fire-and-forget through the wired Bus sender.
+  it('tapping a jump-bar segment sends GUEST_EXPAND_PANEL through the Bus sender', async () => {
+    const expandPanel = vi.fn();
+    expandPanelSender.value = expandPanel;
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      sessionProbe.sessionApplied(fixtureSession);
+      presentationMode.value = 'sheet';
+      const wrapper = mount(App);
+      const seg = wrapper.findAll('button').find((b) => b.text() === 'Takeaways')!;
+
+      await seg.trigger('click');
+
+      expect(expandPanel).toHaveBeenCalledOnce();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 
   it('Extraction + failed keeps the stored content under a warning banner with Try again', async () => {

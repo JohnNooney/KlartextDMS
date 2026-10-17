@@ -1,11 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HostAdapter } from '@klartext/bus-contract/conformance';
 import { HOST_BUS_ADAPTER_FACTORY } from './bus/host-bus.adapter';
 import { GuestFrame } from './guest-frame';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
+import { PageFocus } from './page-focus';
+import { SheetExpand } from './sheet-expand';
 
 class FakeOpenDocument {
   readonly docId = signal<string | null>('doc-1');
@@ -21,6 +23,7 @@ const fakeAdapter: HostAdapter = {
   openSession: vi.fn(),
   requestExtraction: vi.fn(),
   cancelJobs: vi.fn(),
+  setPresentation: vi.fn(),
   dispose: vi.fn(),
 };
 
@@ -72,7 +75,7 @@ function pointer(el: HTMLElement, type: string, clientY: number, timeStamp?: num
 }
 
 describe('GuestFrame mobile sheet detents (issue #50)', () => {
-  it('rests at peek when a Document opens — strip plus a minimal header over the PDF', async () => {
+  it('rests at peek when a Document opens — handle plus the Guest jump bar over the PDF', async () => {
     const { el } = await setup();
     expect(detent(el)).toBe('peek');
 
@@ -83,13 +86,12 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(button.querySelector('.handle-pill')).not.toBeNull();
     expect(button.querySelector('svg')).toBeNull();
 
-    // The minimal header is chrome above the iframe, keeping the Extraction
-    // discoverable while the sheet only covers a sliver of the reader.
-    const head = el.querySelector<HTMLElement>('.sheet-head')!;
-    expect(head.textContent).toContain('Insights');
+    // Issue #79: the "Insights" header is gone — at peek the iframe's top
+    // sliver shows the Guest's own jump bar, tappable through the frame.
+    expect(el.querySelector('.sheet-head')).toBeNull();
     const frame = el.querySelector<HTMLIFrameElement>('iframe.guest-frame')!;
     expect(
-      head.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
+      button.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -141,7 +143,7 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
 
     // Press near the sheet's top edge, drag until the sheet stands half open.
     // Explicit timeStamps keep the flick velocity under threshold.
-    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointerdown', vh - 88, 0);
     pointer(el, 'pointermove', vh * 0.5, 1000);
     expect(sheet.classList.contains('is-dragging')).toBe(true);
     expect(sheet.style.height).toBe(`${vh * 0.5}px`);
@@ -161,9 +163,9 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     const { el } = await setup();
     const vh = window.innerHeight;
 
-    // jsdom: peek resolves to its 76px fallback, so the peek/half midpoint
-    // sits at (76 + vh/2) / 2 ≈ 230 — a 200px sheet lands below it.
-    pointer(el, 'pointerdown', vh - 76, 0);
+    // jsdom: peek resolves to its 88px fallback, so the peek/half midpoint
+    // sits at (88 + vh/2) / 2 ≈ 236 — a 200px sheet lands below it.
+    pointer(el, 'pointerdown', vh - 88, 0);
     pointer(el, 'pointermove', vh - 200, 1000);
     pointer(el, 'pointerup', vh - 200, 1050);
     expect(detent(el)).toBe('peek');
@@ -175,7 +177,7 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
 
     // Released at ~140px — nearest detent is peek — but the upward flick
     // overrides position and takes the sheet to half.
-    pointer(el, 'pointerdown', vh - 76, 0);
+    pointer(el, 'pointerdown', vh - 88, 0);
     pointer(el, 'pointermove', vh - 120, 10);
     pointer(el, 'pointerup', vh - 140, 20);
     expect(detent(el)).toBe('half');
@@ -185,9 +187,9 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     const { fixture, el } = await setup();
     const vh = window.innerHeight;
 
-    pointer(el, 'pointerdown', vh - 76, 0);
-    pointer(el, 'pointermove', vh - 73, 100);
-    pointer(el, 'pointerup', vh - 73, 150);
+    pointer(el, 'pointerdown', vh - 88, 0);
+    pointer(el, 'pointermove', vh - 85, 100);
+    pointer(el, 'pointerup', vh - 85, 150);
     tap(fixture, el);
     expect(detent(el)).toBe('half');
   });
@@ -207,6 +209,44 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(el.querySelector('iframe.guest-frame')).toBeTruthy();
   });
 
+  // Issue #78: a landed show-page request rests the sheet at half — the
+  // jumped-to page shows above it while the takeaways stay in reach; a
+  // request that never lands leaves it alone.
+  it('a landed page request rests the sheet at half', async () => {
+    const { fixture, el } = await setup();
+    tap(fixture, el);
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
+
+    const focus = TestBed.inject(PageFocus);
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
+    focus.show({ page: 3 });
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
+
+    // From peek too — the same request lifts it to half.
+    tap(fixture, el);
+    tap(fixture, el);
+    expect(detent(el)).toBe('peek');
+    focus.show({ page: 2 });
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
+  });
+
+  it('an out-of-range page request leaves the sheet alone', async () => {
+    const { fixture, el } = await setup();
+    tap(fixture, el);
+    tap(fixture, el);
+    expect(detent(el)).toBe('full');
+
+    const focus = TestBed.inject(PageFocus);
+    focus.registerNavigator({ pageCount: () => 4, showPage: vi.fn() });
+    focus.show({ page: 99 });
+    fixture.detectChanges();
+
+    expect(detent(el)).toBe('full');
+  });
+
   it('the handle is a strip in the sheet chrome ahead of the iframe, not overlaid', async () => {
     const { el } = await setup();
     const button = handle(el);
@@ -216,5 +256,132 @@ describe('GuestFrame mobile sheet detents (issue #50)', () => {
     expect(
       button.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// Issue #77: the frame reports its lane/sheet presentation over the Bus —
+// on mount (buffered until GUEST_READY by the adapter) and on every
+// crossing of the same 768px mobile breakpoint the frame's CSS uses.
+describe('GuestFrame panel presentation (issue #77)', () => {
+  // jsdom has no matchMedia — a stubbed MediaQueryList drives the tests.
+  let fakeMedia: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
+  let crossing: (() => void) | null;
+
+  beforeEach(() => {
+    crossing = null;
+    fakeMedia = {
+      matches: false,
+      addEventListener: vi.fn((_type: string, listener: () => void) => {
+        crossing = listener;
+      }),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn(() => fakeMedia));
+    vi.mocked(fakeAdapter.setPresentation).mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('reports the lane mode on mount at desktop widths', async () => {
+    await setup();
+    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 768px)');
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledWith('lane');
+  });
+
+  it('reports the sheet mode on mount under the mobile breakpoint', async () => {
+    fakeMedia.matches = true;
+    await setup();
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledWith('sheet');
+  });
+
+  it('reports each breakpoint crossing', async () => {
+    await setup();
+    expect(fakeAdapter.setPresentation).toHaveBeenCalledTimes(1);
+
+    fakeMedia.matches = true;
+    crossing!();
+    expect(fakeAdapter.setPresentation).toHaveBeenLastCalledWith('sheet');
+
+    fakeMedia.matches = false;
+    crossing!();
+    expect(fakeAdapter.setPresentation).toHaveBeenLastCalledWith('lane');
+  });
+
+  it('stops listening on destroy', async () => {
+    const { fixture } = await setup();
+    fixture.destroy();
+    expect(fakeMedia.removeEventListener).toHaveBeenCalledWith('change', crossing);
+  });
+});
+
+// Issue #79: the Guest can't raise its own sheet — a jump-bar tap sends
+// GUEST_EXPAND_PANEL, which lands as a SheetExpand request through the Bus
+// outcome chain. A peeking sheet lifts to half; every other detent, and
+// the desktop lane, ignore it.
+describe('GuestFrame expand-panel requests (issue #79)', () => {
+  let fakeMedia: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    fakeMedia = {
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn(() => fakeMedia));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('raises a peeking sheet to half', async () => {
+    const { fixture, el } = await setup();
+    expect(detent(el)).toBe('peek');
+
+    TestBed.inject(SheetExpand).request();
+    fixture.detectChanges();
+
+    expect(detent(el)).toBe('half');
+  });
+
+  it('leaves the half and full detents alone', async () => {
+    const { fixture, el } = await setup();
+    const expand = TestBed.inject(SheetExpand);
+
+    tap(fixture, el);
+    expand.request();
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
+
+    tap(fixture, el);
+    expand.request();
+    fixture.detectChanges();
+    expect(detent(el)).toBe('full');
+  });
+
+  it('collapsing back to peek after a request does not re-raise the sheet', async () => {
+    const { fixture, el } = await setup();
+    const expand = TestBed.inject(SheetExpand);
+    expand.request();
+    fixture.detectChanges();
+    expect(detent(el)).toBe('half');
+
+    // The user drags the sheet back to peek — the earlier request is spent;
+    // it must not fire again.
+    tap(fixture, el); // half → full
+    tap(fixture, el); // full → peek
+    expect(detent(el)).toBe('peek');
+  });
+
+  it('is ignored on desktop — there is no sheet in the lane presentation', async () => {
+    fakeMedia.matches = false;
+    const { fixture, el } = await setup();
+
+    TestBed.inject(SheetExpand).request();
+    fixture.detectChanges();
+
+    expect(detent(el)).toBe('peek');
   });
 });

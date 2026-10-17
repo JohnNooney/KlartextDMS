@@ -1,16 +1,19 @@
 @use 'tokens' as kt;
 
-// Overlays the insights lane the reader reserves (issue #28). Hidden via the
-// `hidden` attribute while no Document is open — the iframe stays mounted.
+// The insights lane (issue #28): a card floating beside the reader card,
+// inset by the same gap as the app content — the library makes room for it.
+// Hidden via the `hidden` attribute while no Document is open — the iframe
+// stays mounted.
 .guest-frame-host {
   position: fixed;
-  top: kt.$kt-toolbar-height;
-  right: 0;
-  bottom: 0;
+  top: calc(#{kt.$kt-toolbar-height} + #{kt.$kt-space-3});
+  right: kt.$kt-space-3;
+  bottom: kt.$kt-space-3;
   width: kt.$kt-insights-width;
   background: kt.$kt-surface;
-  border-left: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-lg;
   box-shadow: kt.$kt-shadow-panel;
+  overflow: hidden;
   z-index: 20;
 
   &[hidden] {
@@ -33,9 +36,8 @@
   border: 0;
 }
 
-// The sheet handle and peek header are mobile-only affordances.
-.sheet-handle,
-.sheet-head {
+// The sheet handle is a mobile-only affordance.
+.sheet-handle {
   display: none;
 }
 
@@ -49,7 +51,6 @@
     right: 0;
     bottom: 0;
     width: auto;
-    border-left: 0;
     border-top: 1px solid kt.$kt-border;
     border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
     transition: height 0.2s ease;
@@ -62,8 +63,9 @@
     // bottom inset is padding rather than content (issue #59).
     padding-bottom: env(safe-area-inset-bottom, 0px);
 
-    // Peek is just the chrome — grab-handle strip plus the minimal header —
-    // so the PDF stays essentially unobstructed.
+    // Peek is just the chrome — grab-handle strip plus the top of the
+    // Guest frame (its section jump bar, issue #79) — so the PDF stays
+    // essentially unobstructed.
     &[data-sheet='peek'] {
       height: calc(#{kt.$kt-sheet-peek-height} + env(safe-area-inset-bottom, 0px));
     }
@@ -102,21 +104,6 @@
       border-radius: 999px;
       background: kt.$kt-fill-strong;
     }
-  }
-
-  // The minimal header — only visible at peek, where it names the panel so
-  // the Extraction stays discoverable while the iframe is clipped away.
-  .guest-frame-host[data-sheet='peek'] .sheet-head {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    height: kt.$kt-control-height;
-    font-size: kt.$kt-text-xs;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: kt.$kt-text-faint;
   }
 
   .guest-frame {

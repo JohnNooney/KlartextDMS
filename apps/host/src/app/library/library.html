@@ -1,6 +1,6 @@
 @if (store.openDoc(); as openDoc) {
-  <!-- Open-Document view (issue #29): the Guest iframe displays over the
-       reader's .insights-slot while a Document is open (issue #16). -->
+  <!-- Open-Document view (issue #29): the Guest iframe floats beside this
+       card while a Document is open (issue #16). -->
   <app-reader [doc]="openDoc" />
 } @else {
   <div class="browse">
@@ -26,7 +26,7 @@
         (click)="back()"
         [attr.aria-label]="'Back to ' + backLabel()"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
         <span class="back-label">{{ backLabel() }}</span>
       </button>
     }
@@ -34,7 +34,7 @@
     <div class="toolbar-actions">
       <button type="button" class="btn btn-secondary btn-new-folder" (click)="dialog.set({ kind: 'new-folder' })">New folder</button>
       <button type="button" class="btn btn-primary btn-upload" (click)="openUpload()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
         <span class="btn-upload-label">Upload</span>
       </button>
       <!-- The + affordance (mobile only) opens the add menu — the toolbar's
@@ -48,17 +48,17 @@
           aria-haspopup="menu"
           [attr.aria-expanded]="addMenuOpen()"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
         </button>
         @if (addMenuOpen()) {
           <button type="button" class="menu-shield" (click)="closeAddMenu()" aria-hidden="true" tabindex="-1"></button>
           <div class="menu" role="menu" aria-label="Add">
             <button type="button" class="menu-item" role="menuitem" (click)="pickAdd('upload')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
               <span>Upload document</span>
             </button>
             <button type="button" class="menu-item" role="menuitem" (click)="pickAdd('new-folder')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5zM12 11v5M9.5 13.5h5"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6c.6 0 1.2.3 1.6.7L12 7h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5zM12 11v5M9.5 13.5h5"/></svg>
               <span>New folder</span>
             </button>
           </div>
@@ -78,7 +78,7 @@
       <div class="library-loading"><span class="spinner" role="status" aria-label="Loading"></span></div>
     } @else if (store.visible()!.length === 0 && store.visibleFolders().length === 0) {
       <div class="empty">
-        <svg width="64" height="51" viewBox="0 0 52 42" fill="none" aria-hidden="true">
+        <svg width="72" height="58" viewBox="0 0 52 42" fill="none" aria-hidden="true">
           <path d="M2 6a4 4 0 0 1 4-4h11.3a4 4 0 0 1 3 1.4L23 6.5h23a4 4 0 0 1 4 4V36a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#8ed1fc"/>
           <path d="M2 13a4 4 0 0 1 4-4h40a4 4 0 0 1 4 4v23a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" fill="#5ac8fa"/>
         </svg>
@@ -86,7 +86,7 @@
         <p>Upload a PDF and Klartext will explain it in plain English.</p>
         <p class="empty-hint">You can also drop a PDF anywhere in this window.</p>
         <button type="button" class="btn btn-tinted" (click)="openUpload()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
           Upload your first document
         </button>
       </div>

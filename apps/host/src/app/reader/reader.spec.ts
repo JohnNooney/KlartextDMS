@@ -6,7 +6,14 @@ import type { DocumentRecord } from '../data/document';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
-import { PDF_ENGINE, type PdfDocumentRef, type PdfEngine, type PdfPageRef } from './pdf-engine';
+import { PageFocus } from '../page-focus';
+import {
+  PDF_ENGINE,
+  type PdfDocumentRef,
+  type PdfEngine,
+  type PdfPageRef,
+  type PdfTextLayerRef,
+} from './pdf-engine';
 import { Reader } from './reader';
 
 function record(id: string, title: string, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
@@ -35,6 +42,9 @@ class FakePage implements PdfPageRef {
   readonly width = 600;
   readonly height = 800;
   async render(): Promise<void> {}
+  async renderTextLayer(container: HTMLElement): Promise<PdfTextLayerRef> {
+    return { itemsStr: [], divs: [], update: () => {} };
+  }
 }
 
 class FakeDoc implements PdfDocumentRef {
@@ -102,11 +112,10 @@ function backButton(el: HTMLElement): HTMLButtonElement {
 }
 
 describe('Reader (issue #29)', () => {
-  it('renders the split view: PDF pane plus the insights slot', async () => {
+  it('renders the PDF pane — the insights lane floats beside it, outside the reader', async () => {
     const { el } = await setup(record('d1', 'Mietvertrag 2024'));
-    expect(el.querySelector('app-pdf-viewer')).toBeTruthy();
+    expect(el.querySelector('.pdf-pane app-pdf-viewer')).toBeTruthy();
     expect(el.querySelector('canvas')).toBeTruthy();
-    expect(el.querySelector('.insights-slot')).toBeTruthy();
   });
 
   it('backs out to the root Folder label for a root Document', async () => {
@@ -182,24 +191,34 @@ describe('Reader (issue #29)', () => {
     // Lane shown: the button is pressed and offers to hide it.
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     expect(toggle().getAttribute('aria-label')).toBe('Hide insights');
-    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(false);
+    expect(el.querySelector('.reader')!.classList.contains('lane-hidden')).toBe(false);
 
     toggle().click();
     expect(openDocument.toggleInsightsLane).toHaveBeenCalled();
 
-    // Lane hidden: the slot collapses and the button offers to show it.
+    // Lane hidden: the button offers to show it.
     openDocument.insightsLaneHidden.set(true);
     fixture.detectChanges();
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
     expect(toggle().getAttribute('aria-label')).toBe('Show insights');
-    expect(el.querySelector('.insights-slot')!.hasAttribute('hidden')).toBe(true);
+    expect(el.querySelector('.reader')!.classList.contains('lane-hidden')).toBe(true);
   });
 
-  it('exposes goToPage, forwarded to the viewer for the Session layer', async () => {
+  // Issue #78: the Reader registers its viewer as the PageFocus navigator —
+  // a GUEST_SHOW_PAGE lands inside the open Document's range and is ignored
+  // outside it.
+  it('a show-page request jumps the viewer within 1..pageCount', async () => {
     const { fixture, el } = await setup(record('d1', 'Brief'));
-    fixture.componentInstance.goToPage(2);
+    const focus = TestBed.inject(PageFocus);
+
+    focus.show({ page: 3 });
     for (let i = 0; i < 20; i++) await Promise.resolve();
     fixture.detectChanges();
-    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 2 of 4');
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
+
+    focus.show({ page: 99 });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    fixture.detectChanges();
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
   });
 });

@@ -3,10 +3,12 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   linkedSignal,
   NgZone,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
@@ -17,6 +19,8 @@ import { HostBus } from './bus/host-bus';
 import { windowBusSource } from './bus/window-bus';
 import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
+import { PageFocus } from './page-focus';
+import { SheetExpand } from './sheet-expand';
 
 /** The sheet's snap heights (issue #50), smallest first. */
 type SheetState = 'peek' | 'half' | 'full';
@@ -25,9 +29,16 @@ const SHEET_ORDER: readonly SheetState[] = ['peek', 'half', 'full'];
 const DRAG_THRESHOLD_PX = 4;
 /** Release speed (px/ms) that moves one detent regardless of height (#62). */
 const FLICK_VELOCITY_PX_MS = 0.35;
-/** Peek's chrome height -- equals --kt-sheet-peek-height (44 + 32); used when
- *  the resolved value can't be measured (jsdom). */
-const PEEK_HEIGHT_FALLBACK_PX = 76;
+/** Peek's chrome height -- equals --kt-sheet-peek-height (2 × 44: handle
+ *  strip plus the Guest's jump bar); used when the resolved value can't be
+ *  measured (jsdom). */
+const PEEK_HEIGHT_FALLBACK_PX = 88;
+/**
+ * The lane/sheet breakpoint (issue #77): the same 768px the frame's media
+ * queries switch on. The Guest can't tell lane from sheet by its own
+ * viewport — the widths are within ~50px — so the Host reports it.
+ */
+const MOBILE_MEDIA_QUERY = '(max-width: 768px)';
 
 /** One in-flight handle drag. */
 interface SheetDrag {
@@ -63,6 +74,8 @@ export class GuestFrame {
   private drag: SheetDrag | null = null;
   /** A release after a real drag still fires `click` — it must not cycle. */
   private suppressClick = false;
+  /** Removes the breakpoint listener wired by {@link watchPresentation}. */
+  private unwatchPresentation: (() => void) | null = null;
 
   protected readonly guestUrl: SafeResourceUrl;
   /** Whether a Document is open — the frame displays only then (#28). */
@@ -215,13 +228,56 @@ export class GuestFrame {
           probe: events,
         });
         bus.attach(this.adapter);
+        this.watchPresentation();
       });
     });
 
     inject(DestroyRef).onDestroy(() => {
+      this.unwatchPresentation?.();
+      this.unwatchPresentation = null;
       if (this.adapter) bus.detach(this.adapter);
       this.adapter?.dispose();
       this.adapter = null;
     });
+
+    // A landed show-page request (issue #78) rests the sheet at half: the
+    // jumped-to page shows above it while the takeaways stay in reach for
+    // the next tap. On desktop the detent is inert.
+    const pageFocus = inject(PageFocus);
+    effect(() => {
+      if (pageFocus.landed() !== null) this.sheetState.set('half');
+    });
+
+    // A landed expand-panel request (issue #79) lifts a peeking sheet to
+    // half — the jump bar can't raise the sheet itself, and there is no
+    // sheet in the lane presentation. Untracked reads keep the request
+    // one-shot: later detent changes must not replay it.
+    const sheetExpand = inject(SheetExpand);
+    effect(() => {
+      if (sheetExpand.requested() === 0) return;
+      untracked(() => {
+        if (this.isMobile() && this.sheetState() === 'peek') this.sheetState.set('half');
+      });
+    });
+  }
+
+  /** Whether the frame presents as the mobile sheet — the #77 breakpoint. */
+  private isMobile(): boolean {
+    return window.matchMedia?.(MOBILE_MEDIA_QUERY)?.matches ?? false;
+  }
+
+  /**
+   * Reports the lane/sheet presentation (issue #77): once now — the adapter
+   * buffers it until GUEST_READY — then on every breakpoint crossing.
+   * `matchMedia` fires `change` only on crossings, never per-resize.
+   */
+  private watchPresentation(): void {
+    const media = window.matchMedia?.(MOBILE_MEDIA_QUERY);
+    if (!media) return;
+    const report = (): void =>
+      this.adapter?.setPresentation(media.matches ? 'sheet' : 'lane');
+    report();
+    media.addEventListener('change', report);
+    this.unwatchPresentation = () => media.removeEventListener('change', report);
   }
 }

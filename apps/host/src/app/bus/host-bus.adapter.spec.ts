@@ -35,6 +35,8 @@ function setup() {
     jobStarted: vi.fn(),
     jobFailedFor: vi.fn(),
     retryRequested: vi.fn(() => false),
+    pageRequested: vi.fn(),
+    panelExpandRequested: vi.fn(),
   };
   const adapter = createHostBusAdapter({ source, sink, peerOrigin: PEER_ORIGIN, probe });
   return { source, sink, probe, adapter };
@@ -71,6 +73,46 @@ describe('HostBus adapter — receive-side checks', () => {
     const { source, sink, probe } = setup();
     source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
     expect(probe.onGuestReady).toHaveBeenCalledOnce();
+  });
+});
+
+describe('HostBus adapter — panel presentation (issue #77)', () => {
+  const presentations = (sink: BusSink) =>
+    (sink.postMessage as ReturnType<typeof vi.fn>).mock.calls
+      .map(([data]) => data)
+      .filter((d): d is { type: 'PANEL_PRESENTATION'; payload: { mode: string } } =>
+        (d as { type?: string }).type === 'PANEL_PRESENTATION',
+      );
+
+  it('buffers the presentation until GUEST_READY, then sends it sessionless', () => {
+    const { source, sink, adapter } = setup();
+    adapter.setPresentation('lane');
+    expect(sink.postMessage).not.toHaveBeenCalled();
+
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    expect(presentations(sink)).toEqual([
+      { v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'lane' } },
+    ]);
+  });
+
+  it('sends on each crossing, not on every re-assertion', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.setPresentation('lane');
+    adapter.setPresentation('lane');
+    expect(presentations(sink)).toHaveLength(1);
+
+    adapter.setPresentation('sheet');
+    expect(presentations(sink)).toHaveLength(2);
+    expect(presentations(sink)[1]!.payload.mode).toBe('sheet');
+  });
+
+  it('resends the current presentation when the Guest reloads', () => {
+    const { source, sink, adapter } = setup();
+    adapter.setPresentation('sheet');
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    expect(presentations(sink)).toHaveLength(2);
   });
 });
 
@@ -245,5 +287,164 @@ describe('HostBus adapter — app-side probe hooks (issue #31)', () => {
       .filter((d) => d.type === 'EXTRACT_DOCUMENT');
     expect(dispatches).toHaveLength(2);
     expect(dispatches[1]!.payload.jobId).not.toBe(firstJobId);
+  });
+});
+
+// Issue #78: GUEST_SHOW_PAGE is Session-bound — the Host reports it to the
+// app only for the current Session and only with a usable page; a malformed
+// `quote`/`critical` is stripped rather than killing the request.
+describe('HostBus adapter — GUEST_SHOW_PAGE (issue #78)', () => {
+  const session = { ...goldenFixtureMessages.INIT_SESSION.payload, sessionId: 'sess-open' };
+
+  const showPage = (sessionId: string, payload: unknown) => ({
+    v: 1,
+    type: 'GUEST_SHOW_PAGE',
+    sessionId,
+    payload,
+  });
+
+  it('reports a valid request for the current Session', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', { page: 3, quote: 'Frist drei Monate', critical: true }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).toHaveBeenCalledWith({
+      page: 3,
+      quote: 'Frist drei Monate',
+      critical: true,
+    });
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage(sessionId, { page: 2 }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it('ignores the message while no Session is open', () => {
+    const { source, sink, probe } = setup();
+    source.emit({
+      data: showPage('sess-open', { page: 2 }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a fractional page', { page: 2.5 }],
+    ['a string page', { page: '2' }],
+    ['page zero', { page: 0 }],
+    ['a negative page', { page: -2 }],
+    ['a missing page', { quote: 'q' }],
+    ['a non-object payload', 'page 2'],
+    ['a null payload', null],
+  ])('ignores %s', (_label, payload) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', payload),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+
+  it('strips a non-string quote and non-boolean critical but honours the page', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: showPage('sess-open', { page: 3, quote: 42, critical: 'yes' }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.pageRequested).toHaveBeenCalledWith({
+      page: 3,
+      quote: undefined,
+      critical: undefined,
+    });
+  });
+
+  it('ignores the message from an origin other than the Peer Origin', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+    source.emit({
+      data: showPage('sess-open', { page: 2 }),
+      origin: 'http://evil.test',
+      source: sink,
+    });
+    expect(probe.pageRequested).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #79: GUEST_EXPAND_PANEL is Session-bound — the Host reports it to
+// the app only for the current Session. Which detents honour the raise is
+// the frame's business, not the adapter's.
+describe('HostBus adapter — GUEST_EXPAND_PANEL (issue #79)', () => {
+  const session = { ...goldenFixtureMessages.INIT_SESSION.payload, sessionId: 'sess-open' };
+
+  const expandPanel = (sessionId: string) => ({
+    v: 1,
+    type: 'GUEST_EXPAND_PANEL',
+    sessionId,
+    payload: {},
+  });
+
+  it('reports the request for the current Session', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: expandPanel('sess-open'),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.panelExpandRequested).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: expandPanel(sessionId),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.panelExpandRequested).not.toHaveBeenCalled();
+  });
+
+  it('ignores the message while no Session is open', () => {
+    const { source, sink, probe } = setup();
+    source.emit({
+      data: expandPanel('sess-open'),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+    expect(probe.panelExpandRequested).not.toHaveBeenCalled();
   });
 });

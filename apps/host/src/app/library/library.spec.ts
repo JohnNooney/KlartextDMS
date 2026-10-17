@@ -308,11 +308,26 @@ describe('Library', () => {
     expect(el.querySelector('app-reader .reader')).toBeTruthy();
     expect(el.querySelector('.title-doc')?.textContent).toContain('Mietvertrag 2024');
     expect(el.querySelector('app-pdf-viewer')).toBeTruthy();
-    expect(el.querySelector('.insights-slot')).toBeTruthy();
     expect(el.querySelector('.grid')).toBeNull();
 
     (el.querySelector('.back-btn') as HTMLButtonElement).click();
     expect(openDocument.close).toHaveBeenCalledWith(null);
+  });
+
+  it('makes room for the floating insights lane only while it shows', async () => {
+    const { fixture, openDocument, el } = await setup();
+    expect(el.classList.contains('reading')).toBe(false);
+    expect(el.classList.contains('lane-open')).toBe(false);
+
+    openDocument.docId.set('ready');
+    fixture.detectChanges();
+    expect(el.classList.contains('reading')).toBe(true);
+    expect(el.classList.contains('lane-open')).toBe(true);
+
+    openDocument.insightsLaneHidden.set(true);
+    fixture.detectChanges();
+    expect(el.classList.contains('reading')).toBe(true);
+    expect(el.classList.contains('lane-open')).toBe(false);
   });
 
   it('clicking a ready tile opens the Document', async () => {

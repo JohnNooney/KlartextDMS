@@ -53,7 +53,7 @@ apps/guest          Vue 3 insights panel rendered in the Host's iframe (:5173)
 packages/theme      shared Apple-style design tokens (CSS vars → SCSS / Tailwind)
 packages/bus-contract  the { v, type, sessionId, payload } Envelope contract
 packages/firebase-config  shared Firebase web config + emulator endpoints
-scripts/            deterministic emulator seed (admin SDK) + fixture PDFs/Extractions
+scripts/            deterministic emulator seed (admin SDK) + fixture PDFs/Extractions + Host icon generator
 emulator-data/      committed emulator snapshot loaded via --import
 CONTEXT.md          domain glossary
 docs/adr/           architecture decision records

@@ -1,5 +1,10 @@
 import { shallowRef } from 'vue';
-import { goldenFixtureMessages, type Session } from '@klartext/bus-contract';
+import {
+  goldenFixtureMessages,
+  type GuestShowPagePayload,
+  type PanelPresentation,
+  type Session,
+} from '@klartext/bus-contract';
 import type { GuestProbe } from '@klartext/bus-contract/conformance';
 
 /**
@@ -10,10 +15,20 @@ import type { GuestProbe } from '@klartext/bus-contract/conformance';
  */
 export const currentSession = shallowRef<Session | null>(null);
 
+/**
+ * How the Host presents the Guest frame (issue #77): `lane` renders the
+ * outline rail, `sheet` — and the time before the first PANEL_PRESENTATION
+ * arrives — renders without section navigation.
+ */
+export const presentationMode = shallowRef<PanelPresentation | null>(null);
+
 /** The Bus adapter's probe: an applied Session replaces the panel's content. */
 export const sessionProbe: GuestProbe = {
   sessionApplied(session: Session): void {
     currentSession.value = session;
+  },
+  presentationApplied(mode: PanelPresentation): void {
+    presentationMode.value = mode;
   },
 };
 
@@ -35,4 +50,28 @@ export const retrySender = shallowRef<((documentId: string) => void) | null>(nul
 
 export function requestRetry(documentId: string): void {
   retrySender.value?.(documentId);
+}
+
+/**
+ * The Bus adapter's page sender (issue #78), wired by main.ts once the
+ * adapter exists. A selected Key Takeaway row with a `page` turns into
+ * `GUEST_SHOW_PAGE` — fire-and-forget; standalone dev has no Host and sends
+ * nothing.
+ */
+export const showPageSender = shallowRef<((request: GuestShowPagePayload) => void) | null>(null);
+
+export function showPage(request: GuestShowPagePayload): void {
+  showPageSender.value?.(request);
+}
+
+/**
+ * The Bus adapter's expand sender (issue #79), wired by main.ts once the
+ * adapter exists. A jump-bar tap in the sheet sends `GUEST_EXPAND_PANEL` —
+ * the Guest can't raise its own frame; the Host lifts a peeking sheet to
+ * half and ignores the request at every other detent.
+ */
+export const expandPanelSender = shallowRef<(() => void) | null>(null);
+
+export function expandPanel(): void {
+  expandPanelSender.value?.();
 }

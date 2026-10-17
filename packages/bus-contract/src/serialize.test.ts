@@ -17,12 +17,15 @@ describe('golden fixtures', () => {
       'AI_PROCESSING_STARTED',
       'AI_PROCESSING_SUCCESS',
       'EXTRACT_DOCUMENT',
+      'GUEST_EXPAND_PANEL',
       'GUEST_READY',
+      'GUEST_SHOW_PAGE',
       'INIT_SESSION',
+      'PANEL_PRESENTATION',
       'RETRY_EXTRACTION',
       'SESSION_ACK',
     ]);
-    expect(new Set(types).size).toBe(8);
+    expect(new Set(types).size).toBe(11);
   });
 
   it.each(Object.entries(goldenFixtures))('%s round-trips through the reference serializer', (type, json) => {
@@ -58,7 +61,7 @@ describe('serializeEnvelope / deserializeEnvelope', () => {
   });
 
   it('passes unknown types through untouched (forward compat)', () => {
-    const v2 = { v: 1, type: 'GUEST_SHOW_PAGE', sessionId: 's', payload: { page: 2 } };
+    const v2 = { v: 1, type: 'AUTH_TOKEN_REFRESHED', sessionId: 's', payload: { token: 'x' } };
     expect(deserializeEnvelope(JSON.stringify(v2))).toEqual(v2);
   });
 

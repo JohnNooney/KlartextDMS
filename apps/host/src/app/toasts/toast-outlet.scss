@@ -5,7 +5,7 @@
   top: kt.$kt-space-4;
   right: kt.$kt-space-4;
   z-index: 90;
-  width: 340px;
+  width: 360px;
   display: flex;
   flex-direction: column;
   gap: kt.$kt-space-2;
@@ -89,8 +89,8 @@
 }
 
 .toast-close {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   border: 0;
   border-radius: 50%;

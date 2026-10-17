@@ -89,7 +89,8 @@ test('library-frame — framed folder library for the README', async ({ browser 
 });
 
 // Phone viewport: the reader with the insights sheet resting at peek — grab
-// handle and "Insights" header over the unobstructed PDF (issue #50).
+// handle and the Guest's section jump bar over the unobstructed PDF
+// (issues #50, #79).
 test('mobile — the reader with the insights sheet at peek', async ({ browser }) => {
   const mobile = await browser.newPage({ ...devices['iPhone 13'] });
   try {
@@ -97,7 +98,9 @@ test('mobile — the reader with the insights sheet at peek', async ({ browser }
     await mobile.goto('/folder/wohnung/doc/doc-mietvertrag');
     await expect(mobile.locator('.guest-frame-host')).toHaveAttribute('data-sheet', 'peek');
     await expect(mobile.locator('.sheet-handle')).toBeVisible();
-    await expect(mobile.locator('.sheet-head')).toHaveText('Insights');
+    await expect(
+      guestPanel(mobile).getByRole('navigation', { name: 'Jump to section' }),
+    ).toBeVisible();
     await expect(mobile.getByRole('img', { name: 'Page 1 of 4' })).toBeVisible();
 
     await mobile.screenshot({ path: raw('mobile'), animations: 'disabled' });

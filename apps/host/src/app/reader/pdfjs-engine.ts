@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-import type { PdfDocumentRef, PdfEngine, PdfPageRef } from './pdf-engine';
+import type { PdfDocumentRef, PdfEngine, PdfPageRef, PdfTextLayerRef } from './pdf-engine';
 
 /**
  * The pdf.js adapter behind `PDF_ENGINE` (issue #29). pdf.js is lazy-loaded —
@@ -33,7 +33,7 @@ export class PdfJsEngine implements PdfEngine {
       task.onProgress = (progress: { loaded: number; total?: number }) =>
         source.onProgress!(progress);
     }
-    return new PdfJsDocument(await task.promise, task);
+    return new PdfJsDocument(await task.promise, task, pdfjs);
   }
 }
 
@@ -41,6 +41,7 @@ class PdfJsDocument implements PdfDocumentRef {
   constructor(
     private readonly proxy: PDFDocumentProxy,
     private readonly task: PDFDocumentLoadingTask,
+    private readonly pdfjs: typeof import('pdfjs-dist'),
   ) {}
 
   get numPages(): number {
@@ -48,7 +49,7 @@ class PdfJsDocument implements PdfDocumentRef {
   }
 
   async page(n: number): Promise<PdfPageRef> {
-    return new PdfJsPage(await this.proxy.getPage(n));
+    return new PdfJsPage(await this.proxy.getPage(n), this.pdfjs);
   }
 
   destroy(): void {
@@ -57,7 +58,10 @@ class PdfJsDocument implements PdfDocumentRef {
 }
 
 class PdfJsPage implements PdfPageRef {
-  constructor(private readonly proxy: PDFPageProxy) {}
+  constructor(
+    private readonly proxy: PDFPageProxy,
+    private readonly pdfjs: typeof import('pdfjs-dist'),
+  ) {}
 
   get width(): number {
     return this.proxy.getViewport({ scale: 1 }).width;
@@ -75,5 +79,31 @@ class PdfJsPage implements PdfPageRef {
     canvas.style.width = `${viewport.width / dpr}px`;
     canvas.style.height = `${viewport.height / dpr}px`;
     await this.proxy.render({ canvas, viewport }).promise;
+  }
+
+  /**
+   * The page's text layer (issue #80): pdf.js `TextLayer` lays the items out
+   * in % of the page against `--total-scale-factor`, so `update` keeps the
+   * layer aligned through zoom without a rebuild.
+   */
+  async renderTextLayer(container: HTMLElement, cssScale: number): Promise<PdfTextLayerRef> {
+    const viewportAt = (scale: number) => this.proxy.getViewport({ scale });
+    const fit = (scale: number) =>
+      container.style.setProperty('--total-scale-factor', String(viewportAt(scale).scale));
+    const layer = new this.pdfjs.TextLayer({
+      textContentSource: this.proxy.streamTextContent(),
+      container,
+      viewport: viewportAt(cssScale),
+    });
+    fit(cssScale);
+    await layer.render();
+    return {
+      itemsStr: layer.textContentItemsStr,
+      divs: layer.textDivs,
+      update: (scale) => {
+        layer.update({ viewport: viewportAt(scale) });
+        fit(scale);
+      },
+    };
   }
 }

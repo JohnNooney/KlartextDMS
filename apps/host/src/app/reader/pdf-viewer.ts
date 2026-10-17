@@ -9,6 +9,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import {
@@ -16,14 +17,23 @@ import {
   LARGE_DOCUMENT_PAGES,
   PDF_ENGINE,
   type PdfDocumentRef,
+  type PdfTextLayerRef,
 } from './pdf-engine';
+import { findQuote, wrapMatch } from './quote-matcher';
+
+/** A landed show-page request waiting on (or wearing) its passage mark. */
+interface PassageMark extends Required<GuestShowPagePayload> {
+  /** Latches the one-time scroll-into-view so re-renders don't re-scroll. */
+  scrolled?: boolean;
+}
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.2;
 /** pdf.js fit-to-width cap, per the prototype's paged viewer (issue #17). */
 const MAX_FIT = 1.4;
-const STAGE_PADDING = 48;
+/** Fit slack beyond the stage's own padding — room for a classic scrollbar. */
+const FIT_SLACK = 8;
 
 /**
  * The Host's paged PDF viewer (issues #17, #29; prototype variant B): one page
@@ -45,6 +55,11 @@ export class PdfViewer {
   readonly page = signal(1);
 
   protected readonly numPages = signal(0);
+  /**
+   * The open Document's page count — the `1..pageCount` ceiling the
+   * `GUEST_SHOW_PAGE` range check reads (issue #78).
+   */
+  readonly pageCount = this.numPages.asReadonly();
   protected readonly state = signal<'loading' | 'ready' | 'error'>('loading');
   /** Parse progress in percent, `null` while the total is unknown. */
   protected readonly progress = signal<number | null>(null);
@@ -62,6 +77,8 @@ export class PdfViewer {
   private readonly repository = inject(DOCUMENT_REPOSITORY);
   private readonly stage = viewChild<ElementRef<HTMLElement>>('stage');
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly sheet = viewChild<ElementRef<HTMLElement>>('sheet');
+  private readonly textLayerEl = viewChild<ElementRef<HTMLElement>>('textLayer');
 
   private pdf: PdfDocumentRef | null = null;
   /** Guards async renders against Document switches mid-flight. */
@@ -75,6 +92,20 @@ export class PdfViewer {
   private renderActive = false;
   /** The page the queue is aiming at — stepping continues from here. */
   private target = 1;
+  /** Clears the flash-mark class once the animation has played out (#78). */
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * The rendered text layer (issue #80) and the page it belongs to — rebuilt
+   * on page changes, `update`d in place on plain zoom.
+   */
+  private textLayer: PdfTextLayerRef | null = null;
+  private textLayerPage = 0;
+  /**
+   * The passage a show-page request wants marked (issue #80): set when the
+   * request lands, applied each time its page's layer renders, cleared by
+   * the next jump, page change, or Document switch.
+   */
+  private mark: PassageMark | null = null;
 
   constructor() {
     // The Document drives the load pipeline; `untracked` keeps the load's own
@@ -86,18 +117,56 @@ export class PdfViewer {
     inject(DestroyRef).onDestroy(() => {
       this.generation++;
       this.renderQueued = null;
+      if (this.flashTimer !== null) clearTimeout(this.flashTimer);
       this.teardownDocument();
     });
   }
 
   /**
-   * Jumps to a page — the Host-side `goToPage(n)` that `GUEST_SHOW_PAGE` (#19)
-   * will drive. Clamps into range.
+   * Jumps to a page — the Host-side `goToPage(n)` that `GUEST_SHOW_PAGE`
+   * drives (issue #78). Clamps into range and briefly flash-marks the sheet.
    */
   goToPage(n: number): void {
-    const total = this.numPages();
-    if (total === 0) return;
-    this.requestRender(Math.min(Math.max(1, Math.round(n)), total));
+    if (this.numPages() === 0) return;
+    this.clearMark();
+    this.requestRender(n);
+    this.flashSheet();
+  }
+
+  /**
+   * A show-page request carrying the takeaway's quote (issue #80): the jump
+   * of #78 plus the quoted passage's mark once the page's text layer is
+   * up — warning tint for a Critical Warning, accent otherwise. No quote is
+   * the plain jump-and-flash; a quote the page doesn't carry falls back to
+   * the flash — never an error.
+   */
+  showPage(request: GuestShowPagePayload): void {
+    if (!request.quote?.trim()) {
+      this.goToPage(request.page);
+      return;
+    }
+    if (this.numPages() === 0) return;
+    this.clearMark();
+    this.mark = {
+      page: this.clampPage(request.page),
+      quote: request.quote,
+      critical: request.critical === true,
+    };
+    this.requestRender(this.mark.page);
+  }
+
+  /**
+   * The flash-mark (issue #78): an accent ring around the jumped-to page
+   * that fades over ~1 s. Re-adding the class mid-animation restarts it.
+   */
+  private flashSheet(): void {
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet) return;
+    sheet.classList.remove('flash-mark');
+    void sheet.offsetWidth; // let the removal land so the animation restarts
+    sheet.classList.add('flash-mark');
+    if (this.flashTimer !== null) clearTimeout(this.flashTimer);
+    this.flashTimer = setTimeout(() => sheet.classList.remove('flash-mark'), 1100);
   }
 
   protected prevPage(): void {
@@ -165,9 +234,17 @@ export class PdfViewer {
     }
   }
 
+  private clampPage(page: number): number {
+    const total = this.numPages();
+    return total > 0 ? Math.min(Math.max(1, Math.round(page)), total) : Math.round(page);
+  }
+
   private requestRender(page: number): void {
-    this.target = page;
-    this.renderQueued = page;
+    const target = this.clampPage(page);
+    // A mark dies with its page — navigation to another page clears it.
+    if (this.mark && this.mark.page !== target) this.clearMark();
+    this.target = target;
+    this.renderQueued = target;
     if (this.renderActive) return;
     this.renderActive = true;
     void this.drainRenders();
@@ -193,22 +270,79 @@ export class PdfViewer {
     try {
       const pdfPage = await pdf.page(n);
       if (generation !== this.generation) return;
-      const fit =
-        stage.clientWidth > STAGE_PADDING ? (stage.clientWidth - STAGE_PADDING) / pdfPage.width : 1;
+      // Fit to the stage's real padding, so the slim mobile gutters widen the page.
+      const style = getComputedStyle(stage);
+      const gutter =
+        (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0) + FIT_SLACK;
+      const fit = stage.clientWidth > gutter ? (stage.clientWidth - gutter) / pdfPage.width : 1;
       const scale = Math.min(fit, MAX_FIT) * this.zoom();
       await pdfPage.render(canvas, scale);
       if (generation !== this.generation) return;
+      const layer = this.textLayerEl()?.nativeElement;
+      if (layer) {
+        // Same page and nothing to mark: zoom re-fits the layer in place.
+        // Otherwise rebuild — a new page pours fresh spans, and a set
+        // mark re-derives its wraps on them.
+        if (this.textLayer && this.textLayerPage === n && !this.mark) {
+          this.textLayer.update(scale);
+        } else {
+          layer.replaceChildren();
+          // A failed layer leaves textLayer null — a pending quote then
+          // takes the flash fallback rather than stalling (#80).
+          this.textLayer = await pdfPage.renderTextLayer(layer, scale).catch(() => null);
+          if (generation !== this.generation) return;
+          this.textLayerPage = n;
+        }
+      }
       // The indicator trails the paint so "Page n" always names the canvas.
       this.page.set(n);
+      this.applyMark(n);
     } catch {
       // A torn-down Document rejects in-flight engine calls; the next queued
       // render (or the error state) owns the canvas.
     }
   }
 
+  /**
+   * The landed request's passage mark (issue #80): match the quote in the
+   * just-rendered layer and wrap the covered spans. A miss — or a layer
+   * that never built — falls back to the page flash, once, and drops the
+   * request.
+   */
+  private applyMark(page: number): void {
+    const mark = this.mark;
+    // Only the render that built this page's layer may resolve the request —
+    // a stale queued render for another page mustn't consume it.
+    if (!mark || mark.page !== page) return;
+    const layer = this.textLayerPage === page ? this.textLayer : null;
+    const spans = layer ? findQuote(layer.itemsStr, mark.quote) : null;
+    const first = layer && spans?.length ? wrapMatch(layer.divs, spans, mark.critical) : null;
+    if (!first) {
+      this.mark = null;
+      this.flashSheet();
+      return;
+    }
+    if (!mark.scrolled) {
+      mark.scrolled = true;
+      // A zoomed page may leave the passage off-stage — bring it back, once.
+      first.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }
+  }
+
+  private clearMark(): void {
+    if (!this.mark) return;
+    this.mark = null;
+    // The wraps die with their spans — force the layer's rebuild.
+    this.textLayerPage = 0;
+  }
+
   private teardownDocument(): void {
     this.pdf?.destroy();
     this.pdf = null;
+    this.textLayer = null;
+    this.textLayerPage = 0;
+    this.mark = null;
+    this.textLayerEl()?.nativeElement.replaceChildren();
     const url = this.browserUrl();
     if (url) {
       URL.revokeObjectURL(url);

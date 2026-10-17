@@ -47,9 +47,9 @@
 }
 
 .brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: kt.$kt-accent;
@@ -101,4 +101,19 @@
   flex-direction: column;
   background: kt.$kt-canvas;
   padding: kt.$kt-space-3;
+}
+
+// ---------- Mobile (≤768px) reader: full-bleed ----------
+// The reader toolbar becomes the nav bar — brand and Sign out stay in the
+// library — and the Document fills the screen instead of an inset card.
+@media (max-width: 768px) {
+  .layout.reading {
+    > .toolbar {
+      display: none;
+    }
+
+    .content {
+      padding: 0;
+    }
+  }
 }

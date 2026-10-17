@@ -11,6 +11,21 @@
   overflow: hidden;
 }
 
+// The reader card and the Guest's insights lane float as two cards with a
+// gap between them (desktop). On mobile the reader drops the card entirely.
+@media (min-width: 769px) {
+  :host(.lane-open) {
+    margin-right: calc(#{kt.$kt-insights-width} + #{kt.$kt-space-3});
+  }
+}
+
+@media (max-width: 768px) {
+  :host(.reading) {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 .browse {
   flex: 1;
   display: flex;
@@ -50,7 +65,7 @@
 .back-btn {
   display: none;
   align-items: center;
-  height: 32px;
+  height: kt.$kt-control-height;
   padding: 0 kt.$kt-space-2 0 0;
   border: 0;
   border-radius: kt.$kt-radius-sm;
@@ -121,7 +136,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
   gap: kt.$kt-space-2;
   margin-top: kt.$kt-space-4;
 }
@@ -213,7 +228,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 30px;
+  height: 34px;
   padding: 0 10px;
   border: 0;
   border-radius: 6px;

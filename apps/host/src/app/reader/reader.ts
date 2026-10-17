@@ -1,8 +1,10 @@
-import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, signal, viewChild } from '@angular/core';
+import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { LibraryStore } from '../library/library.store';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { PdfViewer } from './pdf-viewer';
 import { siblingsOf, stepperFor } from './siblings';
 
@@ -25,6 +27,19 @@ export class Reader {
   protected readonly openDocument = inject(OpenDocument);
   private readonly store = inject(LibraryStore);
   private readonly viewer = viewChild(PdfViewer);
+
+  /**
+   * The open Document's page navigator for `GUEST_SHOW_PAGE` (issue #78):
+   * PageFocus owns the `1..pageCount` check and hands the whole request —
+   * quote and all (issue #80) — to the viewer.
+   */
+  constructor() {
+    const unregister = inject(PageFocus).registerNavigator({
+      pageCount: () => this.viewer()?.pageCount() ?? 0,
+      showPage: (request) => this.showPage(request),
+    });
+    inject(DestroyRef).onDestroy(unregister);
+  }
 
   /** The toolbar toggle's read on the shared lane state (issue #76). */
   protected readonly insightsLaneHidden = this.openDocument.insightsLaneHidden;
@@ -65,11 +80,8 @@ export class Reader {
     if (doc) this.store.open(doc.id);
   }
 
-  /**
-   * Page awareness for the Session layer: `GUEST_SHOW_PAGE` (#19) drives the
-   * viewer through this — jump to a page and flash-mark it.
-   */
-  goToPage(n: number): void {
-    this.viewer()?.goToPage(n);
+  /** A `GUEST_SHOW_PAGE` request — the page jump plus its quote's passage. */
+  showPage(request: GuestShowPagePayload): void {
+    this.viewer()?.showPage(request);
   }
 }

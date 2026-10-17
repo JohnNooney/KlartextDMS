@@ -42,5 +42,5 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 ## Explicitly not in this build
 
 - Library **search** over titles/descriptions/keywords: the fields are persisted per [#20](https://github.com/JohnNooney/KlartextDMS/issues/20) but no v1 consumer was decided — open fog on the map, to be revisited as a future effort.
-- `GUEST_SHOW_PAGE` / evidence-to-page links — [Bus v2](https://github.com/JohnNooney/KlartextDMS/issues/19), deferred.
+- `GUEST_SHOW_PAGE` / evidence-to-page links — shipped inside the v1 Envelope ([issue #78](https://github.com/JohnNooney/KlartextDMS/issues/78)); the quoted passage highlights in the Host's text layer ([issue #80](https://github.com/JohnNooney/KlartextDMS/issues/80)).
 - Image/photo Documents ([#18](https://github.com/JohnNooney/KlartextDMS/issues/18)), multi-user sharing, native mobile, legal-accuracy guarantees — out of scope on the map.

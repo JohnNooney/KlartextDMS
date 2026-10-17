@@ -4,6 +4,7 @@ import type {
   ExtractionError,
   ExtractionRecord,
   ExtractionState,
+  GuestShowPagePayload,
   JobDocument,
   Session,
   SessionUser,
@@ -15,6 +16,8 @@ import type { ExtractionRepository } from '../data/extraction-repository';
 import { DOCUMENT_REPOSITORY, EXTRACTION_REPOSITORY } from '../data/providers';
 import { LibraryStore, type ExtractionJobState } from '../library/library.store';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
+import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
@@ -51,6 +54,8 @@ export class ExtractionFlow implements HostBusProbe {
   private readonly extractions: ExtractionRepository = inject(EXTRACTION_REPOSITORY);
   private readonly store = inject(LibraryStore);
   private readonly open = inject(OpenDocument);
+  private readonly pageFocus = inject(PageFocus);
+  private readonly sheetExpand = inject(SheetExpand);
   private readonly auth = inject(AuthService);
   private readonly bus = inject(HostBus);
   private readonly toasts = inject(ToastService);
@@ -149,6 +154,24 @@ export class ExtractionFlow implements HostBusProbe {
     );
     if (doc && doc.status === 'ready' && !inFlight) void this.retry(doc);
     return true;
+  }
+
+  /**
+   * GUEST_SHOW_PAGE (issue #78): the adapter has already vetted the Session
+   * and the wire shape; PageFocus owns the range check against the open
+   * Document and drives the viewer — the sheet rests at half on a landing.
+   */
+  pageRequested(request: GuestShowPagePayload): void {
+    this.pageFocus.show(request);
+  }
+
+  /**
+   * GUEST_EXPAND_PANEL (issue #79): the adapter has already vetted the
+   * Session; SheetExpand publishes the request so the Guest frame can lift
+   * a peeking sheet — it alone knows the detent.
+   */
+  panelExpandRequested(): void {
+    this.sheetExpand.request();
   }
 
   // -- Job queue feeders ----------------------------------------------------

@@ -6,8 +6,10 @@ import { goldenFixtureMessages } from './fixtures.js';
 import type {
   ExtractionCandidate,
   ExtractionError,
+  GuestShowPagePayload,
   JobDocument,
   ExtractDocumentPayload,
+  PanelPresentation,
   Session,
 } from './index.js';
 import {
@@ -31,6 +33,19 @@ export interface HostProbe {
   sessionFailed(sessionId: string, error: ExtractionError): void;
   jobSucceeded(jobId: string, extraction: ExtractionCandidate): void;
   jobFailed(jobId: string, error: ExtractionError): void;
+  /**
+   * GUEST_SHOW_PAGE arrived for the current Session (issue #78): `page` is
+   * an integer ≥ 1; a non-string `quote` or non-boolean `critical` is
+   * stripped rather than killing the request. The `1..pageCount` range check
+   * is the app's — only it knows the open Document's page count.
+   */
+  pageRequested(request: GuestShowPagePayload): void;
+  /**
+   * GUEST_EXPAND_PANEL arrived for the current Session (issue #79): a
+   * jump-bar tap in the sheet asks the Host to raise it — the Guest can't
+   * reach its own frame's detent. Fire-and-forget, no payload to vet.
+   */
+  panelExpandRequested(): void;
 }
 
 export interface HostAdapterContext {
@@ -52,12 +67,21 @@ export interface HostAdapter {
    * in-flight job is discarded, and RETRY_EXTRACTION no longer re-queues it.
    */
   cancelJobs(documentId: string): void;
+  /**
+   * The frame's presentation changed (issue #77): the Host's reader crossed
+   * the mobile breakpoint, or the adapter is (re)asserting the mode ahead of
+   * the Guest's readiness — buffered until `GUEST_READY`, sent again on each
+   * crossing, and resent when the Guest reloads.
+   */
+  setPresentation(mode: PanelPresentation): void;
   dispose(): void;
 }
 
 /** How the suite observes Guest adapter outcomes. */
 export interface GuestProbe {
   sessionApplied(session: Session): void;
+  /** A `PANEL_PRESENTATION` with a valid `mode` was applied (issue #77). */
+  presentationApplied(mode: PanelPresentation): void;
 }
 
 export interface GuestAdapterContext {
@@ -80,6 +104,18 @@ export interface GuestAdapter {
   mount(): void;
   /** User asked to retry an Extraction for a Document. */
   requestRetry(documentId: string): void;
+  /**
+   * A Key Takeaway row carrying a `page` was selected (issue #78):
+   * fire-and-forget `GUEST_SHOW_PAGE` under the current Session — no reply,
+   * no watchdog.
+   */
+  showPage(request: GuestShowPagePayload): void;
+  /**
+   * A jump-bar segment was tapped while the sheet may sit at peek (issue
+   * #79): fire-and-forget `GUEST_EXPAND_PANEL` under the current Session —
+   * the Host raises a peeking sheet to half and ignores it everywhere else.
+   */
+  expandPanel(): void;
   dispose(): void;
 }
 
@@ -185,8 +221,14 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       wireToHost = [];
       pair.guest.source.addEventListener('message', (e) => wireToGuest.push(e.data));
       pair.host.source.addEventListener('message', (e) => wireToHost.push(e.data));
-      hostProbe = { sessionFailed: vi.fn(), jobSucceeded: vi.fn(), jobFailed: vi.fn() };
-      guestProbe = { sessionApplied: vi.fn() };
+      hostProbe = {
+        sessionFailed: vi.fn(),
+        jobSucceeded: vi.fn(),
+        jobFailed: vi.fn(),
+        pageRequested: vi.fn(),
+        panelExpandRequested: vi.fn(),
+      };
+      guestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
       jobDeferreds = [];
       jobPayloads = [];
       disposers = [];
@@ -369,6 +411,104 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       expect(reissued.jobId).not.toBe((dispatched[0]!.payload as ExtractDocumentPayload).jobId);
     });
 
+    it('carries a takeaway row selection to the Host: GUEST_SHOW_PAGE under the current Session (issue #78)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      const request = {
+        page: 3,
+        quote: 'Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.',
+        critical: true,
+      };
+      guest.showPage(request);
+
+      expect(envelopesOf(wireToHost, 'GUEST_SHOW_PAGE')).toEqual([
+        { v: 1, type: 'GUEST_SHOW_PAGE', sessionId: session.sessionId, payload: request },
+      ]);
+      expect(hostProbe.pageRequested).toHaveBeenCalledWith(request);
+    });
+
+    it('a Session-bound message never goes out without a Session — showPage before INIT_SESSION is silent', () => {
+      makeHost();
+      const guest = makeGuest();
+      guest.showPage({ page: 2 });
+      expect(envelopesOf(wireToHost, 'GUEST_SHOW_PAGE')).toEqual([]);
+      expect(hostProbe.pageRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores GUEST_SHOW_PAGE for a stale sessionId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_SHOW_PAGE',
+        sessionId: 'sess-stale',
+        payload: { page: 2 },
+      });
+      expect(hostProbe.pageRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores a non-integer, non-positive, or missing page, whatever the extras', () => {
+      const host = makeHost();
+      host.openSession(session);
+      for (const payload of [{ page: 2.5 }, { page: '2' }, { page: 0 }, { page: -2 }, {}, null, 'two']) {
+        injectToHost({ v: 1, type: 'GUEST_SHOW_PAGE', sessionId: session.sessionId, payload });
+      }
+      expect(hostProbe.pageRequested).not.toHaveBeenCalled();
+    });
+
+    it('a malformed quote or critical is stripped, not fatal — the page still lands', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_SHOW_PAGE',
+        sessionId: session.sessionId,
+        payload: { page: 3, quote: 7, critical: 'yes' },
+      });
+      expect(hostProbe.pageRequested).toHaveBeenCalledWith({
+        page: 3,
+        quote: undefined,
+        critical: undefined,
+      });
+    });
+
+    it('carries a jump-bar tap to the Host: GUEST_EXPAND_PANEL under the current Session (issue #79)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      guest.expandPanel();
+
+      expect(envelopesOf(wireToHost, 'GUEST_EXPAND_PANEL')).toEqual([
+        { v: 1, type: 'GUEST_EXPAND_PANEL', sessionId: session.sessionId, payload: {} },
+      ]);
+      expect(hostProbe.panelExpandRequested).toHaveBeenCalledOnce();
+    });
+
+    it('expandPanel before INIT_SESSION is silent', () => {
+      makeHost();
+      const guest = makeGuest();
+      guest.expandPanel();
+      expect(envelopesOf(wireToHost, 'GUEST_EXPAND_PANEL')).toEqual([]);
+      expect(hostProbe.panelExpandRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores GUEST_EXPAND_PANEL for a stale sessionId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_EXPAND_PANEL',
+        sessionId: 'sess-stale',
+        payload: {},
+      });
+      expect(hostProbe.panelExpandRequested).not.toHaveBeenCalled();
+    });
+
     it('recovers a Guest reload: resends the Session and re-issues the job under a fresh jobId', async () => {
       const host = makeHost();
       const guest = makeGuest();
@@ -449,11 +589,48 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
       expect(hostProbe.jobSucceeded).not.toHaveBeenCalled();
     });
 
+    it('delivers the panel presentation once the Guest is ready, and on every crossing (issue #77)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      host.setPresentation('lane');
+      // Presentation is per-frame state: buffered until GUEST_READY like the Session.
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toEqual([]);
+      guest.mount();
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toEqual([
+        { v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'lane' } },
+      ]);
+      expect(guestProbe.presentationApplied).toHaveBeenCalledWith('lane');
+
+      // A breakpoint crossing reports the new mode; re-asserting it does not.
+      host.setPresentation('sheet');
+      host.setPresentation('sheet');
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toHaveLength(2);
+      expect(guestProbe.presentationApplied).toHaveBeenLastCalledWith('sheet');
+    });
+
+    it('resends the presentation when the Guest reloads', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      host.setPresentation('lane');
+      guest.mount();
+      guest.mount(); // iframe reloaded: GUEST_READY re-announced
+      expect(envelopesOf(wireToGuest, 'PANEL_PRESENTATION')).toHaveLength(2);
+    });
+
+    it('the Guest ignores a presentation carrying an invalid mode', () => {
+      const guest = makeGuest();
+      guest.mount();
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: { mode: 'drawer' } });
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: {} });
+      injectToGuest({ v: 1, type: 'PANEL_PRESENTATION', sessionId: '', payload: 'lane' });
+      expect(guestProbe.presentationApplied).not.toHaveBeenCalled();
+    });
+
     it('ignores envelopes with an unknown type on both sides', async () => {
       const host = makeHost();
       const guest = makeGuest();
       guest.mount();
-      injectToHost({ v: 1, type: 'GUEST_SHOW_PAGE', sessionId: '', payload: { page: 2 } });
+      injectToHost({ v: 1, type: 'AUTH_TOKEN_REFRESHED', sessionId: '', payload: { authToken: 'x' } });
       injectToGuest({ v: 1, type: 'AUTH_TOKEN_REFRESHED', sessionId: session.sessionId, payload: { authToken: 'x' } });
       injectToHost('not even an envelope');
       wireToGuest.length = 0; // ignore the injected envelopes themselves; assert no reaction

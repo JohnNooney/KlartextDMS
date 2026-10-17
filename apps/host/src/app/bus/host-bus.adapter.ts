@@ -6,6 +6,7 @@ import {
   SESSION_ACK_TIMEOUT_MS,
   isBusMessage,
   isExtractionCandidate,
+  sanitizeShowPage,
 } from '@klartext/bus-contract';
 import type {
   BusMessageEvent,
@@ -13,6 +14,7 @@ import type {
   ExtractionError,
   ExtractDocumentPayload,
   JobDocument,
+  PanelPresentation,
   Session,
 } from '@klartext/bus-contract';
 import type {
@@ -83,7 +85,9 @@ interface ActiveJob extends QueuedJob {
  * Buffers the current Session until `GUEST_READY`, runs one Extraction Job
  * at a time under the 10 s/10 s/120 s watchdogs, discards replies for a
  * stale `sessionId`/`jobId`, and on a Guest reload resends the Session and
- * re-issues the in-flight job under a fresh `jobId`.
+ * re-issues the in-flight job under a fresh `jobId`. Also reports the
+ * frame's lane/sheet presentation (issue #77): buffered until ready like
+ * the Session and resent on each reload.
  */
 export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
   let guestReady = false;
@@ -91,12 +95,23 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
   let jobSeq = 0;
   let currentSession: Session | null = null;
   let sessionAckTimer: ReturnType<typeof setTimeout> | null = null;
+  let presentation: PanelPresentation | null = null;
   const knownDocuments = new Map<string, QueuedJob>();
   const queue: QueuedJob[] = [];
   let activeJob: ActiveJob | null = null;
 
   const failSession = (): void => {
     if (currentSession) ctx.probe.sessionFailed(currentSession.sessionId, AI_UNAVAILABLE);
+  };
+
+  // The frame's lane/sheet mode (issue #77): per-frame state, buffered until
+  // GUEST_READY like the Session and resent when the Guest reloads.
+  const sendPresentation = (): void => {
+    if (presentation === null) return;
+    ctx.sink.postMessage(
+      { v: 1, type: 'PANEL_PRESENTATION', sessionId: NO_SESSION, payload: { mode: presentation } },
+      ctx.peerOrigin,
+    );
   };
 
   const sendSession = (): void => {
@@ -176,6 +191,7 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
           currentSession = { ...currentSession, sessionId: `sess_${++sessionSeq}` };
         }
         sendSession();
+        sendPresentation();
         if (activeJob !== null) {
           // Re-issue the in-flight job under a fresh jobId; stale results are discarded.
           clearTimeout(activeJob.watchdog);
@@ -237,6 +253,23 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         }
         break;
       }
+      case 'GUEST_SHOW_PAGE': {
+        // Only the current Session may steer the reader (issue #78); a bad
+        // page kills the message, a bad quote/critical is merely stripped.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeShowPage(msg.payload);
+          if (request) ctx.probe.pageRequested(request);
+        }
+        break;
+      }
+      case 'GUEST_EXPAND_PANEL': {
+        // Only the current Session may ask for the raise (issue #79); which
+        // detents honour it is the frame's business, not the adapter's.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          ctx.probe.panelExpandRequested();
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -266,6 +299,12 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         activeJob = null;
         pumpQueue();
       }
+    },
+    setPresentation(mode: PanelPresentation): void {
+      // Only a crossing is news — re-asserting the current mode sends nothing.
+      if (mode === presentation) return;
+      presentation = mode;
+      if (guestReady) sendPresentation();
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

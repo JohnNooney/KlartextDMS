@@ -4,6 +4,7 @@ import {
   NO_SESSION,
   isBusMessage,
   isEnvelope,
+  isPanelPresentation,
   type BusMessage,
   type GuestToHostMessage,
   type HostToGuestMessage,
@@ -62,6 +63,19 @@ describe('BusMessage union', () => {
         error: { code: 'AI_UNAVAILABLE', message: 'try later', retryable: true },
       } },
       { v: 1, type: 'RETRY_EXTRACTION', sessionId: NO_SESSION, payload: { documentId: 'doc-1' } },
+      {
+        v: 1,
+        type: 'PANEL_PRESENTATION',
+        sessionId: NO_SESSION,
+        payload: { mode: 'lane' },
+      },
+      {
+        v: 1,
+        type: 'GUEST_SHOW_PAGE',
+        sessionId: 'sess-1',
+        payload: { page: 3, quote: 'Die Kündigungsfrist beträgt drei Monate.', critical: true },
+      },
+      { v: 1, type: 'GUEST_EXPAND_PANEL', sessionId: 'sess-1', payload: {} },
     ];
     for (const m of messages) expect(isBusMessage(m)).toBe(true);
   });
@@ -88,11 +102,43 @@ describe('BusMessage union', () => {
       { v: 1, type: 'RETRY_EXTRACTION', sessionId: '', payload: { documentId: 'd' } },
     ];
     for (const m of sample) {
-      if (m.type === 'INIT_SESSION' || m.type === 'EXTRACT_DOCUMENT') toGuest.push(m);
-      else toHost.push(m);
+      if (
+        m.type === 'INIT_SESSION' ||
+        m.type === 'EXTRACT_DOCUMENT' ||
+        m.type === 'PANEL_PRESENTATION'
+      ) {
+        toGuest.push(m);
+      } else {
+        toHost.push(m);
+      }
     }
     expect(toGuest).toHaveLength(1);
     expect(toHost).toHaveLength(1);
+  });
+
+  it('sorts PANEL_PRESENTATION into Host→Guest', () => {
+    const msg: HostToGuestMessage = {
+      v: 1,
+      type: 'PANEL_PRESENTATION',
+      sessionId: NO_SESSION,
+      payload: { mode: 'sheet' },
+    };
+    expect(msg.payload.mode).toBe('sheet');
+  });
+});
+
+describe('isPanelPresentation', () => {
+  it.each(['lane', 'sheet'] as const)('accepts %s', (mode) => {
+    expect(isPanelPresentation(mode)).toBe(true);
+  });
+
+  it.each([
+    ['an unknown mode', 'drawer'],
+    ['a non-string', 3],
+    ['null', null],
+    ['undefined', undefined],
+  ])('rejects %s', (_label, value) => {
+    expect(isPanelPresentation(value)).toBe(false);
   });
 });
 
@@ -115,7 +161,7 @@ describe('isEnvelope', () => {
 
 describe('isBusMessage', () => {
   it('rejects unknown types so both apps ignore them (forward compat)', () => {
-    const v2 = { v: BUS_PROTOCOL_VERSION, type: 'GUEST_SHOW_PAGE', sessionId: 's', payload: { page: 3 } };
+    const v2 = { v: BUS_PROTOCOL_VERSION, type: 'AUTH_TOKEN_REFRESHED', sessionId: 's', payload: { token: 'x' } };
     expect(isEnvelope(v2)).toBe(true);
     expect(isBusMessage(v2)).toBe(false);
   });

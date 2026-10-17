@@ -6,6 +6,9 @@ import aiProcessingStarted from './fixtures/ai-processing-started.json';
 import aiProcessingSuccess from './fixtures/ai-processing-success.json';
 import aiProcessingError from './fixtures/ai-processing-error.json';
 import retryExtraction from './fixtures/retry-extraction.json';
+import panelPresentation from './fixtures/panel-presentation.json';
+import guestShowPage from './fixtures/guest-show-page.json';
+import guestExpandPanel from './fixtures/guest-expand-panel.json';
 import extractionsJson from './fixtures/extractions.json';
 import type { BusMessage, MessageType } from './messages.js';
 import type { ExtractionCandidate } from './extraction.js';
@@ -25,6 +28,9 @@ export const goldenFixtures = {
   AI_PROCESSING_SUCCESS: aiProcessingSuccess,
   AI_PROCESSING_ERROR: aiProcessingError,
   RETRY_EXTRACTION: retryExtraction,
+  PANEL_PRESENTATION: panelPresentation,
+  GUEST_SHOW_PAGE: guestShowPage,
+  GUEST_EXPAND_PANEL: guestExpandPanel,
 } as const satisfies Record<MessageType, unknown>;
 
 /**

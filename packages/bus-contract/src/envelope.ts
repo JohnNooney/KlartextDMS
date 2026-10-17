@@ -8,8 +8,8 @@ export const BUS_PROTOCOL_VERSION = 1;
 
 /**
  * `sessionId` is Host-generated per INIT_SESSION and echoed by the Guest.
- * Messages outside a Session — `GUEST_READY` and Extraction Job messages —
- * carry `""`.
+ * Messages outside a Session — `GUEST_READY`, `PANEL_PRESENTATION` (#77),
+ * and Extraction Job messages — carry `""`.
  */
 export const NO_SESSION = '';
 
