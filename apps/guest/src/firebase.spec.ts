@@ -15,6 +15,7 @@ describe('initGuestFirebase', () => {
 
   afterEach(async () => {
     delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+    document.getElementById('fire_app_check_[DEFAULT]')?.remove();
     vi.restoreAllMocks();
     for (const { app } of initialized) await deleteApp(app);
     initialized.length = 0;
@@ -36,6 +37,16 @@ describe('initGuestFirebase', () => {
     expect(self.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
   });
 
+  it('skips App Check under the emulators without a debug token', () => {
+    init({ ...BASE, appCheckDebugToken: undefined });
+    expect(appCheckContainer()).toBeNull();
+  });
+
+  it('initializes App Check with the site key against a real backend', () => {
+    init({ ...BASE, useEmulators: false, appCheckDebugToken: undefined });
+    expect(appCheckContainer()).not.toBeNull();
+  });
+
   it('connects Auth to the emulator under useEmulators', () => {
     const { auth } = init(BASE);
     expect(auth.emulatorConfig?.host).toBe('localhost');
@@ -46,6 +57,12 @@ describe('initGuestFirebase', () => {
     expect(auth.emulatorConfig).toBeNull();
   });
 });
+
+// App Check marks itself by appending an invisible container div when a
+// reCAPTCHA provider initializes — absent when the SDK was never initialized.
+function appCheckContainer(): HTMLElement | null {
+  return document.getElementById('fire_app_check_[DEFAULT]');
+}
 
 describe('signInThenReady', () => {
   it('announces GUEST_READY only after anonymous sign-in resolves', async () => {

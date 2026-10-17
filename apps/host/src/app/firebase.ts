@@ -42,27 +42,31 @@ export function provideKlartextFirebase(): Provider[] {
         const app = initializeApp(
           config.authDomain ? { ...firebaseConfig, authDomain: config.authDomain } : firebaseConfig,
         );
-        // Unconditional in every Environment (issue #21) — only the provider
-        // outcome varies: debug flag set → debug exchange; otherwise
-        // reCAPTCHA Enterprise with the hostname-pinned site key. In debug
-        // mode the SDK never consults the provider but still runs its
-        // `initialize()` — a CustomProvider keeps reCAPTCHA's script (and its
-        // missing-sitekey render error on dev) out of debug builds.
-        if (!config.useEmulators && !config.appCheckSiteKey && !config.appCheckDebugToken) {
+        // Initialized only with a usable credential (issue #21): a debug
+        // token → the debug exchange; a site key → reCAPTCHA Enterprise with
+        // the hostname-pinned key. With neither — local dev and e2e against
+        // the emulators — App Check stays off entirely: the emulators don't
+        // enforce it, and rendering reCAPTCHA with an empty site key throws
+        // at bootstrap. In debug mode the SDK exchanges the token directly
+        // without consulting the provider — but still runs its
+        // `initialize()` — so a CustomProvider keeps reCAPTCHA's script out
+        // of debug builds.
+        if (config.appCheckDebugToken || config.appCheckSiteKey) {
+          initializeAppCheck(app, {
+            provider: config.appCheckDebugToken
+              ? new CustomProvider({
+                  getToken: () =>
+                    Promise.reject(new Error('debug mode never asks the provider')),
+                })
+              : new ReCaptchaEnterpriseProvider(config.appCheckSiteKey ?? ''),
+            isTokenAutoRefreshEnabled: true,
+          });
+        } else if (!config.useEmulators) {
           console.warn(
             '[app-check] no reCAPTCHA site key and no debug token — ' +
-              'attestation will fail until the site key is provisioned',
+              'running without App Check; requests will be unattested',
           );
         }
-        initializeAppCheck(app, {
-          provider: config.appCheckDebugToken
-            ? new CustomProvider({
-                getToken: () =>
-                  Promise.reject(new Error('debug mode never asks the provider')),
-              })
-            : new ReCaptchaEnterpriseProvider(config.appCheckSiteKey ?? ''),
-          isTokenAutoRefreshEnabled: true,
-        });
         return app;
       },
     },

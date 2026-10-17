@@ -28,6 +28,12 @@ takes `KLARTEXT_GUEST_DEBUG_TOKEN` via `vite.config.ts`'s `envDir`/`envPrefix`
 (see `.env.example`). Preview builds get them from the same-named GitHub
 secrets; production never carries one.
 
+App Check only initializes when a credential exists — a debug token or the
+site key. Plain emulator runs carry neither, so App Check stays off locally
+(the emulators don't enforce it) and no token setup is needed. The token
+path still matters for preview channels and for dev against the real
+backend (e.g. a genuine Gemini round-trip).
+
 ## Node / Angular
 
 The workspace pins Node 24 (`.nvmrc`, `engines`). The Host sits on Angular 21 —
