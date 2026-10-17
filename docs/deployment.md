@@ -110,7 +110,7 @@ Both apps call `initializeAppCheck` wherever a credential exists; only the provi
 | Environment | Provider | Token source |
 |---|---|---|
 | dev | debug — App Check off when no token is set | `KLARTEXT_HOST_DEBUG_TOKEN` / `KLARTEXT_GUEST_DEBUG_TOKEN` from the local `.env` (optional — the emulators don't enforce) |
-| e2e | debug — off when the secret is unset | build-time env var; GitHub secret in CI |
+| e2e | debug — CI fails the build when the secret is unset; off locally | build-time env var; GitHub secret in CI |
 | preview | debug | same GitHub secret, injected at the preview build |
 | production | reCAPTCHA Enterprise | site key pinned to the exact prod hostnames — no `web.app` apex, so hashed preview channels can't attest and deliberately run the debug provider |
 
