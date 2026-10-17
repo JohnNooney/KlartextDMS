@@ -1,0 +1,6 @@
+# Binary payloads autocrlf must not touch: the Storage emulator's exported
+# blobs and the generated fixture PDFs are byte-exact — CRLF conversion
+# corrupts them and the emulator then serves truncated objects.
+emulator-data/storage_export/blobs/* binary
+emulator-data/firestore_export/** binary
+scripts/fixtures/*.pdf binary
