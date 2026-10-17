@@ -9,6 +9,7 @@
     "dev": "concurrently -k -n emulators,host,guest -c yellow,blue,magenta \"pnpm run emulators:dev\" \"pnpm --filter @klartext/host start\" \"pnpm --filter @klartext/guest dev\"",
     "dev:demo": "cross-env VITE_FAKE_AI_PROVIDER=true pnpm dev",
     "emulators": "firebase emulators:start --import=./emulator-data",
+    "emulators:kill": "kill-port 4000 4400 4500 5050 5055 8080 9099 9150 9199",
     "emulators:dev": "firebase emulators:start --only auth,firestore,storage --import=./emulator-data",
     "seed": "firebase emulators:exec --only auth,firestore,storage --export-on-exit ./emulator-data \"node scripts/seed.mjs\"",
     "build": "pnpm -r --if-present build",
@@ -26,6 +27,7 @@
     "concurrently": "^9.1.2",
     "cross-env": "^10.1.0",
     "firebase-admin": "^14.5.0",
-    "firebase-tools": "^15.31.0"
+    "firebase-tools": "^15.31.0",
+    "kill-port": "^2.0.1"
   }
 }
