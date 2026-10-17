@@ -105,14 +105,20 @@ Decided in [App Check enforcement and Gemini abuse limits](https://github.com/Jo
 
 Enforcement is `Enforced` on Firestore, Storage, and AI Logic — flipped on when the App Check SDK first lands in a deployable build, so previews and production run identical enforcement (AI Logic is auto-enforced on registration; there are no pre-App-Check clients to protect). Replay protection is `Enforced` on the AI Logic service (`firebaseml`), so the Guest requests a **limited-use** App Check token per call (`useLimitedUseAppCheckTokens: true` in `getAI`) — a regular exchanged token is rejected by `firebasevertexai` with 401 "token is invalid". Debug tokens still work: the SDK adds `limited_use` to the debug exchange.
 
-Both apps call `initializeAppCheck` in every Environment; only the provider varies:
+Both apps call `initializeAppCheck` wherever a credential exists; only the provider varies:
 
 | Environment | Provider | Token source |
 |---|---|---|
-| dev | debug | `KLARTEXT_HOST_DEBUG_TOKEN` / `KLARTEXT_GUEST_DEBUG_TOKEN` from the local `.env` |
-| e2e | debug | build-time env var; GitHub secret in CI |
+| dev | debug — App Check off when no token is set | `KLARTEXT_HOST_DEBUG_TOKEN` / `KLARTEXT_GUEST_DEBUG_TOKEN` from the local `.env` (optional — the emulators don't enforce) |
+| e2e | debug — CI fails the build when the secret is unset; off locally | build-time env var; GitHub secret in CI |
 | preview | debug | same GitHub secret, injected at the preview build |
 | production | reCAPTCHA Enterprise | site key pinned to the exact prod hostnames — no `web.app` apex, so hashed preview channels can't attest and deliberately run the debug provider |
+
+Skipping happens only where nothing could attest anyway: a credential-less
+emulator run goes straight past `initializeAppCheck` (a reCAPTCHA render
+with an empty site key throws at bootstrap). The debug token restores the
+full init path locally — needed for a real Gemini round-trip, whose calls
+are `Enforced` even in dev.
 
 The debug token is the only secret-ish value in the client config tree: never committed, never baked into production builds.
 

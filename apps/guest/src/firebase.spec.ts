@@ -15,6 +15,7 @@ describe('initGuestFirebase', () => {
 
   afterEach(async () => {
     delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+    document.getElementById('fire_app_check_[DEFAULT]')?.remove();
     vi.restoreAllMocks();
     for (const { app } of initialized) await deleteApp(app);
     initialized.length = 0;
@@ -36,6 +37,22 @@ describe('initGuestFirebase', () => {
     expect(self.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
   });
 
+  it('initializes App Check via the debug provider when a token is configured', () => {
+    const { app } = init(BASE);
+    expect(appCheckInitialized(app)).toBe(true);
+  });
+
+  it('skips App Check under the emulators without a debug token', () => {
+    const { app } = init({ ...BASE, appCheckDebugToken: undefined });
+    expect(appCheckContainer()).toBeNull();
+    expect(appCheckInitialized(app)).toBe(false);
+  });
+
+  it('initializes App Check with the site key against a real backend', () => {
+    init({ ...BASE, useEmulators: false, appCheckDebugToken: undefined });
+    expect(appCheckContainer()).not.toBeNull();
+  });
+
   it('connects Auth to the emulator under useEmulators', () => {
     const { auth } = init(BASE);
     expect(auth.emulatorConfig?.host).toBe('localhost');
@@ -46,6 +63,24 @@ describe('initGuestFirebase', () => {
     expect(auth.emulatorConfig).toBeNull();
   });
 });
+
+// App Check marks itself by appending an invisible container div when a
+// reCAPTCHA provider initializes — absent when the SDK was never initialized
+// or the CustomProvider (debug mode) is in play.
+function appCheckContainer(): HTMLElement | null {
+  return document.getElementById('fire_app_check_[DEFAULT]');
+}
+
+// `getAppCheck` isn't exported in this SDK version — reach into the app's
+// component registry.
+function appCheckInitialized(app: FirebaseApp): boolean {
+  const container = (
+    app as unknown as {
+      container: { getProvider(name: string): { isInitialized(): boolean } };
+    }
+  ).container;
+  return container.getProvider('app-check').isInitialized();
+}
 
 describe('signInThenReady', () => {
   it('announces GUEST_READY only after anonymous sign-in resolves', async () => {

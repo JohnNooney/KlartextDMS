@@ -34,22 +34,26 @@ export function initGuestFirebase(config: GuestConfig): GuestFirebase {
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = config.appCheckDebugToken;
   }
   const app = initializeApp(firebaseConfig);
-  // Unconditional in every Environment — only the provider outcome varies:
-  // debug flag set → debug exchange; otherwise reCAPTCHA Enterprise with the
-  // project's site key, pinned to the exact prod hostnames (issue #21). In
-  // debug mode the SDK exchanges the debug token directly and never consults
-  // the provider — but it still runs `provider.initialize()`, which eagerly
-  // loads reCAPTCHA (and errors on the empty dev site key). A CustomProvider
-  // whose getToken can never fire keeps that script out of dev/preview.
-  initializeAppCheck(app, {
-    provider: config.appCheckDebugToken
-      ? new CustomProvider({
-          getToken: () =>
-            Promise.reject(new Error('debug mode never asks the provider')),
-        })
-      : new ReCaptchaEnterpriseProvider(appCheckSiteKey),
-    isTokenAutoRefreshEnabled: true,
-  });
+  // Runs only where a credential can actually attest (issue #21): a debug
+  // token → the debug exchange; a real backend → reCAPTCHA Enterprise with
+  // the site key pinned to the exact prod hostnames. Under the emulators
+  // without a token it stays off entirely — the emulators don't enforce App
+  // Check, and the prod-pinned site key can't attest localhost. In debug
+  // mode the SDK exchanges the debug token directly and never consults the
+  // provider — but it still runs `provider.initialize()`, so a CustomProvider
+  // (whose initialize is a no-op and whose getToken can never fire) keeps
+  // reCAPTCHA's script out of dev/preview.
+  if (config.appCheckDebugToken || !config.useEmulators) {
+    initializeAppCheck(app, {
+      provider: config.appCheckDebugToken
+        ? new CustomProvider({
+            getToken: () =>
+              Promise.reject(new Error('debug mode never asks the provider')),
+          })
+        : new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  }
   const auth = getAuth(app);
   if (config.useEmulators) {
     connectAuthEmulator(auth, `http://${emulatorConfig.host}:${emulatorConfig.auth.port}`, {

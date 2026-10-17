@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { deleteApp } from 'firebase/app';
+import { deleteApp, type FirebaseApp } from 'firebase/app';
 import type { FirebaseStorage } from 'firebase/storage';
 import type { Firestore } from 'firebase/firestore';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   FIREBASE_APP,
   FIREBASE_AUTH,
@@ -21,6 +21,8 @@ function setup(config: HostConfig): void {
 describe('provideKlartextFirebase', () => {
   afterEach(async () => {
     delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+    document.getElementById('fire_app_check_[DEFAULT]')?.remove();
+    vi.restoreAllMocks();
     await deleteApp(TestBed.inject(FIREBASE_APP));
   });
 
@@ -38,6 +40,40 @@ describe('provideKlartextFirebase', () => {
     setup({ guestOrigin: 'https://guest.web.app', useEmulators: false });
     TestBed.inject(FIREBASE_APP);
     expect(self.FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined();
+  });
+
+  it('initializes App Check via the debug provider when a token is configured', () => {
+    setup({
+      guestOrigin: 'http://localhost:5173',
+      useEmulators: true,
+      appCheckDebugToken: 'debug-token-1',
+    });
+    expect(appCheckInitialized(TestBed.inject(FIREBASE_APP))).toBe(true);
+  });
+
+  it('initializes App Check when a site key is configured', () => {
+    setup({
+      guestOrigin: 'https://guest.web.app',
+      useEmulators: false,
+      appCheckSiteKey: 'site-key-1',
+    });
+    TestBed.inject(FIREBASE_APP);
+    expect(appCheckContainer()).not.toBeNull();
+  });
+
+  it('skips App Check entirely without a credential (local emulator dev)', () => {
+    setup({ guestOrigin: 'http://localhost:5173', useEmulators: true });
+    const app = TestBed.inject(FIREBASE_APP);
+    expect(appCheckContainer()).toBeNull();
+    expect(appCheckInitialized(app)).toBe(false);
+  });
+
+  it('warns when a real-backend config carries no App Check credential', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setup({ guestOrigin: 'https://guest.web.app', useEmulators: false });
+    TestBed.inject(FIREBASE_APP);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[app-check]'));
+    expect(appCheckContainer()).toBeNull();
   });
 
   it('overrides the Auth domain when configured', () => {
@@ -97,6 +133,24 @@ describe('provideKlartextFirebase', () => {
     expect(storageHost(storage)).toBe('firebasestorage.googleapis.com');
   });
 });
+
+// App Check marks itself by appending an invisible container div when a
+// reCAPTCHA provider initializes — absent when the SDK was never initialized
+// or the CustomProvider (debug mode) is in play.
+function appCheckContainer(): HTMLElement | null {
+  return document.getElementById('fire_app_check_[DEFAULT]');
+}
+
+// `getAppCheck` isn't exported in this SDK version — reach into the app's
+// component registry, the same internals `storageHost` taps below.
+function appCheckInitialized(app: FirebaseApp): boolean {
+  const container = (
+    app as unknown as {
+      container: { getProvider(name: string): { isInitialized(): boolean } };
+    }
+  ).container;
+  return container.getProvider('app-check').isInitialized();
+}
 
 // `Firestore` exposes its settings only through the JSON-serializable dump —
 // the SDK's own equivalent of `Auth.emulatorConfig`.

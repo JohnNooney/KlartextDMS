@@ -28,6 +28,12 @@ takes `KLARTEXT_GUEST_DEBUG_TOKEN` via `vite.config.ts`'s `envDir`/`envPrefix`
 (see `.env.example`). Preview builds get them from the same-named GitHub
 secrets; production never carries one.
 
+App Check only initializes when a credential exists — a debug token or the
+site key. Plain emulator runs carry neither, so App Check stays off locally
+(the emulators don't enforce it) and no token setup is needed. The token
+path still matters for preview channels and for dev against the real
+backend (e.g. a genuine Gemini round-trip).
+
 ## Node / Angular
 
 The workspace pins Node 24 (`.nvmrc`, `engines`). The Host sits on Angular 21 —
@@ -38,6 +44,13 @@ supported it (Angular 22 requires ≥22.22). Bump deliberately.
 
 The Hosting emulator runs on :5050 (Guest auto-assigned :5055) because the
 default :5000 collides with macOS's AirPlay Receiver.
+
+## Orphaned emulator processes
+
+`pnpm emulators:kill` frees every port the suite binds (UI, hub, reserved,
+Firestore, Auth, Storage, Hosting) — needed after a force-closed terminal
+leaves the Java emulators running and the next `pnpm dev` fails with
+"port taken".
 
 ## Sign-in under the emulators
 
