@@ -51,14 +51,17 @@ export function provideKlartextFirebase(): Provider[] {
         // without consulting the provider — but still runs its
         // `initialize()` — so a CustomProvider keeps reCAPTCHA's script out
         // of debug builds.
-        if (config.appCheckDebugToken || config.appCheckSiteKey) {
+        const appCheckProvider = config.appCheckDebugToken
+          ? new CustomProvider({
+              getToken: () =>
+                Promise.reject(new Error('debug mode never asks the provider')),
+            })
+          : config.appCheckSiteKey
+            ? new ReCaptchaEnterpriseProvider(config.appCheckSiteKey)
+            : null;
+        if (appCheckProvider) {
           initializeAppCheck(app, {
-            provider: config.appCheckDebugToken
-              ? new CustomProvider({
-                  getToken: () =>
-                    Promise.reject(new Error('debug mode never asks the provider')),
-                })
-              : new ReCaptchaEnterpriseProvider(config.appCheckSiteKey ?? ''),
+            provider: appCheckProvider,
             isTokenAutoRefreshEnabled: true,
           });
         } else if (!config.useEmulators) {

@@ -40,9 +40,9 @@ export function initGuestFirebase(config: GuestConfig): GuestFirebase {
   // without a token it stays off entirely — the emulators don't enforce App
   // Check, and the prod-pinned site key can't attest localhost. In debug
   // mode the SDK exchanges the debug token directly and never consults the
-  // provider — but it still runs `provider.initialize()`, which eagerly
-  // loads reCAPTCHA; a CustomProvider whose getToken can never fire keeps
-  // that script out of dev/preview.
+  // provider — but it still runs `provider.initialize()`, so a CustomProvider
+  // (whose initialize is a no-op and whose getToken can never fire) keeps
+  // reCAPTCHA's script out of dev/preview.
   if (config.appCheckDebugToken || !config.useEmulators) {
     initializeAppCheck(app, {
       provider: config.appCheckDebugToken

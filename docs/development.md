@@ -45,6 +45,13 @@ supported it (Angular 22 requires ≥22.22). Bump deliberately.
 The Hosting emulator runs on :5050 (Guest auto-assigned :5055) because the
 default :5000 collides with macOS's AirPlay Receiver.
 
+## Orphaned emulator processes
+
+`pnpm emulators:kill` frees every port the suite binds (UI, hub, reserved,
+Firestore, Auth, Storage, Hosting) — needed after a force-closed terminal
+leaves the Java emulators running and the next `pnpm dev` fails with
+"port taken".
+
 ## Sign-in under the emulators
 
 The Email/Password form shows only under `useEmulators` — in production the
