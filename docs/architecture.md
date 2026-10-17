@@ -88,6 +88,31 @@ Rather than standing up a backend token-minting server or opening Firestore secu
    - The Guest never imports Firestore or Cloud Storage. It signs in to Firebase Auth *anonymously* solely so Firebase App Check and Firebase AI Logic (`firebase/ai`) accept its Gemini calls ([ADR 0007](./adr/0007-gemini-via-ai-logic-no-proxy.md)).
    - When a new Document needs an Extraction, the Host transfers the raw PDF `ArrayBuffer` over the Bus (`EXTRACT_DOCUMENT`), the Guest calls Gemini, and the Guest sends the validated `ExtractionCandidate` back over the Bus (`AI_PROCESSING_SUCCESS`) for the Host to save to Firestore.
 
+### How Firestore and Cloud Storage are structured
+
+All persisted data belongs to the Host and is partitioned under `users/{uid}/...` in both Cloud Firestore and Cloud Storage:
+
+```text
+Cloud Firestore                                              Cloud Storage (Bucket)
+└── users/{uid}/                 (virtual tenant root)       └── users/{uid}/
+    ├── folders/{folderId}       (FolderRecord)                  └── documents/
+    └── documents/{documentId}   (DocumentRecord)                    └── {documentId}.pdf
+        └── extractions/
+            └── current          (ExtractionRecord)
+```
+
+Three design choices shape this layout:
+
+1. **Flat `folders` and `documents` collections with client-side tree assembly ([ADR 0005](./adr/0005-folder-tree-recursive-delete.md))**:
+   - Even though Folders nest arbitrarily deep in the UI (`Verträge` → `Wohnung`), they are stored in a **flat** `users/{uid}/folders/{folderId}` collection with a `parentId: string | null` pointer (`null` = root `"Documents"`), and Documents reference their container via `folderId: string | null`.
+   - Storing folders and documents as flat collections rather than nested Firestore subcollections allows the Host to subscribe to the entire library with just two `onSnapshot` queries (`orderBy('createdAt')`), move a Folder or Document by updating a single pointer (`parentId` or `folderId`), and assemble breadcrumbs and recursive deletes client-side.
+2. **Extractions live in a singleton subdocument (`extractions/current`) rather than on `DocumentRecord` ([ADR 0008](./adr/0008-extraction-persisted-per-document.md))**:
+   - `DocumentRecord` is watched via `onSnapshot` for every tile in the library grid. Keeping the bulky AI output (`plainEnglishSummary` + up to 12 `keyTakeaways` with German `sourceQuote` strings) in its own child document at `users/{uid}/documents/{documentId}/extractions/current` keeps library list snapshots lightweight and lets re-analysis overwrite the Extraction atomically with a single `setDoc` without touching the Document's upload/folder metadata.
+   - By contrast, a failed Extraction Job writes `extractionFailure` directly onto `DocumentRecord` so the library tile can immediately render an error badge and suppress auto-requeuing on reload without fetching the subdocument.
+3. **1:1 pairing between Firestore `documentId` and Cloud Storage object path**:
+   - When `FirestoreDocumentRepository.create()` mints a new Firestore `documentId`, it deterministically sets `storagePath` to `users/{uid}/documents/{documentId}.pdf`.
+   - Keeping the Storage path deterministic means `UploadPipeline.reconcile()` and `FirestoreDocumentRepository.delete()` can always locate and scrub the PDF binary in Cloud Storage even if a browser tab crashed mid-upload or mid-delete.
+
 ### How Bus messages are structured (`@klartext/bus-contract`)
 
 Every message crossing `window.postMessage` is wrapped in a versioned **Envelope**:
@@ -417,12 +442,105 @@ interface Envelope<TType extends string = string, TPayload = unknown> {
 
 ### Firestore & Cloud Storage Paths
 
-| Resource | Path Pattern | Notes |
+> **Note**: `users/{uid}` is a virtual path prefix used for tenant scoping in Firestore and Storage Security Rules; no document is written at `users/{uid}` itself.
+
+| Resource | Path Pattern | TypeScript Type & Source |
 |---|---|---|
-| **Document Metadata** | `users/{uid}/documents/{documentId}` | Tracks `status` (`uploading` \| `ready` \| `failed` \| `deleting`), `title`, `originalFilename`, `sizeBytes`, `storagePath`, `folderId`, optional `extractionFailure`. |
-| **Current Extraction** | `users/{uid}/documents/{documentId}/extractions/current` | Single persisted `ExtractionRecord` per Document ([ADR 0008](./adr/0008-extraction-persisted-per-document.md)); overwritten on re-analysis. |
-| **Folder Metadata** | `users/{uid}/folders/{folderId}` | Adjacency-list tree (`parentId: string \| null`, `status: 'ready' \| 'deleting'`, `name`, `description`, `keywords`, [ADR 0005](./adr/0005-folder-tree-recursive-delete.md)). |
-| **PDF Binary** | `users/{uid}/documents/{documentId}.pdf` | Cloud Storage object; validated client-side and in `storage.rules` (`application/pdf`, `<= 10 MB`). |
+| **Document Metadata** | `users/{uid}/documents/{documentId}` | `DocumentRecord` ([`apps/host/src/app/data/document.ts`](../apps/host/src/app/data/document.ts)) |
+| **Current Extraction** | `users/{uid}/documents/{documentId}/extractions/current` | `ExtractionRecord` ([`packages/bus-contract/src/extraction.ts`](../packages/bus-contract/src/extraction.ts)) |
+| **Folder Metadata** | `users/{uid}/folders/{folderId}` | `FolderRecord` ([`apps/host/src/app/data/folder.ts`](../apps/host/src/app/data/folder.ts)) |
+| **PDF Binary (Storage)** | `users/{uid}/documents/{documentId}.pdf` | Raw PDF blob (`application/pdf`, `<= 10 MB`, [`apps/host/src/app/data/document-repository.ts`](../apps/host/src/app/data/document-repository.ts)) |
+
+### Firestore Document Shapes
+
+#### 1. `users/{uid}/documents/{documentId}` (`DocumentRecord`)
+
+```ts
+interface DocumentRecord {
+  id: string;                                          // Matches {documentId}
+  ownerId: string;                                     // Matches {uid}; verified by firestore.rules on create/update
+  title: string;                                       // User-renamable display label (defaults to filename without .pdf)
+  originalFilename: string;                            // Immutable upload provenance (e.g. "Mietvertrag-2026.pdf")
+  contentType: 'application/pdf';                      // Fixed MIME type
+  sizeBytes: number;                                   // File size in bytes (<= 10,485,760)
+  storagePath: string;                                 // Always "users/{uid}/documents/{documentId}.pdf"
+  status: 'uploading' | 'ready' | 'failed' | 'deleting'; // Metadata-first upload/teardown state machine
+  extractionFailure?: {                                // Present only when the last Extraction Job failed; null otherwise
+    code: 'AI_UNAVAILABLE' | 'INVALID_EXTRACTION' | 'QUOTA_EXCEEDED' | 'APP_CHECK_FAILED' | 'UNKNOWN';
+    message: string;                                   // User-safe English error message
+    retryable: boolean;
+    failedAt: Timestamp;                               // Firestore serverTimestamp()
+  } | null;
+  folderId: string | null;                             // Parent Folder ID, or null for root ("Documents")
+  createdAt: Timestamp;                                // Firestore serverTimestamp()
+  updatedAt: Timestamp;                                // Firestore serverTimestamp()
+}
+```
+
+#### 2. `users/{uid}/folders/{folderId}` (`FolderRecord`)
+
+```ts
+interface FolderRecord {
+  id: string;                   // Matches {folderId}
+  name: string;                 // Display label (unique among siblings within the same parentId)
+  parentId: string | null;      // Parent Folder ID, or null for root ("Documents")
+  status: 'ready' | 'deleting'; // Marked 'deleting' before recursive child teardown (ADR 0005)
+  description?: string;         // Optional user note (omitted if empty)
+  keywords?: string[];          // Optional keyword list (omitted if empty)
+  createdAt: Timestamp;         // Firestore serverTimestamp()
+  updatedAt: Timestamp;         // Firestore serverTimestamp()
+}
+```
+
+#### 3. `users/{uid}/documents/{documentId}/extractions/current` (`ExtractionRecord`)
+
+> Optional fields that evaluate to `undefined` (`documentTypeLabel`, `statusExplanation`, `keyTakeaways[].page`, `usage`) are stripped via `dropUndefined()` in [`extraction-repository.ts`](../apps/host/src/app/data/extraction-repository.ts) before `setDoc()` because Firestore rejects explicit `undefined` values.
+
+```ts
+interface ExtractionRecord {
+  // --- Identity & Provenance (stamped by Guest provider + Host repository) ---
+  documentId: string;                        // Matches parent {documentId}
+  schemaVersion: 1;                          // Fixed v1 schema marker
+  promptVersion: 'klartext-extraction-v1';   // Immutable prompt identifier
+  model: string;                             // e.g. "gemini-3.8-flash"
+  createdAt: Timestamp;                      // Firestore serverTimestamp() added by Host on save
+  usage?: {                                  // Optional Gemini token usage metadata
+    promptTokens: number;
+    candidatesTokens: number;
+    totalTokens: number;
+  };
+
+  // --- AI-Produced Content (validated by Guest Zod schema) ---
+  documentType:
+    | 'TENANCY_AGREEMENT'
+    | 'HEALTH_INSURANCE'
+    | 'EMPLOYMENT_CONTRACT'
+    | 'INTERNET_OR_PHONE'
+    | 'GOVERNMENT_LETTER'
+    | 'OTHER';
+  documentTypeLabel?: string;                // Present iff documentType === 'OTHER'
+  sourceLanguage: string;                    // Canonical BCP 47 tag (e.g. "de")
+  plainEnglishSummary: string;               // <= 200 words
+  extractionStatus: 'COMPLETE' | 'INSUFFICIENT_CONTENT' | 'UNSUPPORTED_DOCUMENT';
+  statusExplanation?: string;                // Present iff extractionStatus !== 'COMPLETE'
+  keyTakeaways: Array<{                      // 0..12 items (at most 5 CRITICAL)
+    text: string;                            // 1-2 sentence English explanation
+    importance: 'NORMAL' | 'CRITICAL';
+    sourceQuote: string;                     // Verbatim quote from PDF (1..500 chars)
+    page?: number;                           // 1-based PDF page number (when determinable)
+  }>;
+}
+```
+
+#### 4. Cloud Storage Object: `users/{uid}/documents/{documentId}.pdf`
+
+| Property | Value / Rule |
+|---|---|
+| **Bucket Path** | `users/{uid}/documents/{documentId}.pdf` (referenced by `DocumentRecord.storagePath`) |
+| **Content-Type** | `application/pdf` (enforced by client `validateDocumentFile` and `storage.rules`) |
+| **Size Limit** | `<= 10 MB` (`10 * 1024 * 1024` bytes = `10,485,760` bytes) |
+| **Upload Mechanism** | `uploadBytesResumable(ref, blob, { contentType: 'application/pdf' })` |
+| **Access Control** | `request.auth.uid == uid && isAllowedUser()` in [`storage.rules`](../storage.rules) |
 
 ### Ordered Document Deletion Stages (`FirestoreDocumentRepository.delete`)
 
