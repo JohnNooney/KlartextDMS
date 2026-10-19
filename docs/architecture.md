@@ -2,14 +2,7 @@
 
 Klartext stores German paperwork (leases, insurance policies, tax letters) and explains each document in plain English. Under the hood, it is built as two independent web applications—an **Angular Host** and a **Vue Guest**—that communicate exclusively across a cross-origin `<iframe>` over `window.postMessage`.
 
-This document is organized using the [Diátaxis framework](https://diataxis.fr/start-here/), separating **Explanation** (for *studying* how and why the system works) from **Reference** (for *looking up* exact protocol contracts, paths, timeouts, and source files while working).
-
-| Quadrant | Purpose | Where to Go |
-|---|---|---|
-| **Tutorial** *(learning by doing)* | Run Klartext locally with seeded German documents and explore the UI in five minutes | [README — Try it yourself](../README.md#try-it-yourself) |
-| **How-To Guides** *(solving specific tasks)* | Run & debug Playwright E2E tests, wire App Check debug tokens, or configure Cloud Console / CORS | [Development internals](./development.md) · [Deployment operations](./deployment.md) |
-| **Explanation** *(understanding the big picture)* | Understand the microfrontend split, Bus data plane, document flows, security model, and CI/CD design | [Part I: Explanation](#part-i-explanation--how-klartext-works) *(below)* · [ADRs 0001–0008](./adr/) |
-| **Reference** *(exact technical facts)* | Look up Bus message schemas, timeouts, Firestore paths, CSP headers, and source file locations | [Part II: Reference](#part-ii-reference--technical-lookup) *(below)* · [Domain Glossary (`CONTEXT.md`)](../CONTEXT.md) |
+This document separates **[Part I: Explanation](#part-i-explanation--how-klartext-works)** (for *studying* how and why the system works) from **[Part II: Reference](#part-ii-reference--technical-lookup)** (for *looking up* exact protocol contracts, paths, timeouts, and source files while working). For the full documentation map across the repo, see [`docs/README.md`](./README.md).
 
 ---
 

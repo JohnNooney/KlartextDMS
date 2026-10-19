@@ -56,6 +56,7 @@ packages/firebase-config  shared Firebase web config + emulator endpoints
 scripts/            deterministic emulator seed (admin SDK) + fixture PDFs/Extractions + Host icon generator
 emulator-data/      committed emulator snapshot loaded via --import
 CONTEXT.md          domain glossary
+docs/README.md      documentation map (Diátaxis index)
 docs/architecture.md  system architecture (Explanation + Reference)
 docs/adr/           architecture decision records
 docs/deployment.md  hosting topology and per-Environment Peer Origins
