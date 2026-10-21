@@ -40,6 +40,10 @@ _Avoid_: highlight, bullet
 A calendar entry the user exports from one Action Item (as an `.ics` file or a Google Calendar link) so the deadline, cadence, or notice period lands in their own calendar. Klartext does not store or track a Reminder after export.
 _Avoid_: alert, notification, calendar event
 
+**Translation**:
+The full literal English rendering of one Document, page by page, produced on demand. One Translation per Document, persisted and reused. Distinct from an Extraction, which explains the Document rather than rendering all of it; a Translation is never a source for Action Items or Key Takeaways.
+_Avoid_: summary, transcript, translated summary
+
 **Extraction Job**:
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
 _Avoid_: analysis, task, background job
