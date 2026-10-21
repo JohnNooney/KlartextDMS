@@ -25,16 +25,16 @@ A named container the user files Documents in, optionally annotated with a descr
 _Avoid_: directory, category, collection, tag
 
 **Extraction**:
-The AI-produced plain-English reading of one Document: its document type, translated summary, key takeaways, and critical warnings. One Extraction per Document, persisted and reused.
+The AI-produced plain-English reading of one Document: its document type, translated summary, Action Items, and Key Takeaways. One Extraction per Document, persisted and reused.
 _Avoid_: analysis, summary, result, TL;DR
 
-**Key Takeaway**:
-A single fact directly supported by a quotation from a Document that the user needs to know (amounts, dates, obligations). A Key Takeaway has normal or critical importance.
-_Avoid_: highlight, bullet
+**Action Item**:
+Something in a Document the user must do, comply with when acting, or track on a calendar to avoid losing money or rights (deadlines, recurring payment or filing obligations, notice periods, strict form rules such as paper-only cancellation), directly supported by a quotation from the Document and carrying structured timing when the Document states a deadline, cadence, or notice period.
+_Avoid_: risk, alert, red flag, critical warning
 
-**Critical Warning**:
-A Key Takeaway with critical importance that can cost the user money or rights if missed (notice periods, hidden fees, liabilities).
-_Avoid_: risk, alert, red flag
+**Key Takeaway**:
+A passive reference fact directly supported by a quotation from a Document that explains how the agreement or letter works (amounts, coverage limits, repair caps, settlement rules) without requiring a scheduled action or compliance step.
+_Avoid_: highlight, bullet
 
 **Extraction Job**:
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
