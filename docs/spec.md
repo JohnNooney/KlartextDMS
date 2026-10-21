@@ -63,7 +63,17 @@ Feature decisions without ADRs: [Folder attention overview](https://github.com/J
 
 Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel.
 
-__V2_TABLE__
+| # | Issue | Blocked by | Decisions it implements |
+|---|---|---|---|
+| A1 | [Extraction v2 core: bus-contract schema, normalizer, Guest prompt, fixtures](https://github.com/JohnNooney/KlartextDMS/issues/117) | — | #99, ADR 0010 |
+| A2 | [Guest panel: Action Items vs Key Takeaways, timing chips, v1 note](https://github.com/JohnNooney/KlartextDMS/issues/118) | #117 | #99 |
+| A3 | [Host Extraction index: LibraryStore.extractionsByDocId](https://github.com/JohnNooney/KlartextDMS/issues/119) | #117 | #101, ADR 0011 |
+| A4 | [Host Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/120) | #117, #119 | #102 |
+| A5 | [Library search across Documents, Folders, and Extractions](https://github.com/JohnNooney/KlartextDMS/issues/121) | #119 | #103 |
+| A6 | [Calendar reminders from Action Items](https://github.com/JohnNooney/KlartextDMS/issues/122) | #117, #118, #119, #120 | #104 |
+| B1 | [Translation Bus contract and Guest translation client](https://github.com/JohnNooney/KlartextDMS/issues/123) | — | #105, ADR 0009 |
+| B2 | [Host Translation orchestration, persistence, and rules](https://github.com/JohnNooney/KlartextDMS/issues/124) | #123 | #105, ADR 0009 |
+| B3 | [Reader Translated view](https://github.com/JohnNooney/KlartextDMS/issues/125) | #124 | #105 |
 
 ## Explicitly not in v2
 
