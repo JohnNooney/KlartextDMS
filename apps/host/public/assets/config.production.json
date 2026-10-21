@@ -3,6 +3,6 @@
   "useEmulators": false,
   "authDomain": "klartext.nooney.dev",
   "appCheckSiteKey": "6LdwGtAtAAAAAMXPVpQ0vXs81nFfn-CI-KeAK1qF",
-  "emailPasswordSignIn": true,
-  "allowedEmails": ["johnnoon74@gmail.com", "docuware@tester.com"]
+  "emailPasswordSignIn": false,
+  "allowedEmails": ["johnnoon74@gmail.com"]
 }
