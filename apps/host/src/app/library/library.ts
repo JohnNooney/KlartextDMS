@@ -5,6 +5,7 @@ import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { OpenDocument } from '../open-document';
 import { Reader } from '../reader/reader';
+import { AttentionPrototype, attentionVariant } from './attention-prototype';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
 import { describeContents } from './folder-contents';
@@ -43,6 +44,7 @@ type DialogState =
   templateUrl: './library.html',
   styleUrl: './library.scss',
   imports: [
+    AttentionPrototype,
     DocumentTile,
     FolderTile,
     FolderTreeView,
@@ -72,6 +74,7 @@ export class Library {
   // tile's ⋮ Retry analysis routes through it (issue #32).
   protected readonly flow = inject(ExtractionFlow);
 
+  protected readonly attentionVariant = attentionVariant;
   protected readonly dropHover = signal(false);
   protected readonly openDocument = inject(OpenDocument);
   protected readonly describeContents = describeContents;

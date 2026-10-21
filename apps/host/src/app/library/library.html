@@ -92,6 +92,8 @@
       </div>
     } @else {
       <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
+      <app-attention-prototype />
+      @if (attentionVariant() !== 'B') {
       <div class="grid">
         @for (folder of store.visibleFolders(); track folder.id) {
           <app-folder-tile
@@ -117,6 +119,7 @@
           />
         }
       </div>
+      }
     }
   </div>
   </div>
