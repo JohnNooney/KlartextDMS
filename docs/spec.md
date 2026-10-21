@@ -41,6 +41,42 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 
 ## Explicitly not in this build
 
-- Library **search** over titles/descriptions/keywords: the fields are persisted per [#20](https://github.com/JohnNooney/KlartextDMS/issues/20) but no v1 consumer was decided — open fog on the map, to be revisited as a future effort.
+- Library **search**: not in v1; designed in v2 (below).
 - `GUEST_SHOW_PAGE` / evidence-to-page links — shipped inside the v1 Envelope ([issue #78](https://github.com/JohnNooney/KlartextDMS/issues/78)); the quoted passage highlights in the Host's text layer ([issue #80](https://github.com/JohnNooney/KlartextDMS/issues/80)).
 - Image/photo Documents ([#18](https://github.com/JohnNooney/KlartextDMS/issues/18)), multi-user sharing, native mobile, legal-accuracy guarantees — out of scope on the map.
+
+---
+
+# v2
+
+Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks, all decisions resolved. Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**.
+
+## v2 architecture deltas
+
+- [Extraction schema is versioned; v1 records are normalized at read time](./adr/0010-extraction-schema-versioned-read-time-normalization.md) — `klartext-extraction-v2`, Action Items vs Key Takeaways, structured `timing`. ([#99](https://github.com/JohnNooney/KlartextDMS/issues/99))
+- [The Host holds one in-memory Extraction index](./adr/0011-host-extraction-index.md) — `LibraryStore.extractionsByDocId`. ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101))
+- [Translations run as on-demand Bus jobs and persist page by page](./adr/0009-translation-persisted-per-page.md) — ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105), research [#100](https://github.com/JohnNooney/KlartextDMS/issues/100))
+
+Feature decisions without ADRs: [Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/102) (prototype `prototype/folder-attention-overview`, behavioral reference only — no code ports), [library search](https://github.com/JohnNooney/KlartextDMS/issues/103), [calendar reminders](https://github.com/JohnNooney/KlartextDMS/issues/104).
+
+## v2 build order
+
+Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel.
+
+| # | Issue | Blocked by | Decisions it implements |
+|---|---|---|---|
+| A1 | [Extraction v2 core: bus-contract schema, normalizer, Guest prompt, fixtures](https://github.com/JohnNooney/KlartextDMS/issues/117) | — | #99, ADR 0010 |
+| A2 | [Guest panel: Action Items vs Key Takeaways, timing chips, v1 note](https://github.com/JohnNooney/KlartextDMS/issues/118) | #117 | #99 |
+| A3 | [Host Extraction index: LibraryStore.extractionsByDocId](https://github.com/JohnNooney/KlartextDMS/issues/119) | #117 | #101, ADR 0011 |
+| A4 | [Host Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/120) | #117, #119 | #102 |
+| A5 | [Library search across Documents, Folders, and Extractions](https://github.com/JohnNooney/KlartextDMS/issues/121) | #119 | #103 |
+| A6 | [Calendar reminders from Action Items](https://github.com/JohnNooney/KlartextDMS/issues/122) | #117, #118, #119, #120 | #104 |
+| B1 | [Translation Bus contract and Guest translation client](https://github.com/JohnNooney/KlartextDMS/issues/123) | — | #105, ADR 0009 |
+| B2 | [Host Translation orchestration, persistence, and rules](https://github.com/JohnNooney/KlartextDMS/issues/124) | #123 | #105, ADR 0009 |
+| B3 | [Reader Translated view](https://github.com/JohnNooney/KlartextDMS/issues/125) | #124 | #105 |
+
+## Explicitly not in v2
+
+- Direct Google Calendar API event creation via OAuth ([#104](https://github.com/JohnNooney/KlartextDMS/issues/104)).
+- Split original/translated view, search over Translations, Translations as Extraction input ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105)).
+- Search backend, fuzzy matching, EN↔DE query translation ([#103](https://github.com/JohnNooney/KlartextDMS/issues/103)); libraries beyond ~2,000 Documents ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101)).
