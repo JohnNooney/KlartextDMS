@@ -36,6 +36,10 @@ _Avoid_: risk, alert, red flag, critical warning
 A passive reference fact directly supported by a quotation from a Document that explains how the agreement or letter works (amounts, coverage limits, repair caps, settlement rules) without requiring a scheduled action or compliance step.
 _Avoid_: highlight, bullet
 
+**Reminder**:
+A calendar entry the user exports from one Action Item (as an `.ics` file or a Google Calendar link) so the deadline, cadence, or notice period lands in their own calendar. Klartext does not store or track a Reminder after export.
+_Avoid_: alert, notification, calendar event
+
 **Extraction Job**:
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
 _Avoid_: analysis, task, background job
