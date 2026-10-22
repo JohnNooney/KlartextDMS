@@ -221,4 +221,25 @@ describe('Reader (issue #29)', () => {
     fixture.detectChanges();
     expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
   });
+
+  // Issue #120: the Folder attention overview opens a Document at a cited
+  // page — the request waits in PageFocus until that Document's viewer has
+  // loaded, then lands once.
+  it('lands a pending request for the open Document once its PDF has loaded', async () => {
+    const { fixture, el } = await setup(record('d1', 'Brief'));
+    const focus = TestBed.inject(PageFocus);
+
+    focus.showOnceOpen('other', { page: 4 });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    fixture.detectChanges();
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 1 of 4');
+    expect(focus.landed()).toBeNull();
+
+    focus.showOnceOpen('d1', { page: 3, quote: 'Die Kündigungsfrist' });
+    fixture.detectChanges();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    fixture.detectChanges();
+    expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 3 of 4');
+    expect(focus.landed()).toMatchObject({ page: 3, quote: 'Die Kündigungsfrist' });
+  });
 });

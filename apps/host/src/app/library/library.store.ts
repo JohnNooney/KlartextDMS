@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import type { ExtractionRecord } from '@klartext/bus-contract';
+import type { ExtractionRecord, GuestShowPagePayload } from '@klartext/bus-contract';
 import { HostBus } from '../bus/host-bus';
 import type { DocumentRecord } from '../data/document';
 import { InvalidDocumentFileError } from '../data/document-input';
@@ -17,6 +17,7 @@ import {
 import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
 import { UploadCancelledError, UploadPipeline, type UploadHandle } from '../data/upload-pipeline';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { ToastService } from '../toasts/toast.service';
 
 /**
@@ -42,6 +43,7 @@ export class LibraryStore {
   private readonly toasts = inject(ToastService);
   private readonly bus = inject(HostBus);
   private readonly openDocument = inject(OpenDocument);
+  private readonly pageFocus = inject(PageFocus);
 
   /** The live library feed; `null` until the first snapshot lands. */
   readonly documents = signal<DocumentRecord[] | null>(null);
@@ -364,6 +366,17 @@ export class LibraryStore {
   open(documentId: string): void {
     const doc = this.docById(documentId);
     if (doc?.status === 'ready') this.openDocument.open(doc);
+  }
+
+  /**
+   * Opens a `ready` Document and, when a `focus` is given, jumps to its cited
+   * page and quote once the PDF has loaded (Folder attention overview, #120).
+   */
+  openAt(documentId: string, focus?: GuestShowPagePayload): void {
+    const doc = this.docById(documentId);
+    if (doc?.status !== 'ready') return;
+    if (focus) this.pageFocus.showOnceOpen(documentId, focus);
+    this.openDocument.open(doc);
   }
 
   close(): void {

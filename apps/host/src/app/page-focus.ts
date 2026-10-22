@@ -33,6 +33,9 @@ export class PageFocus {
   /** The last request that actually jumped — `null` until the first lands. */
   readonly landed = signal<PageFocusRequest | null>(null);
 
+  /** A request waiting for its Document's viewer to load (issue #120). */
+  readonly pending = signal<{ documentId: string; request: GuestShowPagePayload } | null>(null);
+
   /** Registers the open Document's navigator; the return value unregisters. */
   registerNavigator(navigator: PageNavigator): () => void {
     this.navigator = navigator;
@@ -53,5 +56,22 @@ export class PageFocus {
     }
     navigator.showPage(request);
     this.landed.set({ ...request, seq: ++this.seq });
+  }
+
+  /**
+   * Queues a request for a Document that is still opening: the Reader lands
+   * it once that Document's PDF has loaded (the Folder attention overview's
+   * click-through, issue #120).
+   */
+  showOnceOpen(documentId: string, request: GuestShowPagePayload): void {
+    this.pending.set({ documentId, request });
+  }
+
+  /** Lands and clears the pending request when it targets `documentId`. */
+  landPending(documentId: string): void {
+    const pending = this.pending();
+    if (pending?.documentId !== documentId) return;
+    this.pending.set(null);
+    this.show(pending.request);
   }
 }

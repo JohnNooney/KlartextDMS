@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, input, signal, viewChild, untracked } from '@angular/core';
 import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
@@ -34,11 +34,16 @@ export class Reader {
    * quote and all (issue #80) — to the viewer.
    */
   constructor() {
-    const unregister = inject(PageFocus).registerNavigator({
+    const pageFocus = inject(PageFocus);
+    const unregister = pageFocus.registerNavigator({
       pageCount: () => this.viewer()?.pageCount() ?? 0,
       showPage: (request) => this.showPage(request),
     });
     inject(DestroyRef).onDestroy(unregister);
+    effect(() => {
+      if (pageFocus.pending() === null || (this.viewer()?.pageCount() ?? 0) === 0) return;
+      untracked(() => pageFocus.landPending(this.doc().id));
+    });
   }
 
   /** The toolbar toggle's read on the shared lane state (issue #76). */

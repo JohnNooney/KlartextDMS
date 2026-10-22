@@ -5,6 +5,8 @@ import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { OpenDocument } from '../open-document';
 import { Reader } from '../reader/reader';
+import { AttentionPanel } from './attention-panel';
+import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
 import { describeContents } from './folder-contents';
@@ -43,6 +45,7 @@ type DialogState =
   templateUrl: './library.html',
   styleUrl: './library.scss',
   imports: [
+    AttentionPanel,
     DocumentTile,
     FolderTile,
     FolderTreeView,
@@ -71,6 +74,29 @@ export class Library {
   // the signed-in session (issue #31); it self-attaches to the Bus, and the
   // tile's ⋮ Retry analysis routes through it (issue #32).
   protected readonly flow = inject(ExtractionFlow);
+
+  /** The Folder attention overview (issue #120): Action Items under the browsed Folder, deep. */
+  protected readonly attention = computed(() =>
+    buildAttentionOverview({
+      documents: this.store.documents() ?? [],
+      folders: this.store.folders() ?? [],
+      extractions: this.store.extractionsByDocId(),
+      scopeFolderId: this.openDocument.folderId(),
+      today: new Date(),
+    }),
+  );
+
+  /** "Reading n of m documents…" while the Extraction index is still loading. */
+  protected readonly reading = computed(() => {
+    if (this.store.extractionsLoaded()) return null;
+    const scoped = readyDocumentsInScope(
+      this.store.documents() ?? [],
+      this.store.folders() ?? [],
+      this.openDocument.folderId(),
+    );
+    const index = this.store.extractionsByDocId();
+    return { read: scoped.filter(({ doc }) => index.has(doc.id)).length, total: scoped.length };
+  });
 
   protected readonly dropHover = signal(false);
   protected readonly openDocument = inject(OpenDocument);
@@ -147,6 +173,13 @@ export class Library {
         void this.store.retryFolderDelete(folder.id);
         break;
     }
+  }
+
+  protected openAttentionItem(item: AttentionItem): void {
+    this.store.openAt(
+      item.documentId,
+      item.page ? { page: item.page, quote: item.sourceQuote } : undefined,
+    );
   }
 
   protected openFolder(folderId: string | null): void {
