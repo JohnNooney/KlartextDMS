@@ -2,9 +2,12 @@ import { z } from 'zod';
 import type { SchemaRequest } from 'firebase/ai';
 import type {
   DocumentType,
+  ActionTiming,
   ExtractionContent,
   ExtractionStatus,
-  TakeawayImportance,
+  RecurrenceCadence,
+  NoticeUnit,
+  ActionTimingKind,
 } from '@klartext/bus-contract';
 
 /**
@@ -19,7 +22,9 @@ import type {
  * to the Guest's extraction pipeline. It enforces the rules the wire schema
  * cannot: required-conditionals (`documentTypeLabel` iff `OTHER`,
  * `statusExplanation` iff non-`COMPLETE`), the 200-word summary cap, BCP 47
- * `sourceLanguage`, quote bounds, one-based `page`, and the five-CRITICAL cap.
+ * `sourceLanguage`, quote bounds, one-based `page`, the list caps, and the
+ * per-`kind` `timing` invariants (the wire schema is a flat object because
+ * `SchemaRequest` has no `oneOf`).
  * Model-emitted `null`s normalize to absent — shape fixups, not semantic
  * coercion; nothing else is repaired silently.
  */
@@ -40,7 +45,16 @@ const EXTRACTION_STATUSES = [
   'UNSUPPORTED_DOCUMENT',
 ] as const satisfies readonly ExtractionStatus[];
 
-const TAKEAWAY_IMPORTANCES = ['NORMAL', 'CRITICAL'] as const satisfies readonly TakeawayImportance[];
+const CADENCES = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'] as const satisfies readonly RecurrenceCadence[];
+
+const NOTICE_UNITS = ['DAYS', 'WEEKS', 'MONTHS', 'YEARS'] as const satisfies readonly NoticeUnit[];
+
+const TIMING_KINDS = [
+  'FIXED_DATE',
+  'RECURRING',
+  'NOTICE_PERIOD',
+  'NONE',
+] as const satisfies readonly ActionTimingKind[];
 
 export const extractionResponseSchema: SchemaRequest = {
   type: 'object',
@@ -57,19 +71,46 @@ export const extractionResponseSchema: SchemaRequest = {
       enum: [...EXTRACTION_STATUSES],
     },
     statusExplanation: { type: 'string', nullable: true },
-    keyTakeaways: {
+    actionItems: {
       type: 'array',
       minItems: 0,
-      maxItems: 12,
+      maxItems: 6,
       items: {
         type: 'object',
         properties: {
           text: { type: 'string' },
-          importance: { type: 'string', enum: [...TAKEAWAY_IMPORTANCES] },
+          sourceQuote: { type: 'string' },
+          page: { type: 'integer', minimum: 1, nullable: true },
+          timing: {
+            type: 'object',
+            properties: {
+              kind: { type: 'string', enum: [...TIMING_KINDS] },
+              dueDate: { type: 'string', nullable: true },
+              cadence: { type: 'string', enum: [...CADENCES], nullable: true },
+              dayOfMonth: { type: 'integer', minimum: 1, maximum: 31, nullable: true },
+              scheduleLabel: { type: 'string', nullable: true },
+              duration: { type: 'integer', minimum: 1, nullable: true },
+              unit: { type: 'string', enum: [...NOTICE_UNITS], nullable: true },
+              anchor: { type: 'string', nullable: true },
+            },
+            required: ['kind'],
+          },
+        },
+        required: ['text', 'sourceQuote', 'timing'],
+      },
+    },
+    keyTakeaways: {
+      type: 'array',
+      minItems: 0,
+      maxItems: 10,
+      items: {
+        type: 'object',
+        properties: {
+          text: { type: 'string' },
           sourceQuote: { type: 'string' },
           page: { type: 'integer', minimum: 1, nullable: true },
         },
-        required: ['text', 'importance', 'sourceQuote'],
+        required: ['text', 'sourceQuote'],
       },
     },
   },
@@ -78,6 +119,7 @@ export const extractionResponseSchema: SchemaRequest = {
     'sourceLanguage',
     'plainEnglishSummary',
     'extractionStatus',
+    'actionItems',
     'keyTakeaways',
   ],
 };
@@ -92,34 +134,85 @@ const isBcp47 = (tag: string): boolean => {
   }
 };
 
-const optionalString = z
-  .string()
-  .nullish()
-  .transform((v) => v ?? undefined);
+const optionalNullish = <T extends z.ZodType>(schema: T) =>
+  schema.nullish().transform((v) => v ?? undefined);
+
+const page = optionalNullish(z.number().int().min(1));
+
+const isCalendarDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+};
+
+const timingSchema = z
+  .object({
+    kind: z.enum(TIMING_KINDS),
+    dueDate: optionalNullish(z.string()),
+    cadence: optionalNullish(z.enum(CADENCES)),
+    dayOfMonth: optionalNullish(z.number().int().min(1).max(31)),
+    scheduleLabel: optionalNullish(z.string()),
+    duration: optionalNullish(z.number().int().min(1)),
+    unit: optionalNullish(z.enum(NOTICE_UNITS)),
+    anchor: optionalNullish(z.string()),
+  })
+  .transform((raw, ctx): ActionTiming => {
+    const { kind, ...fields } = raw;
+    const allowed: Record<ActionTimingKind, readonly string[]> = {
+      FIXED_DATE: ['dueDate'],
+      RECURRING: ['cadence', 'dayOfMonth', 'scheduleLabel'],
+      NOTICE_PERIOD: ['duration', 'unit', 'anchor'],
+      NONE: [],
+    };
+    const fail = (field: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [field], message });
+    for (const [field, value] of Object.entries(fields)) {
+      if (value !== undefined && !allowed[kind].includes(field)) {
+        fail(field, `${field} must be absent for timing kind ${kind}`);
+      }
+    }
+    const text = (field: 'scheduleLabel' | 'anchor', max: number) => {
+      const value = fields[field];
+      if (!value || value.length > max) fail(field, `${field} must be 1-${max} characters`);
+    };
+    if (kind === 'FIXED_DATE') {
+      if (!fields.dueDate || !isCalendarDate(fields.dueDate)) {
+        fail('dueDate', 'dueDate must be a valid ISO YYYY-MM-DD date');
+      }
+    } else if (kind === 'RECURRING') {
+      if (!fields.cadence) fail('cadence', 'cadence is required for RECURRING');
+      text('scheduleLabel', 60);
+    } else if (kind === 'NOTICE_PERIOD') {
+      if (fields.duration === undefined) fail('duration', 'duration is required for NOTICE_PERIOD');
+      if (!fields.unit) fail('unit', 'unit is required for NOTICE_PERIOD');
+      text('anchor', 80);
+    }
+    const present = Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== undefined),
+    );
+    return { kind, ...present } as ActionTiming;
+  });
 
 const keyTakeawaySchema = z.object({
   text: z.string().min(1),
-  importance: z.enum(TAKEAWAY_IMPORTANCES),
   sourceQuote: z.string().min(1).max(500),
-  page: z
-    .number()
-    .int()
-    .min(1)
-    .nullish()
-    .transform((v) => v ?? undefined),
+  page,
 });
+
+const actionItemSchema = keyTakeawaySchema.extend({ timing: timingSchema });
 
 export const extractionContentSchema = z
   .object({
     documentType: z.enum(DOCUMENT_TYPES),
-    documentTypeLabel: optionalString,
+    documentTypeLabel: optionalNullish(z.string()),
     sourceLanguage: z.string().refine(isBcp47, 'sourceLanguage must be a BCP 47 tag'),
     plainEnglishSummary: z
       .string()
       .refine((s) => wordCount(s) <= 200, 'plainEnglishSummary exceeds 200 words'),
     extractionStatus: z.enum(EXTRACTION_STATUSES),
-    statusExplanation: optionalString,
-    keyTakeaways: z.array(keyTakeawaySchema).min(0).max(12),
+    statusExplanation: optionalNullish(z.string()),
+    actionItems: z.array(actionItemSchema).min(0).max(6),
+    keyTakeaways: z.array(keyTakeawaySchema).min(0).max(10),
   })
   .superRefine((content, ctx) => {
     if (content.documentType === 'OTHER' && content.documentTypeLabel === undefined) {
@@ -144,12 +237,11 @@ export const extractionContentSchema = z
         message: 'statusExplanation must be omitted for COMPLETE',
       });
     }
-    const critical = content.keyTakeaways.filter((t) => t.importance === 'CRITICAL').length;
-    if (critical > 5) {
+    if (!complete && (content.actionItems.length > 0 || content.keyTakeaways.length > 0)) {
       ctx.addIssue({
         code: 'custom',
-        path: ['keyTakeaways'],
-        message: 'at most five Key Takeaways may be CRITICAL',
+        path: ['actionItems'],
+        message: 'actionItems and keyTakeaways must be empty for non-COMPLETE statuses',
       });
     }
   });

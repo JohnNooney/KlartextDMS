@@ -28,14 +28,7 @@
       "extractionStatus": "COMPLETE",
       "keyTakeaways": [
         {
-          "text": "To move out you must give three months' notice in writing.",
-          "importance": "CRITICAL",
-          "sourceQuote": "Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.",
-          "page": 3
-        },
-        {
           "text": "Rent is due by the third working day of each month.",
-          "importance": "NORMAL",
           "sourceQuote": "Die Miete ist spätestens am dritten Werktag eines jeden Monats zu zahlen.",
           "page": 2
         }
@@ -43,7 +36,18 @@
       "createdAt": {
         "seconds": 1710500400,
         "nanoseconds": 0
-      }
+      },
+      "actionItems": [
+        {
+          "id": "ai_0aef472a4d4df2",
+          "text": "To move out you must give three months' notice in writing.",
+          "sourceQuote": "Die Kündigung bedarf der Schriftform. Die Kündigungsfrist beträgt drei Monate.",
+          "page": 3,
+          "timing": {
+            "kind": "NONE"
+          }
+        }
+      ]
     },
     "extractionState": "none"
   }

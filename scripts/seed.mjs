@@ -63,6 +63,17 @@ const extractionFixtures = JSON.parse(
   ).toString('utf8'),
 );
 
+// `doc-versicherungsschein` is seeded as a stored schemaVersion 1 record so
+// opening it exercises read-time normalization (ADR 0010); re-analyzing it
+// upgrades it to v2 via the fake provider.
+const legacyV1Fixtures = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL('../packages/bus-contract/src/fixtures/extractions-v1.json', import.meta.url),
+    ),
+  ).toString('utf8'),
+);
+
 // Three fixture Documents spread across nested Folders and the root, matching
 // the prototype library. `hasExtraction` controls whether a stored Extraction is
 // seeded at documents/{id}/extractions/current.
@@ -135,7 +146,7 @@ for (const doc of DOCUMENTS) {
   });
   if (doc.hasExtraction) {
     await db.doc(`users/${USER.uid}/documents/${doc.id}/extractions/current`).set({
-      ...extractionFixtures[doc.id],
+      ...(legacyV1Fixtures[doc.id] ?? extractionFixtures[doc.id]),
       createdAt: FieldValue.serverTimestamp(),
     });
   }

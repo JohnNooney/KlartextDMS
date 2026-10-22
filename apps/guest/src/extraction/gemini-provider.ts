@@ -127,7 +127,7 @@ function readCandidate(
     candidate: {
       ...validated.content,
       documentId,
-      schemaVersion: 1,
+      schemaVersion: 2,
       promptVersion: EXTRACTION_PROMPT_VERSION,
       model: modelId,
       ...(usage ? { usage } : {}),

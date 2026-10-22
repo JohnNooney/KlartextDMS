@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages } from '@klartext/bus-contract';
-import type { ExtractionRecord, KeyTakeaway } from '@klartext/bus-contract';
+import type { ExtractionRecord, IdentifiedActionItem, KeyTakeaway } from '@klartext/bus-contract';
 import ExtractionPanel from './ExtractionPanel.vue';
 
 const fixture = goldenFixtureMessages.INIT_SESSION.payload.extraction!;
@@ -16,7 +16,11 @@ function record(extraction: Partial<ExtractionRecord>): ExtractionRecord {
 }
 
 function takeaway(partial: Partial<KeyTakeaway>): KeyTakeaway {
-  return { text: 'x', importance: 'NORMAL', sourceQuote: 'q', ...partial };
+  return { text: 'x', sourceQuote: 'q', ...partial };
+}
+
+function actionItem(partial: Partial<IdentifiedActionItem>): IdentifiedActionItem {
+  return { id: `ai_${partial.text ?? 'x'}`, text: 'x', sourceQuote: 'q', timing: { kind: 'NONE' }, ...partial };
 }
 
 const attentionButton = (wrapper: ReturnType<typeof mount>) =>
@@ -57,11 +61,8 @@ describe('ExtractionPanel', () => {
   it('offers an attention callout carrying the Critical Warning count', () => {
     const two = record({
       extractionStatus: 'COMPLETE',
-      keyTakeaways: [
-        takeaway({ text: 'a', importance: 'CRITICAL' }),
-        takeaway({ text: 'b' }),
-        takeaway({ text: 'c', importance: 'CRITICAL' }),
-      ],
+      actionItems: [actionItem({ text: 'a' }), actionItem({ text: 'c' })],
+      keyTakeaways: [takeaway({ text: 'b' })],
     });
     const wrapper = mount(ExtractionPanel, { props: { extraction: two } });
     expect(attentionButton(wrapper)?.text()).toContain('2 things need your attention');
@@ -70,6 +71,7 @@ describe('ExtractionPanel', () => {
   it('omits the attention callout when nothing is critical', () => {
     const calm = record({
       extractionStatus: 'COMPLETE',
+      actionItems: [],
       keyTakeaways: [takeaway({ text: 'a' }), takeaway({ text: 'b' })],
     });
     const wrapper = mount(ExtractionPanel, { props: { extraction: calm } });
@@ -104,12 +106,12 @@ describe('ExtractionPanel', () => {
   // sections (the takeaway's place in the Extraction), the plain-English
   // text, and a trailing page label when the Extraction located one.
 
-  it('numbers rows by their place in the Extraction across both sections', () => {
+  it('numbers rows continuously: Action Items first, then Key Takeaways', () => {
     const ex = record({
       extractionStatus: 'COMPLETE',
+      actionItems: [actionItem({ text: 'critical mid', page: 2 })],
       keyTakeaways: [
         takeaway({ text: 'first normal', page: 1 }),
-        takeaway({ text: 'critical mid', importance: 'CRITICAL', page: 2 }),
         takeaway({ text: 'last normal', page: 4 }),
       ],
     });
@@ -118,13 +120,13 @@ describe('ExtractionPanel', () => {
     const attention = wrapper.find('[data-section="attention"]');
     expect(attention.text()).toContain('critical mid');
     expect(attention.findAll('li')).toHaveLength(1);
-    expect(attention.find('li').text()).toContain('2');
+    expect(attention.find('li').text()).toContain('1');
     expect(attention.find('li').text()).toContain('p. 2');
 
     const takeaways = wrapper.find('[data-section="takeaways"]');
     const rows = takeaways.findAll('li');
     expect(rows).toHaveLength(2);
-    expect(rows[0]!.text()).toContain('1');
+    expect(rows[0]!.text()).toContain('2');
     expect(rows[0]!.text()).toContain('first normal');
     expect(rows[0]!.text()).toContain('p. 1');
     expect(rows[1]!.text()).toContain('3');
@@ -167,13 +169,8 @@ describe('ExtractionPanel', () => {
   it('emits showPage with page, sourceQuote, and critical for a Critical Warning row', async () => {
     const ex = record({
       extractionStatus: 'COMPLETE',
+      actionItems: [actionItem({ text: 'deadline', sourceQuote: 'Frist drei Monate', page: 3 })],
       keyTakeaways: [
-        takeaway({
-          text: 'deadline',
-          sourceQuote: 'Frist drei Monate',
-          importance: 'CRITICAL',
-          page: 3,
-        }),
         takeaway({ text: 'rent', sourceQuote: 'dritten Werktag', page: 2 }),
       ],
     });
@@ -197,6 +194,19 @@ describe('ExtractionPanel', () => {
 
     await row.trigger('click');
 
+    expect(wrapper.emitted('showPage')).toEqual([
+      [{ page: 2, quote: 'dritten Werktag', critical: false }],
+    ]);
+  });
+
+  it('resolves a Key Takeaway row correctly when Action Items precede it', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      actionItems: [actionItem({ text: 'deadline', sourceQuote: 'Frist', page: 3 })],
+      keyTakeaways: [takeaway({ text: 'rent', sourceQuote: 'dritten Werktag', page: 2 })],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    await wrapper.findAll('button').find((b) => b.text().includes('rent'))!.trigger('click');
     expect(wrapper.emitted('showPage')).toEqual([
       [{ page: 2, quote: 'dritten Werktag', critical: false }],
     ]);
@@ -262,6 +272,7 @@ describe('ExtractionPanel', () => {
           extraction: record({
             extractionStatus,
             statusExplanation: 'Not enough readable text to explain this document.',
+            actionItems: [],
             keyTakeaways: [],
           }),
         },
@@ -291,7 +302,7 @@ describe('ExtractionPanel', () => {
     (extractionStatus) => {
       const wrapper = mount(ExtractionPanel, {
         props: {
-          extraction: record({ extractionStatus, statusExplanation: 'x', keyTakeaways: [] }),
+          extraction: record({ extractionStatus, statusExplanation: 'x', actionItems: [], keyTakeaways: [] }),
         },
       });
       expect(wrapper.find('button[aria-label="More actions"]').exists()).toBe(false);
@@ -346,13 +357,8 @@ describe('ExtractionPanel outline rail (issue #77)', () => {
 
   const ex = record({
     extractionStatus: 'COMPLETE',
-    keyTakeaways: [
-      takeaway({ text: 'c1', importance: 'CRITICAL' }),
-      takeaway({ text: 'n1' }),
-      takeaway({ text: 'c2', importance: 'CRITICAL' }),
-      takeaway({ text: 'n2' }),
-      takeaway({ text: 'n3' }),
-    ],
+    actionItems: [actionItem({ text: 'c1' }), actionItem({ text: 'c2' })],
+    keyTakeaways: [takeaway({ text: 'n1' }), takeaway({ text: 'n2' }), takeaway({ text: 'n3' })],
   });
 
   it('renders no rail before the Host reports a presentation', () => {
@@ -397,6 +403,7 @@ describe('ExtractionPanel outline rail (issue #77)', () => {
   it('omits rail buttons for sections the Extraction does not render', () => {
     const calm = record({
       extractionStatus: 'COMPLETE',
+      actionItems: [],
       keyTakeaways: [takeaway({ text: 'n1' })],
     });
     const wrapper = mount(ExtractionPanel, {
@@ -523,13 +530,8 @@ describe('ExtractionPanel jump bar (issue #79)', () => {
 
   const ex = record({
     extractionStatus: 'COMPLETE',
-    keyTakeaways: [
-      takeaway({ text: 'c1', importance: 'CRITICAL' }),
-      takeaway({ text: 'n1' }),
-      takeaway({ text: 'c2', importance: 'CRITICAL' }),
-      takeaway({ text: 'n2' }),
-      takeaway({ text: 'n3' }),
-    ],
+    actionItems: [actionItem({ text: 'c1' }), actionItem({ text: 'c2' })],
+    keyTakeaways: [takeaway({ text: 'n1' }), takeaway({ text: 'n2' }), takeaway({ text: 'n3' })],
   });
 
   it('renders no bar before the Host reports a presentation', () => {
@@ -558,6 +560,7 @@ describe('ExtractionPanel jump bar (issue #79)', () => {
   it('omits the attention segment when nothing is critical', () => {
     const calm = record({
       extractionStatus: 'COMPLETE',
+      actionItems: [],
       keyTakeaways: [takeaway({ text: 'n1' })],
     });
     const wrapper = mount(ExtractionPanel, {

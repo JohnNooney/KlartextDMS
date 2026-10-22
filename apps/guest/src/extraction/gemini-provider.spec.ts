@@ -28,14 +28,15 @@ const CONTENT: ExtractionContent = {
   sourceLanguage: 'de',
   plainEnglishSummary: 'The tax office reminds you to file your 2023 income tax return.',
   extractionStatus: 'COMPLETE',
-  keyTakeaways: [
+  actionItems: [
     {
       text: 'File your 2023 tax return by 31 July 2024, or a late-filing fee may be charged.',
-      importance: 'CRITICAL',
       sourceQuote: 'bis zum 31.07.2024 … Verspätungszuschlag',
       page: 1,
+      timing: { kind: 'FIXED_DATE', dueDate: '2024-07-31' },
     },
   ],
+  keyTakeaways: [],
 };
 
 function result(text: string, usageMetadata?: unknown): GenerateContentResult {
@@ -70,7 +71,7 @@ function fakeModel(responses: Array<GenerateContentResult | Error>): {
 const PDF_BYTES = new TextEncoder().encode('%PDF-1.4 fake').buffer as ArrayBuffer;
 
 describe('gemini provider — happy path', () => {
-  it('sends the v1 prompt and inline PDF bytes, returns a validated candidate', async () => {
+  it('sends the v2 prompt and inline PDF bytes, returns a validated candidate', async () => {
     const { model, requests } = fakeModel([
       result(JSON.stringify(CONTENT), {
         promptTokenCount: 3011,
@@ -85,7 +86,7 @@ describe('gemini provider — happy path', () => {
     expect(candidate).toEqual({
       ...CONTENT,
       documentId: 'doc-finanzamt',
-      schemaVersion: 1,
+      schemaVersion: 2,
       promptVersion: EXTRACTION_PROMPT_VERSION,
       model: MODEL_ID,
       usage: { promptTokens: 3011, candidatesTokens: 240, totalTokens: 3251 },
@@ -109,7 +110,12 @@ describe('gemini provider — happy path', () => {
 });
 
 describe('gemini provider — repair pass', () => {
-  const INVALID = { ...CONTENT, extractionStatus: 'INSUFFICIENT_CONTENT' };
+  const INVALID = {
+    ...CONTENT,
+    extractionStatus: 'INSUFFICIENT_CONTENT',
+    actionItems: [],
+    keyTakeaways: [],
+  };
 
   it('re-prompts once with the validation errors, then succeeds', async () => {
     const { model, requests } = fakeModel([

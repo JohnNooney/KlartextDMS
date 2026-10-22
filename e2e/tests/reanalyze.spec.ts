@@ -11,6 +11,11 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
   const fixture = seededExtraction('doc-versicherungsschein');
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
   await expect(page().getByRole('img', { name: /^Page 1 of/ })).toBeVisible();
+  // Seeded as a stored schemaVersion 1 record (ADR 0010): its CRITICAL
+  // takeaway is read as an Action Item under "Needs your attention".
+  await expect(panel.locator('[data-section="attention"]')).toContainText(
+    fixture.actionItems[0]!.text,
+  );
 
   // Slow the Host's byte fetch for the job so the queued state is observable.
   const bytes = `**/o/users%2F${SEED_USER.uid}%2Fdocuments%2Fdoc-versicherungsschein.pdf?*`;

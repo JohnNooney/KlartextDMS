@@ -36,7 +36,7 @@ test('an uploaded PDF is analyzed in the background and opens beside its Extract
     panel.getByRole('heading', { level: 1, name: 'Service charge statement' }),
   ).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
-  for (const takeaway of fixture.keyTakeaways) {
+  for (const takeaway of [...fixture.actionItems, ...fixture.keyTakeaways]) {
     await expect(panel.getByText(takeaway.text)).toBeVisible();
   }
 });

@@ -31,7 +31,7 @@ test('reader — a Document open beside its Extraction', async () => {
   await expect(panel.getByRole('heading', { level: 1, name: 'Tenancy agreement' })).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
   await expect(panel.getByRole('heading', { name: 'Needs your attention' })).toBeVisible();
-  for (const takeaway of fixture.keyTakeaways.filter((t) => t.importance === 'CRITICAL')) {
+  for (const takeaway of fixture.actionItems) {
     await expect(panel.getByText(takeaway.text)).toBeVisible();
   }
 

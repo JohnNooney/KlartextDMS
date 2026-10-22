@@ -6,6 +6,7 @@ import {
   SESSION_ACK_TIMEOUT_MS,
   isBusMessage,
   isExtractionCandidate,
+  normalizeExtractionRecord,
   sanitizeShowPage,
 } from '@klartext/bus-contract';
 import type {
@@ -164,10 +165,10 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         currentSession = {
           ...currentSession,
           sessionId: `sess_${++sessionSeq}`,
-          extraction: {
+          extraction: normalizeExtractionRecord({
             ...extraction!,
             createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
-          },
+          }),
           extractionState: 'none',
         };
         sendSession();

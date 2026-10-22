@@ -56,12 +56,12 @@ describe.runIf(RUN)('live Gemini round-trip', () => {
 
       expect(validateExtractionContent(candidate).ok).toBe(true);
       expect(candidate.documentId).toBe('doc-finanzamt');
-      expect(candidate.schemaVersion).toBe(1);
-      expect(candidate.promptVersion).toBe('klartext-extraction-v1');
+      expect(candidate.schemaVersion).toBe(2);
+      expect(candidate.promptVersion).toBe('klartext-extraction-v2');
       expect(candidate.model).toBe(EXTRACTION_MODEL);
       console.log(
         `[live] ${candidate.extractionStatus} — ${candidate.documentType}, ` +
-          `${candidate.keyTakeaways.length} takeaways, ` +
+          `${candidate.actionItems.length} action items, ${candidate.keyTakeaways.length} takeaways, ` +
           `${candidate.usage?.totalTokens ?? '?'} tokens`,
       );
     } finally {

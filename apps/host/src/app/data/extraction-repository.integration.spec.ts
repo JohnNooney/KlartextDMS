@@ -2,7 +2,11 @@
 // (issue #27). Exercises the real Firestore implementation of the
 // Extraction repository against the committed rules (ADR 0008: one Extraction
 // per Document, persisted at `extractions/current` and reused).
-import type { ExtractionCandidate } from '@klartext/bus-contract';
+import type { ExtractionCandidate, LegacyExtractionRecordV1 } from '@klartext/bus-contract';
+import { legacyV1ExtractionFixtures } from '@klartext/bus-contract';
+import { setDoc } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
+import { extractionRef } from './paths';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FirestoreDocumentRepository } from './document-repository';
 import { FirestoreExtractionRepository } from './extraction-repository';
@@ -11,13 +15,20 @@ import { emulatorHost } from './testing';
 function candidate(documentId: string): ExtractionCandidate {
   return {
     documentId,
-    schemaVersion: 1,
-    promptVersion: 'klartext-extraction-v1',
+    schemaVersion: 2,
+    promptVersion: 'klartext-extraction-v2',
     model: 'gemini-test-model',
     documentType: 'TENANCY_AGREEMENT',
     sourceLanguage: 'de',
     plainEnglishSummary: 'A tenancy agreement with a notice period.',
     extractionStatus: 'COMPLETE',
+    actionItems: [
+      {
+        text: 'Give three months notice.',
+        sourceQuote: 'Die Kündigungsfrist beträgt drei Monate.',
+        timing: { kind: 'NOTICE_PERIOD', duration: 3, unit: 'MONTHS', anchor: 'moving out' },
+      },
+    ],
     keyTakeaways: [],
   };
 }
@@ -26,9 +37,13 @@ describe('FirestoreExtractionRepository (emulator)', () => {
   let documents: FirestoreDocumentRepository;
   let extractions: FirestoreExtractionRepository;
   let documentId: string;
+  let firestore: Firestore;
+  let ownerId: string;
 
   beforeEach(async () => {
     const host = await emulatorHost();
+    firestore = host.firestore;
+    ownerId = host.uid;
     documents = new FirestoreDocumentRepository(host.firestore, host.storage, host.uid);
     extractions = new FirestoreExtractionRepository(host.firestore, host.uid);
     // Extractions live under their Document — create the parent first.
@@ -69,7 +84,6 @@ describe('FirestoreExtractionRepository (emulator)', () => {
       keyTakeaways: [
         {
           text: 'Notice period is three months.',
-          importance: 'NORMAL' as const,
           sourceQuote: 'Die Kündigungsfrist beträgt drei Monate.',
           page: undefined,
         },
@@ -82,6 +96,25 @@ describe('FirestoreExtractionRepository (emulator)', () => {
     expect('documentTypeLabel' in stored!).toBe(false);
     expect('statusExplanation' in stored!).toBe(false);
     expect('page' in stored!.keyTakeaways[0]!).toBe(false);
+  });
+
+  it('normalizes a stored schemaVersion 1 record on read (ADR 0010)', async () => {
+    const legacy: Omit<LegacyExtractionRecordV1, 'createdAt'> = {
+      ...legacyV1ExtractionFixtures['doc-versicherungsschein']!,
+      documentId,
+    };
+    await setDoc(extractionRef(firestore, ownerId, documentId), {
+      ...legacy,
+      createdAt: new Date(),
+    });
+
+    const stored = await extractions.get(documentId);
+    expect(stored?.schemaVersion).toBe(1);
+    expect(stored?.actionItems).toHaveLength(1);
+    expect(stored?.actionItems[0]).toMatchObject({ timing: { kind: 'NONE' } });
+    expect(stored?.actionItems[0]?.id).toMatch(/^ai_/);
+    expect(stored?.keyTakeaways).toHaveLength(1);
+    expect(stored?.keyTakeaways[0]).not.toHaveProperty('importance');
   });
 
   it('replaces the stored Extraction on re-save — one per Document', async () => {

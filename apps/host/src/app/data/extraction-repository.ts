@@ -5,7 +5,12 @@
  * open; re-analysis replaces it. The Host adds the Firestore server
  * timestamp; the Guest never touches Firestore (ADR 0001).
  */
-import type { ExtractionCandidate, ExtractionRecord } from '@klartext/bus-contract';
+import { normalizeExtractionRecord } from '@klartext/bus-contract';
+import type {
+  ExtractionCandidate,
+  ExtractionRecord,
+  StoredExtractionRecord,
+} from '@klartext/bus-contract';
 import { getDoc, serverTimestamp, setDoc, type Firestore } from 'firebase/firestore';
 import { extractionRef } from './paths';
 
@@ -24,7 +29,7 @@ export class FirestoreExtractionRepository implements ExtractionRepository {
 
   async get(documentId: string): Promise<ExtractionRecord | null> {
     const snap = await getDoc(extractionRef(this.firestore, this.ownerId, documentId));
-    return snap.exists() ? (snap.data() as ExtractionRecord) : null;
+    return snap.exists() ? normalizeExtractionRecord(snap.data() as StoredExtractionRecord) : null;
   }
 
   async save(documentId: string, extraction: ExtractionCandidate): Promise<void> {

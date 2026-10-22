@@ -21,8 +21,8 @@ test.describe('desktop lane', () => {
     // Count badges mirror the section contents — Critical Warnings carry the
     // warning tint; the summary has none.
     const fixture = seededExtraction('doc-mietvertrag');
-    const critical = fixture.keyTakeaways.filter((t) => t.importance === 'CRITICAL').length;
-    const normal = fixture.keyTakeaways.length - critical;
+    const critical = fixture.actionItems.length;
+    const normal = fixture.keyTakeaways.length;
     const attention = rail.getByRole('button', { name: 'Needs your attention' });
     const takeaways = rail.getByRole('button', { name: 'Key takeaways' });
     await expect(attention).toHaveText(String(critical));

@@ -12,12 +12,19 @@ const VALID: ExtractionContent = {
   sourceLanguage: 'de',
   plainEnglishSummary: 'A rental agreement for a flat in Berlin.',
   extractionStatus: 'COMPLETE',
-  keyTakeaways: [
+  actionItems: [
     {
       text: "Three months' written notice is required to end the tenancy.",
-      importance: 'CRITICAL',
       sourceQuote: 'Die Kündigungsfrist beträgt drei Monate.',
       page: 3,
+      timing: { kind: 'NOTICE_PERIOD', duration: 3, unit: 'MONTHS', anchor: 'moving out' },
+    },
+  ],
+  keyTakeaways: [
+    {
+      text: 'Service charges are settled once a year.',
+      sourceQuote: 'Über die Vorauszahlungen wird jährlich abgerechnet.',
+      page: 2,
     },
   ],
 };
@@ -33,7 +40,7 @@ describe('validateExtractionContent', () => {
   });
 
   it('rejects non-objects and missing required fields', () => {
-    for (const input of [null, 'x', 42, {}, { ...VALID, keyTakeaways: undefined }]) {
+    for (const input of [null, 'x', 42, {}, { ...VALID, keyTakeaways: undefined }, { ...VALID, actionItems: undefined }]) {
       expect(validateExtractionContent(input).ok).toBe(false);
     }
   });
@@ -61,7 +68,12 @@ describe('validateExtractionContent', () => {
     for (const status of ['INSUFFICIENT_CONTENT', 'UNSUPPORTED_DOCUMENT'] as const) {
       expect(
         validateExtractionContent(
-          valid({ extractionStatus: status, statusExplanation: 'Blank scans only.' }),
+          valid({
+            extractionStatus: status,
+            statusExplanation: 'Blank scans only.',
+            actionItems: [],
+            keyTakeaways: [],
+          }),
         ).ok,
       ).toBe(true);
       expect(validateExtractionContent(valid({ extractionStatus: status })).ok).toBe(false);
@@ -86,41 +98,42 @@ describe('validateExtractionContent', () => {
     expect(validateExtractionContent(valid({ plainEnglishSummary: words(201) })).ok).toBe(false);
   });
 
-  it('bounds keyTakeaways to 0–12 items', () => {
-    const takeaway = { ...VALID.keyTakeaways[0]!, importance: 'NORMAL' };
+  it('bounds keyTakeaways to 0–10 items', () => {
+    const takeaway = VALID.keyTakeaways[0]!;
     expect(validateExtractionContent(valid({ keyTakeaways: [] })).ok).toBe(true);
-    expect(
-      validateExtractionContent(valid({ keyTakeaways: Array(12).fill(takeaway) })).ok,
-    ).toBe(true);
-    expect(
-      validateExtractionContent(valid({ keyTakeaways: Array(13).fill(takeaway) })).ok,
-    ).toBe(false);
+    expect(validateExtractionContent(valid({ keyTakeaways: Array(10).fill(takeaway) })).ok).toBe(
+      true,
+    );
+    expect(validateExtractionContent(valid({ keyTakeaways: Array(11).fill(takeaway) })).ok).toBe(
+      false,
+    );
   });
 
-  it('allows at most five CRITICAL takeaways', () => {
-    const critical = { ...VALID.keyTakeaways[0]!, importance: 'CRITICAL' };
-    const normal = { ...VALID.keyTakeaways[0]!, importance: 'NORMAL' };
-    expect(
-      validateExtractionContent(
-        valid({ keyTakeaways: [...Array(5).fill(critical), normal] }),
-      ).ok,
-    ).toBe(true);
-    expect(
-      validateExtractionContent(valid({ keyTakeaways: Array(6).fill(critical) })).ok,
-    ).toBe(false);
+  it('bounds actionItems to 0–6 items', () => {
+    const item = VALID.actionItems[0]!;
+    expect(validateExtractionContent(valid({ actionItems: Array(6).fill(item) })).ok).toBe(true);
+    expect(validateExtractionContent(valid({ actionItems: Array(7).fill(item) })).ok).toBe(false);
   });
 
-  it('bounds sourceQuote to non-empty, ≤500 characters', () => {
-    const t = VALID.keyTakeaways[0]!;
+  it('requires both lists to be empty for non-COMPLETE statuses', () => {
+    const base = { extractionStatus: 'INSUFFICIENT_CONTENT', statusExplanation: 'Blank page.' };
+    expect(
+      validateExtractionContent(valid({ ...base, actionItems: [], keyTakeaways: [] })).ok,
+    ).toBe(true);
+    expect(validateExtractionContent(valid({ ...base, keyTakeaways: [] })).ok).toBe(false);
+    expect(validateExtractionContent(valid({ ...base, actionItems: [] })).ok).toBe(false);
+  });
+
+  it.each([
+    ['Action Item', 'actionItems'],
+    ['Key Takeaway', 'keyTakeaways'],
+  ] as const)('bounds a %s sourceQuote to non-empty, ≤500 characters', (_label, key) => {
+    const t = VALID[key][0]!;
     for (const sourceQuote of ['', 'x'.repeat(501)]) {
-      expect(
-        validateExtractionContent(valid({ keyTakeaways: [{ ...t, sourceQuote }] })).ok,
-      ).toBe(false);
+      expect(validateExtractionContent(valid({ [key]: [{ ...t, sourceQuote }] })).ok).toBe(false);
     }
     expect(
-      validateExtractionContent(
-        valid({ keyTakeaways: [{ ...t, sourceQuote: 'x'.repeat(500) }] }),
-      ).ok,
+      validateExtractionContent(valid({ [key]: [{ ...t, sourceQuote: 'x'.repeat(500) }] })).ok,
     ).toBe(true);
   });
 
@@ -131,14 +144,82 @@ describe('validateExtractionContent', () => {
         validateExtractionContent(valid({ keyTakeaways: [{ ...t, page }] })).ok,
       ).toBe(false);
     }
-    const withoutPage = { text: t.text, importance: t.importance, sourceQuote: t.sourceQuote };
+    const withoutPage = { text: t.text, sourceQuote: t.sourceQuote };
     expect(validateExtractionContent(valid({ keyTakeaways: [withoutPage] })).ok).toBe(true);
+  });
+
+  describe('Action Item timing', () => {
+    const item = (timing: unknown) => valid({ actionItems: [{ ...VALID.actionItems[0]!, timing }] });
+    const ok = (timing: unknown) => validateExtractionContent(item(timing)).ok;
+
+    it('accepts a valid timing of every kind', () => {
+      expect(ok({ kind: 'FIXED_DATE', dueDate: '2024-07-31' })).toBe(true);
+      expect(ok({ kind: 'RECURRING', cadence: 'MONTHLY', scheduleLabel: 'Monthly on the 3rd' })).toBe(true);
+      expect(ok({ kind: 'RECURRING', cadence: 'YEARLY', dayOfMonth: 31, scheduleLabel: 'Yearly' })).toBe(true);
+      expect(ok({ kind: 'NOTICE_PERIOD', duration: 2, unit: 'WEEKS', anchor: 'renewal' })).toBe(true);
+      expect(ok({ kind: 'NONE' })).toBe(true);
+    });
+
+    it('rejects an unknown kind or a missing timing', () => {
+      expect(ok({ kind: 'SOON' })).toBe(false);
+      expect(validateExtractionContent(valid({ actionItems: [{ text: 'x', sourceQuote: 'q' }] })).ok).toBe(false);
+    });
+
+    it('requires FIXED_DATE to carry a real ISO calendar date', () => {
+      for (const dueDate of [undefined, '31.07.2024', '2024-7-31', '2024-02-30', '2023-02-29', '2024-13-01']) {
+        expect(ok({ kind: 'FIXED_DATE', dueDate })).toBe(false);
+      }
+      expect(ok({ kind: 'FIXED_DATE', dueDate: '2024-02-29' })).toBe(true);
+    });
+
+    it('validates RECURRING fields', () => {
+      const base = { kind: 'RECURRING', cadence: 'WEEKLY', scheduleLabel: 'Weekly' };
+      expect(ok({ ...base, cadence: undefined })).toBe(false);
+      expect(ok({ ...base, cadence: 'DAILY' })).toBe(false);
+      expect(ok({ ...base, scheduleLabel: '' })).toBe(false);
+      expect(ok({ ...base, scheduleLabel: 'x'.repeat(61) })).toBe(false);
+      expect(ok({ ...base, scheduleLabel: 'x'.repeat(60) })).toBe(true);
+      for (const dayOfMonth of [0, 32, 1.5]) expect(ok({ ...base, dayOfMonth })).toBe(false);
+    });
+
+    it('validates NOTICE_PERIOD fields', () => {
+      const base = { kind: 'NOTICE_PERIOD', duration: 3, unit: 'MONTHS', anchor: 'moving out' };
+      for (const duration of [0, 1.5, undefined]) expect(ok({ ...base, duration })).toBe(false);
+      expect(ok({ ...base, unit: 'DECADES' })).toBe(false);
+      expect(ok({ ...base, anchor: '' })).toBe(false);
+      expect(ok({ ...base, anchor: 'x'.repeat(81) })).toBe(false);
+      expect(ok({ ...base, anchor: 'x'.repeat(80) })).toBe(true);
+    });
+
+    it('rejects fields that belong to another kind', () => {
+      expect(ok({ kind: 'NONE', dueDate: '2024-07-31' })).toBe(false);
+      expect(ok({ kind: 'FIXED_DATE', dueDate: '2024-07-31', cadence: 'WEEKLY' })).toBe(false);
+      expect(ok({ kind: 'RECURRING', cadence: 'WEEKLY', scheduleLabel: 'w', duration: 1 })).toBe(false);
+      expect(ok({ kind: 'NOTICE_PERIOD', duration: 1, unit: 'DAYS', anchor: 'a', dayOfMonth: 3 })).toBe(false);
+    });
+
+    it('maps model-emitted nulls on the other kinds\' fields to absent', () => {
+      const flat = {
+        kind: 'FIXED_DATE',
+        dueDate: '2024-07-31',
+        cadence: null,
+        dayOfMonth: null,
+        scheduleLabel: null,
+        duration: null,
+        unit: null,
+        anchor: null,
+      };
+      const result = validateExtractionContent(item(flat));
+      expect(result.ok && result.content.actionItems[0]!.timing).toEqual({
+        kind: 'FIXED_DATE',
+        dueDate: '2024-07-31',
+      });
+    });
   });
 
   it('maps the schema-subset `null` on nullable fields to absent', () => {
     const takeawayNoPage = {
       text: VALID.keyTakeaways[0]!.text,
-      importance: VALID.keyTakeaways[0]!.importance,
       sourceQuote: VALID.keyTakeaways[0]!.sourceQuote,
     };
     const result = validateExtractionContent(
