@@ -40,3 +40,17 @@ test('an uploaded PDF is analyzed in the background and opens beside its Extract
     await expect(panel.getByText(takeaway.text)).toBeVisible();
   }
 });
+
+// Journey: a stored v2 Extraction shows Action Items (numbered first, with
+// timing chips) above Key Takeaways, numbering continuing across sections.
+test('Action Items carry timing chips and numbering continues into Key Takeaways', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  const panel = guestPanel(page());
+  const attention = panel.locator('[data-section="attention"]');
+  await expect(attention.locator('[data-timing-chip]').first()).toHaveText('3 months’ notice · moving out');
+  await expect(attention.locator('[data-timing-chip]').last()).toHaveText('Monthly by the 3rd working day');
+  await expect(attention.locator('li')).toHaveCount(4);
+  await expect(panel.locator('[data-section="takeaways"] li').first()).toContainText('5');
+  await panel.getByRole('button', { name: 'More actions' }).click();
+  await expect(panel.getByText('Earlier analysis format')).toBeHidden();
+});

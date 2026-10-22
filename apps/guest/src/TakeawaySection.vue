@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeyTakeaway } from '@klartext/bus-contract';
+import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 import KeyTakeawayRow from './KeyTakeawayRow.vue';
 
 // One HIG inset grouped list of Key Takeaway rows (issue #75): "Needs your
@@ -9,7 +9,7 @@ import KeyTakeawayRow from './KeyTakeawayRow.vue';
 defineProps<{
   title: string;
   section: string;
-  rows: { takeaway: KeyTakeaway; index: number; number: number }[];
+  rows: { takeaway: KeyTakeaway & { timing?: ActionTiming }; index: number; number: number }[];
   critical?: boolean;
   selectedIndex: number | null;
 }>();

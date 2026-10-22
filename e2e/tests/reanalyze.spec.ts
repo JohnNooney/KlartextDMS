@@ -17,6 +17,12 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
     fixture.actionItems[0]!.text,
   );
 
+  // Stored v1: no dates, so the ⋯ menu notes the earlier format.
+  await expect(panel.locator('[data-timing-chip]')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'More actions' }).click();
+  await expect(panel.getByText('Earlier analysis format — re-analyze for dates')).toBeVisible();
+  await panel.getByRole('button', { name: 'More actions' }).click();
+
   // Slow the Host's byte fetch for the job so the queued state is observable.
   const bytes = `**/o/users%2F${SEED_USER.uid}%2Fdocuments%2Fdoc-versicherungsschein.pdf?*`;
   await page().route(bytes, async (route) => {
@@ -32,7 +38,10 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
 
   await expect(panel.getByText(/Re-analy(sis queued|zing)…/)).toBeHidden();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
+  // Upgraded live to v2: the date chip appears and the earlier-format note is gone.
+  await expect(panel.locator('[data-timing-chip]')).toHaveText('Due 31 Jan 2026');
   await panel.getByRole('button', { name: 'More actions' }).click();
+  await expect(panel.getByText('Earlier analysis format')).toBeHidden();
   await expect(panel.getByRole('button', { name: 'Re-analyze document' })).toBeEnabled();
   await page().unroute(bytes);
 });

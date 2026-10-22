@@ -640,3 +640,87 @@ describe('ExtractionPanel jump bar (issue #79)', () => {
     }
   });
 });
+
+// Issue #118: each Action Item carries a timing chip per kind, and a stored
+// schemaVersion 1 Extraction gets a ⋯ menu note offering re-analysis for dates.
+describe('ExtractionPanel timing chips and v1 note (issue #118)', () => {
+  const rowFor = (timing: IdentifiedActionItem['timing']) =>
+    mount(ExtractionPanel, {
+      props: {
+        extraction: record({
+          extractionStatus: 'COMPLETE',
+          actionItems: [actionItem({ text: 'do it', timing })],
+          keyTakeaways: [],
+        }),
+      },
+    }).find('[data-section="attention"] li');
+
+  it('shows a due-date chip for FIXED_DATE', () => {
+    const chip = rowFor({ kind: 'FIXED_DATE', dueDate: '2026-01-31' }).find('[data-timing-chip]');
+    expect(chip.text()).toBe('Due 31 Jan 2026');
+  });
+
+  it('shows the schedule label for RECURRING', () => {
+    const chip = rowFor({
+      kind: 'RECURRING',
+      cadence: 'MONTHLY',
+      scheduleLabel: 'Monthly by the 3rd working day',
+    }).find('[data-timing-chip]');
+    expect(chip.text()).toBe('Monthly by the 3rd working day');
+  });
+
+  it('shows duration and anchor for NOTICE_PERIOD', () => {
+    const chip = rowFor({
+      kind: 'NOTICE_PERIOD',
+      duration: 3,
+      unit: 'MONTHS',
+      anchor: 'moving out',
+    }).find('[data-timing-chip]');
+    expect(chip.text()).toBe('3 months’ notice · moving out');
+  });
+
+  it('uses the singular unit for a duration of one', () => {
+    const chip = rowFor({
+      kind: 'NOTICE_PERIOD',
+      duration: 1,
+      unit: 'WEEKS',
+      anchor: 'contract end',
+    }).find('[data-timing-chip]');
+    expect(chip.text()).toBe('1 week’s notice · contract end');
+  });
+
+  it('shows no chip for NONE', () => {
+    expect(rowFor({ kind: 'NONE' }).find('[data-timing-chip]').exists()).toBe(false);
+  });
+
+  it('shows no chip on Key Takeaway rows', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: {
+        extraction: record({
+          extractionStatus: 'COMPLETE',
+          actionItems: [],
+          keyTakeaways: [takeaway({ text: 'fact' })],
+        }),
+      },
+    });
+    expect(wrapper.find('[data-timing-chip]').exists()).toBe(false);
+  });
+
+  const openMenu = async (schemaVersion: 1 | 2) => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: record({ extractionStatus: 'COMPLETE', schemaVersion }) },
+    });
+    await wrapper.find('button[aria-label="More actions"]').trigger('click');
+    return wrapper;
+  };
+
+  it('notes in the ⋯ menu that a schemaVersion 1 Extraction is an earlier format', async () => {
+    const wrapper = await openMenu(1);
+    expect(wrapper.text()).toContain('Earlier analysis format — re-analyze for dates');
+  });
+
+  it('shows no earlier-format note for schemaVersion 2', async () => {
+    const wrapper = await openMenu(2);
+    expect(wrapper.text()).not.toContain('Earlier analysis format');
+  });
+});
