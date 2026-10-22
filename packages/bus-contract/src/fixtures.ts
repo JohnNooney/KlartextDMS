@@ -10,8 +10,9 @@ import panelPresentation from './fixtures/panel-presentation.json';
 import guestShowPage from './fixtures/guest-show-page.json';
 import guestExpandPanel from './fixtures/guest-expand-panel.json';
 import extractionsJson from './fixtures/extractions.json';
+import extractionsV1Json from './fixtures/extractions-v1.json';
 import type { BusMessage, MessageType } from './messages.js';
-import type { ExtractionCandidate } from './extraction.js';
+import type { ExtractionCandidate, LegacyExtractionRecordV1 } from './extraction.js';
 import { deserializeEnvelope } from './serialize.js';
 
 /**
@@ -53,3 +54,11 @@ export const goldenFixtureMessages = Object.fromEntries(
  */
 export const seededExtractionFixtures =
   extractionsJson as unknown as Record<string, ExtractionCandidate>;
+
+/**
+ * `schemaVersion: 1` Extractions as stored before `klartext-extraction-v2`,
+ * keyed by documentId minus `createdAt` (ADR 0010). `scripts/seed.mjs` seeds
+ * `doc-versicherungsschein` from this file to exercise read-time normalization.
+ */
+export const legacyV1ExtractionFixtures =
+  extractionsV1Json as unknown as Record<string, Omit<LegacyExtractionRecordV1, 'createdAt'>>;

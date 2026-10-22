@@ -20,7 +20,8 @@ export const seededPdf = (name: string): Buffer => readFileSync(repoFile(`script
 /** A fixture Extraction's content as the Guest's fake provider serves it (issue #30). */
 interface FixtureExtraction {
   plainEnglishSummary: string;
-  keyTakeaways: { text: string; importance: 'CRITICAL' | 'NORMAL' }[];
+  actionItems: { text: string }[];
+  keyTakeaways: { text: string }[];
 }
 
 /** The seeded Extractions keyed by documentId — what the seed stores and the fake provider returns. */

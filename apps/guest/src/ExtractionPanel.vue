@@ -75,21 +75,16 @@ const analyzedAt = computed(() =>
 
 const isComplete = computed(() => props.extraction.extractionStatus === 'COMPLETE');
 
-// Rows keep their number across both sections: `number` is the Key
-// Takeaway's one-based place in the Extraction, `index` its position for
-// selection.
-const numberedTakeaways = computed(() =>
-  props.extraction.keyTakeaways.map((takeaway, index) => ({
-    takeaway,
-    index,
-    number: index + 1,
-  })),
-);
+// Rows are numbered continuously across both sections (Action Items 1..M,
+// Key Takeaways M+1..M+K); `index` is the same position, used for selection.
 const criticalTakeaways = computed(() =>
-  numberedTakeaways.value.filter((row) => row.takeaway.importance === 'CRITICAL'),
+  props.extraction.actionItems.map((takeaway, index) => ({ takeaway, index, number: index + 1 })),
 );
 const normalTakeaways = computed(() =>
-  numberedTakeaways.value.filter((row) => row.takeaway.importance !== 'CRITICAL'),
+  props.extraction.keyTakeaways.map((takeaway, i) => {
+    const index = props.extraction.actionItems.length + i;
+    return { takeaway, index, number: index + 1 };
+  }),
 );
 
 // The outline rail (issue #77, prototype variant C2): a slim icon rail on
@@ -204,12 +199,16 @@ function toggleTakeaway(index: number): void {
   selectedTakeaway.value = selecting ? index : null;
   // Selecting a paged row also asks the Host to show that page (issue #78);
   // deselecting stays silent.
-  const takeaway = props.extraction.keyTakeaways[index];
+  const actionCount = props.extraction.actionItems.length;
+  const isActionItem = index < actionCount;
+  const takeaway = isActionItem
+    ? props.extraction.actionItems[index]
+    : props.extraction.keyTakeaways[index - actionCount];
   if (selecting && takeaway?.page !== undefined) {
     emit('showPage', {
       page: takeaway.page,
       quote: takeaway.sourceQuote,
-      critical: takeaway.importance === 'CRITICAL',
+      critical: isActionItem,
     });
   }
 }

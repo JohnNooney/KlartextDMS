@@ -171,9 +171,7 @@ test('tapping a jump-bar segment at peek raises the sheet to its section', async
   await expect(bar).toBeVisible();
 
   // The attention segment carries the seeded Critical Warning count.
-  const critical = seededExtraction('doc-mietvertrag').keyTakeaways.filter(
-    (t) => t.importance === 'CRITICAL',
-  ).length;
+  const critical = seededExtraction('doc-mietvertrag').actionItems.length;
   const attention = bar.getByRole('button', { name: /^Attention/ });
   await expect(attention).toContainText(String(critical));
 

@@ -10,7 +10,7 @@ import type {
   JobDocument,
   Session,
 } from '@klartext/bus-contract';
-import { goldenFixtureMessages } from '@klartext/bus-contract';
+import { goldenFixtureMessages, normalizeExtractionRecord } from '@klartext/bus-contract';
 import { AuthService } from '../auth.service';
 import type {
   DocumentRecord,
@@ -47,7 +47,10 @@ function candidate(documentId: string): ExtractionCandidate {
 }
 
 function storedRecord(documentId: string): ExtractionRecord {
-  return { ...candidate(documentId), createdAt: { seconds: 1_700_000_000, nanoseconds: 0 } };
+  return normalizeExtractionRecord({
+    ...candidate(documentId),
+    createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
+  });
 }
 
 function jobDocument(documentId: string, documentTitle = 'seed'): JobDocument {
@@ -157,10 +160,13 @@ class FakeExtractionRepository implements ExtractionRepository {
 
   async save(documentId: string, extraction: ExtractionCandidate): Promise<void> {
     this.saves.push({ documentId, extraction });
-    this.records.set(documentId, {
-      ...extraction,
-      createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
-    });
+    this.records.set(
+      documentId,
+      normalizeExtractionRecord({
+        ...extraction,
+        createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
+      }),
+    );
   }
 }
 

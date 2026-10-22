@@ -49,7 +49,7 @@ describe('fake extraction provider', () => {
     for (const documentId of Object.keys(seededExtractionFixtures)) {
       const candidate = await provider.extract(document(documentId), BYTES);
       expect(candidate.documentId).toBe(documentId);
-      expect(candidate.promptVersion).toBe('klartext-extraction-v1');
+      expect(candidate.promptVersion).toBe('klartext-extraction-v2');
     }
   });
 });

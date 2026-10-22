@@ -29,7 +29,7 @@ import {
 } from './messages.js';
 import { NO_SESSION } from './envelope.js';
 import type { BusEnd, BusMessageEvent, BusMessageListener, BusSink, BusSource } from './endpoints.js';
-import { isExtractionCandidate, type ExtractionCandidate } from './extraction.js';
+import { isExtractionCandidate, normalizeExtractionRecord, type ExtractionCandidate } from './extraction.js';
 import type {
   ExtractionError,
   ExtractDocumentPayload,
@@ -209,10 +209,10 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         currentSession = {
           ...currentSession,
           sessionId: `sess_${++sessionSeq}`,
-          extraction: {
+          extraction: normalizeExtractionRecord({
             ...extraction!,
             createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
-          },
+          }),
           extractionState: 'none',
         };
         sendSession();

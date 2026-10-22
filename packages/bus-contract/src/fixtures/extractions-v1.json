@@ -1,0 +1,27 @@
+{
+  "doc-versicherungsschein": {
+    "documentId": "doc-versicherungsschein",
+    "schemaVersion": 1,
+    "promptVersion": "klartext-extraction-v1",
+    "model": "gemini-2.5-flash",
+    "documentType": "HEALTH_INSURANCE",
+    "documentTypeLabel": "Health insurance notice",
+    "sourceLanguage": "de",
+    "extractionStatus": "COMPLETE",
+    "plainEnglishSummary": "Your health insurer confirms your membership and announces a higher additional contribution from January. Because of the increase you have a special right to switch insurer.",
+    "keyTakeaways": [
+      {
+        "text": "Your contribution rises by 0.4 percentage points from 1 January. You can switch insurer until 31 January.",
+        "importance": "CRITICAL",
+        "sourceQuote": "Sonderkündigungsrecht bis zum 31. Januar",
+        "page": 1
+      },
+      {
+        "text": "Professional teeth cleaning is reimbursed up to €80 a year.",
+        "importance": "NORMAL",
+        "sourceQuote": "Professionelle Zahnreinigung bis zu 80 € jährlich",
+        "page": 2
+      }
+    ]
+  }
+}

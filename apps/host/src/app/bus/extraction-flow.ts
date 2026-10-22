@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, effect, inject } from '@angular/core';
+import { normalizeExtractionRecord } from '@klartext/bus-contract';
 import type {
   ExtractionCandidate,
   ExtractionError,
@@ -107,7 +108,7 @@ export class ExtractionFlow implements HostBusProbe {
       // the panel shows, and drop any refresh still in flight from before it
       // (e.g. `running`) — a late stale Session would stick on the panel.
       this.refreshSeq++;
-      const shown = { ...extraction, createdAt: nowTimestamp() } as ExtractionRecord;
+      const shown = normalizeExtractionRecord({ ...extraction, createdAt: nowTimestamp() });
       this.extractionCache.set(documentId, shown);
       this.lastSent = {
         documentId,
@@ -254,7 +255,7 @@ export class ExtractionFlow implements HostBusProbe {
       await this.extractions.save(documentId, candidate);
       const record =
         (await this.extractions.get(documentId)) ??
-        ({ ...candidate, createdAt: nowTimestamp() } as ExtractionRecord);
+        normalizeExtractionRecord({ ...candidate, createdAt: nowTimestamp() });
       this.extractionCache.set(documentId, record);
       this.store.markExtractionStored(documentId);
       this.store.clearExtractionJob(documentId);
