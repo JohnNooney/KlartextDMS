@@ -10,9 +10,12 @@ test('the attention overview lists deep Action Items and opens a Document at the
   await browseRoot(page());
   const overview = page().getByRole('region', { name: 'Needs your attention' });
   await expect(overview).toBeVisible();
-  await expect(overview.getByText('Reading', { exact: false })).toHaveCount(0);
 
+  // The tax-office Document has no stored Extraction: its job finishes after
+  // load, and its dated item arrives under Overdue (due 2024-07-31).
+  const overdue = overview.getByRole('button', { name: /File your 2023 tax return/ });
   await expect(overview.getByRole('heading', { name: /Overdue/ })).toBeVisible();
+  await expect(overdue).toContainText(' days ago');
   const row = overview.getByRole('button', { name: /Notice must be given in writing/ });
   await expect(row).toBeVisible();
   await expect(row).toContainText('Mietvertrag 2024');

@@ -3,7 +3,7 @@
     type="button"
     class="attention-head"
     [attr.aria-expanded]="expanded()"
-    (click)="expanded.set(!expanded())"
+    (click)="expanded.update(toggle)"
   >
     <svg class="chevron" [class.is-open]="expanded()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
     <span id="attention-title" class="attention-title">Needs your attention</span>
@@ -19,7 +19,7 @@
         Reading {{ progress.read }} of {{ progress.total }} documents…
       </p>
     } @else if (count() === 0) {
-      <p class="attention-note">Nothing needs your attention in this folder.</p>
+      <p class="attention-note">Nothing needs your attention.</p>
     }
     @for (group of groups(); track group.key) {
       <h3 class="attention-group" [class.is-overdue]="group.key === 'overdue'">
@@ -39,7 +39,7 @@
               }
             </span>
           </span>
-          <span class="attention-when">{{ item.when }}</span>
+          <span class="attention-when">{{ item.timingLabel }}</span>
         </button>
       }
     }

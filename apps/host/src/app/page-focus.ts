@@ -70,8 +70,8 @@ export class PageFocus {
   /** Lands and clears the pending request when it targets `documentId`. */
   landPending(documentId: string): void {
     const pending = this.pending();
-    if (pending?.documentId !== documentId) return;
+    if (!pending) return;
     this.pending.set(null);
-    this.show(pending.request);
+    if (pending.documentId === documentId) this.show(pending.request);
   }
 }

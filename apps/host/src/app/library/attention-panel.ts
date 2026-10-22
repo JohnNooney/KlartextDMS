@@ -19,6 +19,7 @@ export class AttentionPanel {
   readonly itemOpened = output<AttentionItem>();
 
   protected readonly expanded = signal(true);
+  protected readonly toggle = (open: boolean): boolean => !open;
 
   protected count(): number {
     return this.groups().reduce((sum, group) => sum + group.items.length, 0);

@@ -580,13 +580,13 @@ describe('Library', () => {
       const { fixture, store, el } = await withAttention();
       store.extractionsByDocId.set(new Map());
       fixture.detectChanges();
-      expect(panel(el)!.textContent).toContain('Nothing needs your attention');
+      expect(panel(el)!.textContent).toContain('Nothing needs your attention.');
     });
 
     it('shows "Reading n of m documents…" until the Extraction index has loaded', async () => {
       const { el } = await withAttention(false);
       expect(panel(el)!.textContent).toContain('Reading 2 of 3 documents…');
-      expect(panel(el)!.textContent).not.toContain('Nothing needs your attention');
+      expect(panel(el)!.textContent).not.toContain('Nothing needs your attention.');
     });
 
     it('is absent when the browsed scope holds no Documents', async () => {

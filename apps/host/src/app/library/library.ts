@@ -78,22 +78,24 @@ export class Library {
   /** The Folder attention overview (issue #120): Action Items under the browsed Folder, deep. */
   protected readonly attention = computed(() =>
     buildAttentionOverview({
-      documents: this.store.documents() ?? [],
-      folders: this.store.folders() ?? [],
+      scoped: this.scoped(),
       extractions: this.store.extractionsByDocId(),
-      scopeFolderId: this.openDocument.folderId(),
       today: new Date(),
     }),
+  );
+
+  private readonly scoped = computed(() =>
+    readyDocumentsInScope(
+      this.store.documents() ?? [],
+      this.store.folders() ?? [],
+      this.openDocument.folderId(),
+    ),
   );
 
   /** "Reading n of m documents…" while the Extraction index is still loading. */
   protected readonly reading = computed(() => {
     if (this.store.extractionsLoaded()) return null;
-    const scoped = readyDocumentsInScope(
-      this.store.documents() ?? [],
-      this.store.folders() ?? [],
-      this.openDocument.folderId(),
-    );
+    const scoped = this.scoped();
     const index = this.store.extractionsByDocId();
     return { read: scoped.filter(({ doc }) => index.has(doc.id)).length, total: scoped.length };
   });

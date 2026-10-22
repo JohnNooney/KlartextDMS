@@ -14,8 +14,8 @@ export interface AttentionItem {
   path: string | null;
   page?: number;
   sourceQuote: string;
-  /** The human timing label: "Due in 4 days", "Monthly by the 3rd", "3 months notice". */
-  when: string;
+  /** The human timing label: "Due in 4 days", "Monthly by the 3rd", "3 months’ notice · moving out". */
+  timingLabel: string;
 }
 
 export interface AttentionGroup {
@@ -25,12 +25,16 @@ export interface AttentionGroup {
 }
 
 export interface AttentionOverviewInput {
-  documents: readonly DocumentRecord[];
-  folders: readonly FolderRecord[];
+  /** The ready Documents under the browsed Folder, from `readyDocumentsInScope`. */
+  scoped: readonly ScopedDocument[];
   extractions: ReadonlyMap<string, ExtractionRecord>;
-  /** The browsed Folder; `null` = root, which rolls up the whole library. */
-  scopeFolderId: string | null;
   today: Date;
+}
+
+export interface ScopedDocument {
+  doc: DocumentRecord;
+  /** Folder path below the browsed Folder; `null` when filed directly in it. */
+  path: string | null;
 }
 
 const GROUPS: { key: AttentionGroupKey; label: string }[] = [
@@ -55,13 +59,13 @@ const DAY_MS = 86_400_000;
  * grouped by urgency with each item's folder path relative to that Folder.
  */
 export function buildAttentionOverview(input: AttentionOverviewInput): AttentionGroup[] {
-  const { documents, folders, extractions, scopeFolderId, today } = input;
+  const { scoped, extractions, today } = input;
   const entries: { key: AttentionGroupKey; item: AttentionItem; due: number | null }[] = [];
-  for (const { doc, path } of readyDocumentsInScope(documents, folders, scopeFolderId)) {
+  for (const { doc, path } of scoped) {
     const extraction = extractions.get(doc.id);
     if (!extraction) continue;
     for (const action of extraction.actionItems) {
-      const { key, when, due } = classify(action.timing, today);
+      const { key, timingLabel, due } = classify(action.timing, today);
       entries.push({
         key,
         due,
@@ -73,7 +77,7 @@ export function buildAttentionOverview(input: AttentionOverviewInput): Attention
           path,
           page: action.page,
           sourceQuote: action.sourceQuote,
-          when,
+          timingLabel,
         },
       });
     }
@@ -83,11 +87,7 @@ export function buildAttentionOverview(input: AttentionOverviewInput): Attention
     label,
     items: entries
       .filter((e) => e.key === key)
-      .sort(
-        (a, b) =>
-          (a.due ?? Infinity) - (b.due ?? Infinity) ||
-          (a.due === null ? 0 : a.item.documentTitle.localeCompare(b.item.documentTitle)),
-      )
+      .sort(compareByDue)
       .map((e) => e.item),
   })).filter((group) => group.items.length > 0);
 }
@@ -100,8 +100,8 @@ export function readyDocumentsInScope(
   documents: readonly DocumentRecord[],
   folders: readonly FolderRecord[],
   scopeFolderId: string | null,
-): { doc: DocumentRecord; path: string | null }[] {
-  const scoped: { doc: DocumentRecord; path: string | null }[] = [];
+): ScopedDocument[] {
+  const scoped: ScopedDocument[] = [];
   for (const doc of documents) {
     if (doc.status !== 'ready') continue;
     const chain = folderAncestry(folders, doc.folderId);
@@ -112,30 +112,36 @@ export function readyDocumentsInScope(
   return scoped;
 }
 
+/** Dated items first by due date then Document title; undated items keep feed order. */
+function compareByDue(a: { due: number | null; item: AttentionItem }, b: typeof a): number {
+  if (a.due === null || b.due === null) return a.due === b.due ? 0 : a.due === null ? 1 : -1;
+  return a.due - b.due || a.item.documentTitle.localeCompare(b.item.documentTitle);
+}
+
 function classify(
   timing: ActionTiming,
   today: Date,
-): { key: AttentionGroupKey; when: string; due: number | null } {
+): { key: AttentionGroupKey; timingLabel: string; due: number | null } {
   switch (timing.kind) {
     case 'FIXED_DATE': {
       const [y, m, d] = timing.dueDate.split('-').map(Number);
       const due = Date.UTC(y, m - 1, d);
       const days = Math.round((due - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / DAY_MS);
       const key = days < 0 ? 'overdue' : days <= WEEK_DAYS ? 'thisWeek' : 'later';
-      return { key, due, when: dueLabel(days, due) };
+      return { key, due, timingLabel: dueLabel(days, due) };
     }
     case 'RECURRING':
-      return { key: 'later', due: null, when: timing.scheduleLabel };
+      return { key: 'later', due: null, timingLabel: timing.scheduleLabel };
     case 'NOTICE_PERIOD': {
       const unit = NOTICE_UNITS[timing.unit];
       return {
         key: 'later',
         due: null,
-        when: `${timing.duration} ${unit}${timing.duration === 1 ? '' : 's'} notice`,
+        timingLabel: `${timing.duration} ${unit}${timing.duration === 1 ? '' : 's'}’ notice · ${timing.anchor}`,
       };
     }
     case 'NONE':
-      return { key: 'noDate', due: null, when: 'No date' };
+      return { key: 'noDate', due: null, timingLabel: 'No date' };
   }
 }
 

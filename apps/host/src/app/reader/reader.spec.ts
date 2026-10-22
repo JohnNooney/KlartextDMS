@@ -234,6 +234,7 @@ describe('Reader (issue #29)', () => {
     fixture.detectChanges();
     expect(el.querySelector('canvas')?.getAttribute('aria-label')).toBe('Page 1 of 4');
     expect(focus.landed()).toBeNull();
+    expect(focus.pending()).toBeNull();
 
     focus.showOnceOpen('d1', { page: 3, quote: 'Die Kündigungsfrist' });
     fixture.detectChanges();

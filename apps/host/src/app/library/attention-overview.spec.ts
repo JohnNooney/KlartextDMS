@@ -2,7 +2,7 @@ import type { ActionTiming, ExtractionRecord } from '@klartext/bus-contract';
 import { describe, expect, it } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
 import type { FolderRecord } from '../data/folder';
-import { buildAttentionOverview } from './attention-overview';
+import { buildAttentionOverview, readyDocumentsInScope } from './attention-overview';
 
 const TODAY = new Date(2026, 9, 22); // 22 Oct 2026, local
 
@@ -73,10 +73,8 @@ describe('buildAttentionOverview', () => {
     scopeFolderId: string | null = null,
   ) =>
     buildAttentionOverview({
-      documents,
-      folders,
+      scoped: readyDocumentsInScope(documents, folders, scopeFolderId),
       extractions: new Map(extractions.map((e) => [e.documentId, e])),
-      scopeFolderId,
       today: TODAY,
     });
 
@@ -137,10 +135,10 @@ describe('buildAttentionOverview', () => {
     );
     expect(groups).toHaveLength(1);
     expect(groups[0].key).toBe('later');
-    expect(groups[0].items.map((i) => i.when)).toEqual([
+    expect(groups[0].items.map((i) => i.timingLabel)).toEqual([
       'Monthly by the 3rd',
-      '3 months notice',
-      '1 week notice',
+      '3 months’ notice · moving out',
+      '1 week’ notice · x',
     ]);
   });
 
@@ -157,7 +155,7 @@ describe('buildAttentionOverview', () => {
         ]),
       ],
     );
-    const when = Object.fromEntries(groups.flatMap((g) => g.items.map((i) => [i.text, i.when])));
+    const when = Object.fromEntries(groups.flatMap((g) => g.items.map((i) => [i.text, i.timingLabel])));
     expect(when).toEqual({
       a: 'Due 3 days ago',
       b: 'Due today',
