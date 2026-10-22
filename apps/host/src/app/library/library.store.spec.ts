@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
+import { goldenFixtureMessages, normalizeExtractionRecord } from '@klartext/bus-contract';
+import type { ExtractionRecord } from '@klartext/bus-contract';
 import { HostBus } from '../bus/host-bus';
 import type {
   DocumentRecord,
@@ -317,6 +319,14 @@ async function until(store: LibraryStore, predicate: (docs: DocumentRecord[]) =>
   throw new Error('store did not reach expected state');
 }
 
+function extractionFor(documentId: string): ExtractionRecord {
+  return normalizeExtractionRecord({
+    ...goldenFixtureMessages.AI_PROCESSING_SUCCESS.payload.extraction,
+    documentId,
+    createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
+  });
+}
+
 describe('LibraryStore', () => {
   it('reflects the live library from the repository watch feed', async () => {
     const { store, repository } = setup();
@@ -461,6 +471,18 @@ describe('LibraryStore', () => {
     expect(open.docId()).toBeNull();
     expect(repository.records.has(id)).toBe(false);
     expect(toasts.toasts().map((t) => t.title)).toContain('Deleted seed');
+  });
+
+  it('deleting a Document removes its Extraction from the index', async () => {
+    const { store, repository } = setup();
+    const id = await repository.seed('ready');
+    const keep = await repository.seed('ready');
+    store.setExtraction(id, extractionFor(id));
+    store.setExtraction(keep, extractionFor(keep));
+
+    await store.confirmDelete(id);
+
+    expect([...store.extractionsByDocId().keys()]).toEqual([keep]);
   });
 
   it('a failed delete stays deleting and offers retry; retry completes it', async () => {

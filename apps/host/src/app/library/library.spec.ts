@@ -1,3 +1,4 @@
+import type { ExtractionRecord } from '@klartext/bus-contract';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
@@ -59,7 +60,7 @@ class FakeStore {
   readonly progress = signal<ReadonlyMap<string, number>>(new Map());
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
   readonly extractionJobs = signal<ReadonlyMap<string, 'queued' | 'running' | 'failed'>>(new Map());
-  readonly extractionStored = signal<ReadonlySet<string>>(new Set());
+  readonly extractionsByDocId = signal<ReadonlyMap<string, ExtractionRecord>>(new Map());
   readonly openDoc = signal<DocumentRecord | null>(null);
   folderById = vi.fn(
     (id: string | null): FolderRecord | undefined =>
@@ -364,7 +365,7 @@ describe('Library', () => {
     store.documents.set(docs);
     store.visible.set(docs);
     store.extractionJobs.set(new Map([['doc-1', 'failed']]));
-    store.extractionStored.set(new Set(['doc-1']));
+    store.extractionsByDocId.set(new Map([['doc-1', {} as ExtractionRecord]]));
     fixture.detectChanges();
 
     const tile = el.querySelector('app-document-tile')!;
