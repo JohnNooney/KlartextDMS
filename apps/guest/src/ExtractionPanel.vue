@@ -312,6 +312,12 @@ function reanalyze(): void {
             <p class="whitespace-nowrap px-kt-4 pb-kt-1 pt-kt-2 text-kt-xs text-kt-text-faint">
               Analyzed with {{ extraction.model }}
             </p>
+            <p
+              v-if="extraction.schemaVersion === 1"
+              class="max-w-56 px-kt-4 pb-kt-1 text-kt-xs text-kt-text-faint"
+            >
+              Earlier analysis format — re-analyze for dates
+            </p>
             <button
               type="button"
               class="block w-full px-kt-4 py-kt-2 text-left text-kt-sm hover:bg-kt-fill disabled:opacity-50"

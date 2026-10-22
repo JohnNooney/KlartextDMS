@@ -1,18 +1,38 @@
 <script setup lang="ts">
-import type { KeyTakeaway } from '@klartext/bus-contract';
+import { computed } from 'vue';
+import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 
 // One row in the panel's grouped Key Takeaway lists (issue #75, prototype
 // variant C2): the takeaway's number — stable across both sections — its
 // plain-English text, and a trailing page label. Selecting the row reveals
 // its German source quote; `divider` draws the inset separator between rows.
-defineProps<{
-  takeaway: KeyTakeaway;
+const props = defineProps<{
+  takeaway: KeyTakeaway & { timing?: ActionTiming };
   number: number;
   critical?: boolean;
   selected?: boolean;
   divider?: boolean;
 }>();
 const emit = defineEmits<{ select: [] }>();
+
+// Timing chip per Action Item kind (issue #118); NONE and Key Takeaways get none.
+const UNITS = { DAYS: 'day', WEEKS: 'week', MONTHS: 'month', YEARS: 'year' } as const;
+const timingChip = computed(() => {
+  const timing = props.takeaway.timing;
+  switch (timing?.kind) {
+    case 'FIXED_DATE':
+      return `Due ${new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${timing.dueDate}T00:00:00Z`))}`;
+    case 'RECURRING':
+      return timing.scheduleLabel;
+    case 'NOTICE_PERIOD': {
+      const { duration, unit, anchor } = timing;
+      const word = UNITS[unit] + (duration === 1 ? '’s' : 's’');
+      return `${duration} ${word} notice · ${anchor}`;
+    }
+    default:
+      return null;
+  }
+});
 </script>
 
 <template>
@@ -36,6 +56,12 @@ const emit = defineEmits<{ select: [] }>();
       >
       <span class="min-w-0">
         <span class="text-kt-sm">{{ takeaway.text }}</span>
+        <span
+          v-if="timingChip"
+          data-timing-chip
+          class="mt-kt-1 block w-fit rounded-full bg-kt-fill px-kt-2 py-px text-kt-xs font-medium text-kt-text-muted"
+          >{{ timingChip }}</span
+        >
         <blockquote
           v-if="selected"
           lang="de"
