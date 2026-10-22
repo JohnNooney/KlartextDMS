@@ -1,0 +1,47 @@
+<section class="attention" aria-labelledby="attention-title">
+  <button
+    type="button"
+    class="attention-head"
+    [attr.aria-expanded]="expanded()"
+    (click)="expanded.update(toggle)"
+  >
+    <svg class="chevron" [class.is-open]="expanded()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    <span id="attention-title" class="attention-title">Needs your attention</span>
+    @if (!reading() && count() > 0) {
+      <span class="attention-count">{{ count() }}</span>
+    }
+  </button>
+
+  @if (expanded()) {
+    @if (reading(); as progress) {
+      <p class="attention-note" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        Reading {{ progress.read }} of {{ progress.total }} documents…
+      </p>
+    } @else if (count() === 0) {
+      <p class="attention-note">Nothing needs your attention.</p>
+    }
+    @for (group of groups(); track group.key) {
+      <h3 class="attention-group" [class.is-overdue]="group.key === 'overdue'">
+        {{ group.label }} · {{ group.items.length }}
+      </h3>
+      @for (item of group.items; track item.id) {
+        <button type="button" class="attention-row" (click)="itemOpened.emit(item)">
+          <span class="attention-main">
+            <span class="attention-text">{{ item.text }}</span>
+            <span class="attention-sub">
+              <span lang="de">{{ item.documentTitle }}</span>
+              @if (item.page) {
+                <span> · p.{{ item.page }}</span>
+              }
+              @if (item.path) {
+                <span class="attention-chip" lang="de">{{ item.path }}</span>
+              }
+            </span>
+          </span>
+          <span class="attention-when">{{ item.timingLabel }}</span>
+        </button>
+      }
+    }
+  }
+</section>

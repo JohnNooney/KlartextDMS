@@ -17,6 +17,7 @@ import type { FolderPatch, FolderRepository, NewFolder } from '../data/folder-re
 import { DOCUMENT_REPOSITORY, FOLDER_REPOSITORY } from '../data/providers';
 import { UploadPipeline } from '../data/upload-pipeline';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { ToastService } from '../toasts/toast.service';
 import { LibraryStore } from './library.store';
 
@@ -457,6 +458,33 @@ describe('LibraryStore', () => {
     // The URL revoke is deferred so the save can't be cancelled.
     await new Promise((resolve) => setTimeout(resolve, 1100));
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+  });
+
+  // Issue #120: the attention overview opens a Document at a cited page.
+  it('openAt opens a ready Document and queues its page focus', async () => {
+    const { store, repository, open } = setup();
+    const id = await repository.seed('ready');
+    const focus = TestBed.inject(PageFocus);
+
+    store.openAt(id, { page: 3, quote: 'Schriftform' });
+
+    expect(open.docId()).toBe(id);
+    expect(focus.pending()).toEqual({ documentId: id, request: { page: 3, quote: 'Schriftform' } });
+  });
+
+  it('openAt without a focus just opens, and ignores a Document that is not ready', async () => {
+    const { store, repository, open } = setup();
+    const readyId = await repository.seed('ready');
+    const uploadingId = await repository.seed('uploading');
+    const focus = TestBed.inject(PageFocus);
+
+    store.openAt(uploadingId, { page: 1 });
+    expect(open.docId()).toBeNull();
+    expect(focus.pending()).toBeNull();
+
+    store.openAt(readyId);
+    expect(open.docId()).toBe(readyId);
+    expect(focus.pending()).toBeNull();
   });
 
   it('delete confirm cancels jobs, tears down, navigates back, and toasts', async () => {

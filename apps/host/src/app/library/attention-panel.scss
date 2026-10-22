@@ -1,0 +1,133 @@
+@use 'tokens' as kt;
+
+.attention {
+  margin-top: kt.$kt-space-4;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-lg;
+  background: kt.$kt-surface;
+  overflow: hidden;
+}
+
+.attention-head {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  width: 100%;
+  min-height: kt.$kt-touch-target;
+  padding: 0 kt.$kt-space-4;
+  border: 0;
+  background: transparent;
+  color: kt.$kt-text;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chevron {
+  transition: transform 0.15s;
+
+  &.is-open {
+    transform: rotate(90deg);
+  }
+}
+
+.attention-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: kt.$kt-danger-tint;
+  color: kt.$kt-danger;
+  font-size: kt.$kt-text-xs;
+  line-height: 20px;
+  text-align: center;
+}
+
+.attention-note {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  margin: 0;
+  padding: kt.$kt-space-2 kt.$kt-space-4 kt.$kt-space-4;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid kt.$kt-border-strong;
+  border-top-color: kt.$kt-text;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.attention-group {
+  margin: 0;
+  padding: kt.$kt-space-1 kt.$kt-space-4;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &.is-overdue {
+    color: kt.$kt-danger;
+  }
+}
+
+.attention-row {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  width: 100%;
+  min-height: kt.$kt-touch-target;
+  padding: kt.$kt-space-2 kt.$kt-space-4;
+  border: 0;
+  border-top: 1px solid kt.$kt-border;
+  background: transparent;
+  color: kt.$kt-text;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+}
+
+.attention-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.attention-text {
+  font-size: kt.$kt-text-sm;
+  font-weight: 600;
+}
+
+.attention-sub {
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+}
+
+.attention-chip {
+  margin-left: kt.$kt-space-1;
+  padding: 1px 7px;
+  border-radius: kt.$kt-radius-sm;
+  background: kt.$kt-accent-tint;
+}
+
+.attention-when {
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  white-space: nowrap;
+}

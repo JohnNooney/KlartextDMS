@@ -61,6 +61,7 @@ class FakeStore {
   readonly failedDeletes = signal<ReadonlySet<string>>(new Set());
   readonly extractionJobs = signal<ReadonlyMap<string, 'queued' | 'running' | 'failed'>>(new Map());
   readonly extractionsByDocId = signal<ReadonlyMap<string, ExtractionRecord>>(new Map());
+  readonly extractionsLoaded = signal(true);
   readonly openDoc = signal<DocumentRecord | null>(null);
   folderById = vi.fn(
     (id: string | null): FolderRecord | undefined =>
@@ -79,6 +80,7 @@ class FakeStore {
   confirmDelete = vi.fn(async () => {});
   retryDelete = vi.fn(async () => {});
   open = vi.fn();
+  openAt = vi.fn();
   close = vi.fn();
 }
 
@@ -488,5 +490,111 @@ describe('Library', () => {
     (el.querySelector('.menu-shield') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+  });
+
+  // Issue #120: the Folder attention overview above the tile grid.
+  describe('Folder attention overview', () => {
+    const extractionFor = (
+      documentId: string,
+      actionItems: ExtractionRecord['actionItems'],
+    ): ExtractionRecord => ({
+      documentId,
+      schemaVersion: 2,
+      promptVersion: 'klartext-extraction-v2',
+      model: 'm',
+      documentType: 'OTHER',
+      sourceLanguage: 'de',
+      plainEnglishSummary: 's',
+      extractionStatus: 'COMPLETE',
+      actionItems,
+      keyTakeaways: [],
+      createdAt: { seconds: 1, nanoseconds: 0 },
+    });
+
+    async function withAttention(extractionsLoaded = true) {
+      const ctx = await setup();
+      const docs = [
+        record('ready', { id: 'd-top', title: 'Top letter', folderId: null }),
+        record('ready', { id: 'd-deep', title: 'Mietvertrag', folderId: 'b' }),
+        record('ready', { id: 'd-quiet', title: 'Quiet', folderId: null }),
+      ];
+      ctx.store.folders.set([folder('a', 'Wohnung', null), folder('b', 'Mietverträge', 'a')]);
+      ctx.store.documents.set(docs);
+      ctx.store.visible.set(docs.filter((d) => d.folderId === null));
+      ctx.store.deepDocumentCount.set(3);
+      ctx.store.extractionsLoaded.set(extractionsLoaded);
+      ctx.store.extractionsByDocId.set(
+        new Map([
+          [
+            'd-top',
+            extractionFor('d-top', [
+              { id: 'ai-1', text: 'Pay the fee', sourceQuote: 'Gebühr', page: 2, timing: { kind: 'FIXED_DATE', dueDate: '2000-01-01' } },
+            ]),
+          ],
+          [
+            'd-deep',
+            extractionFor('d-deep', [
+              { id: 'ai-2', text: 'Give notice in writing', sourceQuote: 'Schriftform', page: 3, timing: { kind: 'NONE' } },
+            ]),
+          ],
+        ]),
+      );
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+
+    const panel = (el: HTMLElement) => el.querySelector('app-attention-panel');
+
+    it('lists Action Items grouped by urgency with deep path chips', async () => {
+      const { el } = await withAttention();
+      const text = panel(el)!.textContent!;
+      expect(text).toContain('Needs your attention');
+      expect(text).toContain('Overdue');
+      expect(text).toContain('Pay the fee');
+      expect(text).toContain('No date');
+      expect(text).toContain('Give notice in writing');
+      expect(panel(el)!.querySelector('.attention-chip')?.textContent).toContain('Wohnung / Mietverträge');
+    });
+
+    it('collapses and expands from the header', async () => {
+      const { fixture, el } = await withAttention();
+      const head = panel(el)!.querySelector<HTMLButtonElement>('.attention-head')!;
+      expect(head.getAttribute('aria-expanded')).toBe('true');
+      head.click();
+      fixture.detectChanges();
+      expect(head.getAttribute('aria-expanded')).toBe('false');
+      expect(panel(el)!.querySelector('.attention-row')).toBeNull();
+    });
+
+    it('clicking an item opens its Document at the cited page and quote', async () => {
+      const { fixture, store, el } = await withAttention();
+      const row = [...panel(el)!.querySelectorAll<HTMLButtonElement>('.attention-row')].find((r) =>
+        r.textContent!.includes('Give notice in writing'),
+      )!;
+      row.click();
+      fixture.detectChanges();
+      expect(store.openAt).toHaveBeenCalledWith('d-deep', { page: 3, quote: 'Schriftform' });
+    });
+
+    it('shows the empty state once every Extraction is read and nothing needs attention', async () => {
+      const { fixture, store, el } = await withAttention();
+      store.extractionsByDocId.set(new Map());
+      fixture.detectChanges();
+      expect(panel(el)!.textContent).toContain('Nothing needs your attention.');
+    });
+
+    it('shows "Reading n of m documents…" until the Extraction index has loaded', async () => {
+      const { el } = await withAttention(false);
+      expect(panel(el)!.textContent).toContain('Reading 2 of 3 documents…');
+      expect(panel(el)!.textContent).not.toContain('Nothing needs your attention.');
+    });
+
+    it('is absent when the browsed scope holds no Documents', async () => {
+      const { fixture, store, el } = await withAttention();
+      store.deepDocumentCount.set(0);
+      store.documents.set([]);
+      fixture.detectChanges();
+      expect(panel(el)).toBeNull();
+    });
   });
 });
