@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import type { ExtractionRecord } from '@klartext/bus-contract';
 import { HostBus } from '../bus/host-bus';
 import type { DocumentRecord } from '../data/document';
 import { InvalidDocumentFileError } from '../data/document-input';
@@ -57,8 +58,15 @@ export class LibraryStore {
    * the in-flight guards. Written by `ExtractionFlow`; never persisted.
    */
   readonly extractionJobs = signal<ReadonlyMap<string, ExtractionJobState>>(new Map());
-  /** Documents holding a stored Extraction — no failure badge for these (#32). */
-  readonly extractionStored = signal<ReadonlySet<string>>(new Set());
+  /**
+   * The Extraction index (ADR 0011): every stored Extraction by Document id —
+   * the one read model for rollups, search and the no-failure-badge rule
+   * (#32). Records arrive already normalized (ADR 0010); entries leave with
+   * their Document.
+   */
+  readonly extractionsByDocId = signal<ReadonlyMap<string, ExtractionRecord>>(new Map());
+  /** `true` once the startup sweep has read every ready Document's Extraction. */
+  readonly extractionsLoaded = signal(false);
   /** The open Document record — only while the open id resolves to `ready`. */
   readonly openDoc = computed(() => {
     const doc = this.docById(this.openDocument.docId());
@@ -377,11 +385,14 @@ export class LibraryStore {
     });
   }
 
-  /** Marks a Document as holding a stored Extraction (no failure badge). */
-  markExtractionStored(documentId: string): void {
-    this.extractionStored.update((set) =>
-      set.has(documentId) ? set : new Set(set).add(documentId),
-    );
+  /** Write-through: indexes (or replaces) a Document's current Extraction. */
+  setExtraction(documentId: string, record: ExtractionRecord): void {
+    this.extractionsByDocId.update((map) => new Map(map).set(documentId, record));
+  }
+
+  /** Marks the startup sweep finished — the index is complete for loaded Documents. */
+  markExtractionsLoaded(): void {
+    this.extractionsLoaded.set(true);
   }
 
   private startUpload(file: File, folderId: string | null): Promise<void> {
@@ -456,6 +467,7 @@ export class LibraryStore {
 
   private onSnapshot(documents: DocumentRecord[]): void {
     this.documents.set(documents);
+    this.pruneExtractions(documents);
     // The open Document vanished or left `ready` — navigate back (#16).
     const openId = this.openDocument.docId();
     if (openId !== null && !documents.some((d) => d.id === openId && d.status === 'ready')) {
@@ -466,6 +478,18 @@ export class LibraryStore {
       void this.reconcile(documents);
     }
     this.reconcileFolders();
+  }
+
+  /** Drops index entries whose Document is gone from the feed. */
+  private pruneExtractions(documents: DocumentRecord[]): void {
+    const ids = new Set(documents.map((d) => d.id));
+    this.extractionsByDocId.update((map) => {
+      const gone = [...map.keys()].filter((id) => !ids.has(id));
+      if (gone.length === 0) return map;
+      const next = new Map(map);
+      for (const id of gone) next.delete(id);
+      return next;
+    });
   }
 
   /**

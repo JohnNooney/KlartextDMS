@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, effect, inject } from '@angular/core';
+import { DestroyRef, Injectable, effect, inject, untracked } from '@angular/core';
 import { normalizeExtractionRecord } from '@klartext/bus-contract';
 import type {
   ExtractionCandidate,
@@ -61,10 +61,9 @@ export class ExtractionFlow implements HostBusProbe {
   private readonly bus = inject(HostBus);
   private readonly toasts = inject(ToastService);
 
-  /** Extraction Records resolved this session — the Session builder's read-through cache. */
-  private readonly extractionCache = new Map<string, ExtractionRecord>();
   /** Ready Documents the auto-enqueue rule already handled this load. */
   private readonly handled = new Set<string>();
+  private swept = false;
   private lastSent: SentSession | null = null;
   private refreshSeq = 0;
 
@@ -73,7 +72,7 @@ export class ExtractionFlow implements HostBusProbe {
     events.attach(this);
     inject(DestroyRef).onDestroy(() => events.detach(this));
     // Job orchestration: upload-ready transitions and the load re-queue rule.
-    effect(() => this.sweep(this.store.documents() ?? []));
+    effect(() => this.sweep(this.store.documents()));
     // Session flow: INIT_SESSION follows the open Document and its job state.
     effect(() => {
       const docId = this.open.docId();
@@ -109,7 +108,7 @@ export class ExtractionFlow implements HostBusProbe {
       // (e.g. `running`) — a late stale Session would stick on the panel.
       this.refreshSeq++;
       const shown = normalizeExtractionRecord({ ...extraction, createdAt: nowTimestamp() });
-      this.extractionCache.set(documentId, shown);
+      this.store.setExtraction(documentId, shown);
       this.lastSent = {
         documentId,
         documentTitle: doc.title,
@@ -177,30 +176,35 @@ export class ExtractionFlow implements HostBusProbe {
 
   // -- Job queue feeders ----------------------------------------------------
 
-  private sweep(documents: DocumentRecord[]): void {
+  private sweep(documents: DocumentRecord[] | null): void {
+    if (documents === null) return;
+    const reads: Promise<void>[] = [];
     for (const doc of documents) {
       if (doc.status !== 'ready' || this.handled.has(doc.id)) continue;
       this.handled.add(doc.id);
-      void this.classify(doc);
+      reads.push(this.classify(doc));
     }
+    if (this.swept) return;
+    this.swept = true;
+    void Promise.all(reads).then(() => this.store.markExtractionsLoaded());
   }
 
   /**
-   * One ready Document per load: resolves whether it holds a stored Extraction
-   * (the chips' no-badge rule, #32) and auto-enqueues when it does not — a
+   * One ready Document per load: reads its stored Extraction into the Host's
+   * index (ADR 0011) and auto-enqueues when it has none — a
    * recorded failure is never auto-requeued, `running` is never persisted.
    */
   private async classify(doc: DocumentRecord): Promise<void> {
     try {
       const record = await this.extractions.get(doc.id);
       if (record) {
-        this.extractionCache.set(doc.id, record);
-        this.store.markExtractionStored(doc.id);
+        // Deleted while the read was in flight — never resurrect its entry.
+        if (this.docById(doc.id)) this.store.setExtraction(doc.id, record);
         return;
       }
       if (doc.extractionFailure) return;
       if (this.store.extractionJobs().has(doc.id)) return;
-      await this.enqueue(doc.id);
+      void this.enqueue(doc.id);
     } catch (err) {
       // Release the slot: a transient read failure must not cost the
       // Document its auto-enqueue for the rest of the session.
@@ -256,8 +260,7 @@ export class ExtractionFlow implements HostBusProbe {
       const record =
         (await this.extractions.get(documentId)) ??
         normalizeExtractionRecord({ ...candidate, createdAt: nowTimestamp() });
-      this.extractionCache.set(documentId, record);
-      this.store.markExtractionStored(documentId);
+      if (this.docById(documentId)) this.store.setExtraction(documentId, record);
       this.store.clearExtractionJob(documentId);
       const doc = this.docById(documentId);
       if (doc && this.open.docId() === documentId) {
@@ -345,10 +348,10 @@ export class ExtractionFlow implements HostBusProbe {
   }
 
   private async extractionFor(documentId: string): Promise<ExtractionRecord | null> {
-    const cached = this.extractionCache.get(documentId);
-    if (cached) return cached;
+    const indexed = untracked(() => this.store.extractionsByDocId().get(documentId));
+    if (indexed) return indexed;
     const record = await this.extractions.get(documentId);
-    if (record) this.extractionCache.set(documentId, record);
+    if (record && this.docById(documentId)) this.store.setExtraction(documentId, record);
     return record;
   }
 

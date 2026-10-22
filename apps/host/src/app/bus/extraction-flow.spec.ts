@@ -533,7 +533,7 @@ describe('ExtractionFlow — library chip state (issue #32)', () => {
   });
 
   it('clears the job state once the Extraction is persisted', async () => {
-    const { repository, flow, store, tick } = setup();
+    const { repository, extractions, flow, store, tick } = setup();
     const doc = await repository.seed({ status: 'ready' });
     tick();
     await flush();
@@ -544,7 +544,7 @@ describe('ExtractionFlow — library chip state (issue #32)', () => {
     tick();
     await flush();
     expect(store.extractionJobs().has(doc.id)).toBe(false);
-    expect(store.extractionStored().has(doc.id)).toBe(true);
+    expect(store.extractionsByDocId().get(doc.id)).toEqual(extractions.records.get(doc.id));
   });
 
   it('marks Documents with a stored Extraction as analyzed on load, even failed ones', async () => {
@@ -566,9 +566,51 @@ describe('ExtractionFlow — library chip state (issue #32)', () => {
     tick();
     await flush();
 
-    expect(store.extractionStored().has(analyzed.id)).toBe(true);
+    expect(store.extractionsByDocId().has(analyzed.id)).toBe(true);
     // A Document holding a valid Extraction wears no failure badge (#32).
-    expect(store.extractionStored().has(failedButAnalyzed.id)).toBe(true);
+    expect(store.extractionsByDocId().has(failedButAnalyzed.id)).toBe(true);
+  });
+
+  it('indexes every stored Extraction and flags the sweep done only once all reads land', async () => {
+    const repository = new FakeDocumentRepository();
+    const a = await repository.seed({ status: 'ready' });
+    const b = await repository.seed({ status: 'ready' });
+    const { extractions, store, tick } = setup(repository);
+    extractions.records.set(a.id, storedRecord(a.id));
+    extractions.records.set(b.id, storedRecord(b.id));
+    expect(store.extractionsLoaded()).toBe(false);
+
+    tick();
+    await flush();
+
+    expect(store.extractionsLoaded()).toBe(true);
+    expect([...store.extractionsByDocId().keys()].sort()).toEqual([a.id, b.id].sort());
+    expect(store.extractionsByDocId().get(a.id)).toEqual(storedRecord(a.id));
+  });
+
+  it('is loaded for an empty library, and a Document without an Extraction is absent', async () => {
+    const empty = setup();
+    empty.tick();
+    await flush();
+    expect(empty.store.extractionsLoaded()).toBe(true);
+    expect(empty.store.extractionsByDocId().size).toBe(0);
+  });
+
+  it('writes a re-analysis result through, replacing the prior Extraction', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const { extractions, flow, store, tick } = setup(repository);
+    extractions.records.set(doc.id, storedRecord(doc.id));
+    tick();
+    await flush();
+    const before = store.extractionsByDocId().get(doc.id);
+
+    flow.jobSucceeded('job-2', candidate(doc.id));
+    await flush();
+
+    const after = store.extractionsByDocId().get(doc.id);
+    expect(after).not.toBe(before);
+    expect(after).toEqual(extractions.records.get(doc.id));
   });
 });
 
