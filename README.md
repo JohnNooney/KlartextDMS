@@ -2,20 +2,20 @@
 
 A personal filing cabinet for German paperwork that explains each document in plain English.
 
-Moving to Germany means a flood of contracts and official letters: Mietvertrag, Krankenversicherung, Internetvertrag, Behördenbriefe. Klartext stores them and, for each one, produces an **Extraction**: what kind of document it is, an English summary, the key takeaways (amounts, dates, obligations), and the critical warnings (notice periods, hidden fees, liabilities) that cost you money or rights if you miss them.
+Moving to Germany means a flood of contracts and official letters: Mietvertrag, Krankenversicherung, Internetvertrag, Behördenbriefe. Klartext stores them and, for each one, produces an **Extraction**: the document type, an English summary, the key takeaways (amounts, dates, obligations), and the **Action Items** (notice periods, deadlines, hidden fees) that cost you money or rights if you miss them.
 
 [![CI](https://github.com/JohnNooney/KlartextDMS/actions/workflows/firebase-hosting-merge.yml/badge.svg)](https://github.com/JohnNooney/KlartextDMS/actions/workflows/firebase-hosting-merge.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Live at [klartext.nooney.dev](https://klartext.nooney.dev) — single-user deployment; sign-in is allowlist-gated.
+Live at [klartext.nooney.dev](https://klartext.nooney.dev). Sign-in is allowlist-gated.
 
 ![Klartext on desktop and phone — a Document open in the reader beside its Extraction](docs/screenshots/hero.png)
 
 ![The library: Folder tree and Document tiles](docs/screenshots/library-framed.png)
 
-Screenshots regenerate deterministically with `pnpm screenshots` — the same seeded-emulator harness as the e2e suite.
-
 ## Try it yourself
+
+Requires Node 24 and pnpm 9.
 
 ```sh
 git clone https://github.com/JohnNooney/KlartextDMS.git && cd KlartextDMS
@@ -23,66 +23,56 @@ pnpm install
 pnpm dev:demo
 ```
 
-Open http://localhost:4200 and sign in with `test-user@test.com` / `test1234`. The seeded Documents open with their Extractions already filled in; `dev:demo` swaps the Guest's AI provider for the same deterministic fixtures, so uploads get a fixture Extraction instead of a Gemini call — no API keys or env vars needed. Plain `pnpm dev` keeps the real Gemini provider.
+Open http://localhost:4200 and sign in with `test-user@test.com` / `test1234` (emulator only). The seeded Documents open with their Extractions already filled in, and `dev:demo` swaps the AI provider for deterministic fixtures, so no API keys are needed. Plain `pnpm dev` calls the real Gemini model and needs Firebase credentials (see [development internals](./docs/development.md)).
 
-## Why two apps and an iframe
+## How it works
 
-Klartext is also a sandbox for an enterprise integration problem: embedding a newly acquired Vue product inside a legacy Angular dashboard when the only integration point is an `<iframe>`. The constraint is deliberate, so the project is built as two independent frontends that talk **only** over `window.postMessage`. No Module Federation, no Web Components.
+Klartext is also a sandbox for an enterprise integration problem: embedding a newly acquired Vue product inside a legacy Angular dashboard when the only integration point is an `<iframe>`. So it is two independent frontends that talk **only** over `window.postMessage`: no Module Federation, no Web Components.
 
 | | Host | Guest |
 |---|---|---|
-| Stack | Angular (latest stable), SCSS | Vue 3 (Composition API), Vite, TailwindCSS |
-| Role | Sign-in, document list, uploads, the frame the Guest renders in | Document viewer + Extraction panel; calls the AI |
-| Runs on | Its own port / Firebase Hosting site | Its own port / Firebase Hosting site |
+| Stack | Angular 21, SCSS | Vue 3.5, Vite 8, Tailwind 4 |
+| Role | Sign-in, library, uploads, PDF reader, the frame the Guest renders in | Extraction panel; calls the AI |
+| Dev port | :4200 | :5173 |
 
-**The Bus.** Everything crossing the iframe is an Envelope `{ v, type, sessionId, payload }`. The Host opens a Session (`INIT_SESSION`) when a Document is clicked; the Guest reports `AI_PROCESSING_STARTED` / `AI_PROCESSING_SUCCESS` / `AI_PROCESSING_ERROR`, and the Host locks the sidebar while processing runs.
+- **The Bus.** Everything crossing the iframe is an Envelope `{ v, type, sessionId, payload }`, defined in [`packages/bus-contract`](./packages/bus-contract). The Host queues Extractions as background jobs after upload and opens a Session (`INIT_SESSION`) when a Document is clicked; the Guest reports progress back while you keep browsing.
+- **Platform.** Firebase end to end: Hosting (two sites), Auth, App Check, Storage for Document bytes, Firestore for metadata and Extractions, and Firebase AI Logic (Gemini) called from the Guest with the PDF sent directly to the model. Local development runs on the Firebase emulators. One Extraction per Document is persisted and reused.
 
-**Platform.** Firebase end to end from the first cut: Hosting (two sites), Auth, Storage for Document bytes, Firestore for metadata and Extractions, and Firebase AI Logic (Gemini) called from the Guest with the PDF sent directly to the multimodal model. Local development runs against the Firebase emulators. One Extraction per Document is persisted and reused.
-
-Vocabulary (Host, Guest, Document, Extraction, Bus, Envelope, Session) is defined in [`CONTEXT.md`](./CONTEXT.md); use those terms in code, issues, and docs.
+Domain terms (Host, Guest, Document, Extraction, Action Item, Bus, Envelope, Session, ...) are defined in [`CONTEXT.md`](./CONTEXT.md).
 
 ## Status
 
-Working end to end: sign-in, folder library, uploads, the reader, and persisted Extractions run against the emulators locally and on Firebase Hosting in production. Feature work proceeds through the phased issues indexed in [`docs/spec.md`](./docs/spec.md); pick from open issues labelled `ready-for-agent` with no open blockers.
+v1 is shipped: sign-in, folder library, uploads, the reader, and persisted Extractions. v2 is in progress: the Extraction v2 schema, Action Items, and the Host extraction index are done; library search, calendar reminders, and per-page Translation are planned. See [`docs/spec.md`](./docs/spec.md).
 
 ## Repository layout
 
 ```
-apps/host           Angular dashboard — sign-in, library, PDF view, Guest iframe (:4200)
-apps/guest          Vue 3 insights panel rendered in the Host's iframe (:5173)
-packages/theme      shared Apple-style design tokens (CSS vars → SCSS / Tailwind)
-packages/bus-contract  the { v, type, sessionId, payload } Envelope contract
-packages/firebase-config  shared Firebase web config + emulator endpoints
-scripts/            deterministic emulator seed (admin SDK) + fixture PDFs/Extractions + Host icon generator
-emulator-data/      committed emulator snapshot loaded via --import
-CONTEXT.md          domain glossary
-docs/README.md      documentation map (Diátaxis index)
-docs/architecture.md  system architecture (Explanation + Reference)
-docs/adr/           architecture decision records
-docs/deployment.md  hosting topology and per-Environment Peer Origins
-docs/development.md contributor internals — e2e wiring, App Check tokens, port notes
+apps/host           Angular dashboard
+apps/guest          Vue insights panel rendered in the Host's iframe
+packages/           shared theme tokens, Bus contract, Firebase config
+e2e/                Playwright suite and screenshot composites
+scripts/            emulator seed, fixtures, build helpers
+emulator-data/      committed emulator snapshot
+docs/               documentation, ADRs, spec
+firebase.json, firestore.rules, storage.rules   Firebase config and security rules
 ```
 
-## Local development
+## Common commands
 
 ```sh
-pnpm install
-pnpm dev          # Host :4200 + Guest :5173 + Auth/Firestore/Storage emulators (seeded)
-pnpm dev:demo     # same, but the Guest serves fixture Extractions instead of calling Gemini
-pnpm test         # unit/smoke suites across apps and packages
-pnpm build        # build both apps
-pnpm seed         # regenerate emulator-data/ from scripts/seed.mjs
-pnpm emulators    # full emulator suite incl. Hosting emulator (:5050/:5055)
-pnpm e2e          # e2e build, then Playwright under firebase emulators:exec (seeded)
+pnpm dev          # Host + Guest + Auth/Firestore/Storage emulators (seeded)
+pnpm dev:demo     # same, with fixture Extractions instead of Gemini
+pnpm typecheck
+pnpm test         # unit suites across the workspace
+pnpm e2e          # Playwright under the emulators
 pnpm screenshots  # regenerate docs/screenshots/*.png
 ```
 
-Contributor internals — the e2e Environment wiring, App Check debug tokens, toolchain and port notes — live in [`docs/development.md`](./docs/development.md).
+## Further reading
 
-## Working on this repo
+The [documentation index](./docs/README.md) covers [architecture](./docs/architecture.md), [ADRs](./docs/adr/), [deployment](./docs/deployment.md), and [development internals](./docs/development.md) (ports, e2e wiring, App Check tokens, the full script list).
 
-- Issues and specs: GitHub Issues via the `gh` CLI, see [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md).
-- Agent conventions: [`AGENTS.md`](./AGENTS.md).
+Contributing: issues live in GitHub Issues (see [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md)); agent conventions are in [`AGENTS.md`](./AGENTS.md).
 
 ## License
 
