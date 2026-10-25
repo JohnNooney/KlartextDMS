@@ -92,13 +92,6 @@
   font-weight: 700;
 }
 
-// The Folder's Document count rides beside the title on phone widths,
-// where the meta line below the toolbar collapses to screen-reader text
-// (issue #121's mobile declutter). Desktop keeps the meta line.
-.title-count {
-  display: none;
-}
-
 .toolbar-actions {
   margin-left: auto;
   display: flex;
@@ -284,24 +277,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
-  }
-
-  .title-count {
-    display: inline;
-    font-size: kt.$kt-text-lg;
-    font-weight: 500;
-    color: kt.$kt-text-faint;
-  }
-
-  // The count moved into the title; the meta line stays for screen readers.
-  .meta-line {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
   }
 
   // The standalone pills collapse into the + affordance's add menu.

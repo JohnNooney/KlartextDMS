@@ -863,13 +863,6 @@ describe('Library', () => {
       expect(ctx.el.classList.contains('search-open')).toBe(true);
     });
 
-    it('the title carries the Folder count on mobile', async () => {
-      const ctx = await withLibrary();
-      const count = ctx.el.querySelector('.library-title .title-count')!;
-      expect(count.textContent).toContain('2');
-      expect(count.getAttribute('aria-hidden')).toBe('true');
-    });
-
     it('a query restored from the URL fills the field', async () => {
       const ctx = await withLibrary();
       ctx.openDocument.query.set('restored');
