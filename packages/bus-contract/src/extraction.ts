@@ -18,6 +18,32 @@ export type DocumentType =
   | 'GOVERNMENT_LETTER'
   | 'OTHER';
 
+/**
+ * The user-facing English label for each `DocumentType` — shared (ADR 0012's
+ * precedent) so the Guest's insights panel and the Host's library search name
+ * a Document's type the same way.
+ */
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  TENANCY_AGREEMENT: 'Tenancy agreement',
+  HEALTH_INSURANCE: 'Health insurance',
+  EMPLOYMENT_CONTRACT: 'Employment contract',
+  INTERNET_OR_PHONE: 'Internet or phone contract',
+  GOVERNMENT_LETTER: 'Government letter',
+  OTHER: 'Other',
+};
+
+/**
+ * The Extraction's displayable Document type label: the free-text
+ * `documentTypeLabel` for `OTHER`, the enum's shared label otherwise.
+ */
+export function documentTypeLabel(
+  extraction: Pick<ExtractionContent, 'documentType' | 'documentTypeLabel'>,
+): string {
+  return extraction.documentType === 'OTHER'
+    ? (extraction.documentTypeLabel ?? DOCUMENT_TYPE_LABELS.OTHER)
+    : DOCUMENT_TYPE_LABELS[extraction.documentType];
+}
+
 export type ExtractionStatus = 'COMPLETE' | 'INSUFFICIENT_CONTENT' | 'UNSUPPORTED_DOCUMENT';
 
 export type RecurrenceCadence = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';

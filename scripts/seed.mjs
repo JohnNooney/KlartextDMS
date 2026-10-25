@@ -39,14 +39,21 @@ const USER = {
 };
 
 // Prototype Folder tree (issue #20): Verträge → {Wohnung, Internet & Mobilfunk},
-// Versicherungen → Krankenversicherung, Behörden.
+// Versicherungen → Krankenversicherung, Behörden. Behörden carries description
+// and keywords so library search exercises Folder metadata matching (#121).
 const FOLDERS = [
   { id: 'vertraege', name: 'Verträge', parentId: null },
   { id: 'wohnung', name: 'Wohnung', parentId: 'vertraege' },
   { id: 'internet', name: 'Internet & Mobilfunk', parentId: 'vertraege' },
   { id: 'versicherungen', name: 'Versicherungen', parentId: null },
   { id: 'kranken', name: 'Krankenversicherung', parentId: 'versicherungen' },
-  { id: 'behoerden', name: 'Behörden', parentId: null },
+  {
+    id: 'behoerden',
+    name: 'Behörden',
+    parentId: null,
+    description: 'Letters from government offices',
+    keywords: ['tax', 'amt'],
+  },
 ];
 
 // Fixture PDFs: regenerate with `node scripts/make-fixtures.mjs`.
@@ -120,6 +127,8 @@ for (const folder of FOLDERS) {
     name: folder.name,
     parentId: folder.parentId,
     status: 'ready',
+    ...(folder.description ? { description: folder.description } : {}),
+    ...(folder.keywords?.length ? { keywords: folder.keywords } : {}),
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });

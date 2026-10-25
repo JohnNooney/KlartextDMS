@@ -90,14 +90,33 @@
   margin: 0;
   font-size: kt.$kt-text-xl;
   font-weight: 700;
+  // A long Folder name ellipsizes rather than overflowing the toolbar —
+  // min-width:0 lets the flex child shrink below its content.
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-actions {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;
   flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  // Three-column centering: the title and the button group take equal
+  // flexible shares either side of the fixed-width search field, which
+  // therefore sits dead-center in the toolbar whatever the title says.
+  .library-title {
+    flex: 1 1 0;
+  }
+
+  .toolbar-actions {
+    flex: 1 1 0;
+    justify-content: flex-end;
+  }
 }
 
 .library-drop {
@@ -273,10 +292,12 @@
     order: 3;
     flex-basis: 100%;
     font-size: kt.$kt-text-3xl;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
+  }
+
+  // The navigation row still pushes the + affordance right (mobile keeps
+  // the auto margin desktop gave up for the search field's anchor).
+  .toolbar-actions {
+    margin-left: auto;
   }
 
   // The standalone pills collapse into the + affordance's add menu.

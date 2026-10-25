@@ -1,0 +1,187 @@
+@use 'tokens' as kt;
+
+// The library toolbar's search field (issue #121): sunken fill, magnifier
+// left, `/` shortcut hint right, the "This folder | All documents" scope pill
+// (decision #103) inside it. On mobile the field collapses to the magnifier
+// in .toolbar-actions; expanding swaps it into that same row beside + while
+// the title's row collapses (the prototype's "title swap") — the chrome
+// never grows a line, and collapsing restores the title exactly.
+.search {
+  // A fixed box — the field's width doesn't spring with the Folder title's
+  // length (it may still shrink on very narrow windows). Desktop centers
+  // it via equal flexible shares on .library-title and .toolbar-actions
+  // (see library.scss) — no margin here or it would eat the free space.
+  flex: 0 1 420px;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  min-width: 0;
+  height: kt.$kt-control-height;
+  padding: 0 kt.$kt-space-2 0 kt.$kt-space-3;
+  border-radius: 999px;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: kt.$kt-text-sm;
+  color: kt.$kt-text;
+  outline: none;
+
+  &::placeholder {
+    color: kt.$kt-text-faint;
+  }
+
+  // The custom clear button replaces the native one.
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.search-hint {
+  font-family: kt.$kt-font-sans;
+  font-size: kt.$kt-text-xs;
+  color: kt.$kt-text-faint;
+  border: 1px solid kt.$kt-border;
+  border-radius: 4px;
+  padding: 0 6px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: kt.$kt-fill-strong;
+  color: kt.$kt-text-muted;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+// The mobile close button takes the / hint's spot at the field's end.
+.search-close {
+  display: none;
+}
+
+.scope-pill {
+  display: flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: kt.$kt-fill-strong;
+  flex-shrink: 0;
+
+  button {
+    border: 0;
+    border-radius: 999px;
+    padding: 3px 10px;
+    background: transparent;
+    font: inherit;
+    font-size: kt.$kt-text-xs;
+    color: kt.$kt-text-muted;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &.on {
+      background: kt.$kt-bg;
+      color: kt.$kt-text;
+      box-shadow: kt.$kt-shadow-raised;
+    }
+  }
+}
+
+// The idle-search prompt (mobile only): while the expanded field is empty,
+// it stands in for the library content — a quiet "type here" rather than
+// the full grid behind the keyboard. Desktop never renders it.
+.search-prompt {
+  display: none;
+  margin: kt.$kt-space-8 0 0;
+  text-align: center;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+
+  .prompt-title {
+    margin: 0 0 kt.$kt-space-1;
+    font-size: kt.$kt-text-lg;
+    font-weight: 600;
+    color: kt.$kt-text;
+  }
+
+  .prompt-sub {
+    margin: 0;
+  }
+}
+
+// The mobile magnifier — desktop hides it; the field is always out there.
+.btn-search {
+  display: none;
+  width: kt.$kt-touch-target;
+  height: kt.$kt-touch-target;
+  border: 0;
+  border-radius: 50%;
+  background: kt.$kt-accent-tint;
+  color: kt.$kt-accent;
+  place-items: center;
+}
+
+@media (max-width: 768px) {
+  // The collapsed affordance sits with +; expanding hides the large title
+  // and the field grows inline in the navigation row, between ‹ back and
+  // the + affordance — one row of chrome, like the prototype.
+  .btn-search {
+    display: grid;
+  }
+
+  .search {
+    display: none;
+  }
+
+  // No keyboard — the hint swaps for the ✕ close button.
+  .search-hint {
+    display: none;
+  }
+
+  .search-close {
+    display: grid;
+  }
+
+  :host(.search-open) {
+    .btn-search,
+    .library-title {
+      display: none;
+    }
+
+    .search {
+      display: flex;
+      flex: 1;
+      max-width: none;
+      height: auto;
+      min-height: kt.$kt-control-height;
+      flex-wrap: wrap;
+      padding: 4px kt.$kt-space-3;
+      margin-left: 0;
+      row-gap: kt.$kt-space-1;
+    }
+  }
+
+  // Field open but idle: the prompt shows, everything after it in
+  // .library-drop (loading, results, meta, grid) goes away.
+  :host(.search-idle) {
+    .search-prompt {
+      display: block;
+    }
+
+    .search-prompt ~ * {
+      display: none;
+    }
+  }
+}

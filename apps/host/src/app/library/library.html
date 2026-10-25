@@ -31,7 +31,52 @@
       </button>
     }
     <h1 class="library-title" lang="de">{{ title() }}</h1>
+    <div class="search" role="search" (focusout)="onSearchFocusOut($event)">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/></svg>
+      <input
+        #searchBox
+        class="search-input"
+        type="search"
+        placeholder="Search"
+        aria-label="Search the library"
+        (input)="onSearchInput($event)"
+        (keydown.escape)="onSearchEscape()"
+      />
+      @if (searching() && openDocument.folderId() !== null) {
+        <span class="scope-pill" role="group" aria-label="Search scope">
+          <button
+            type="button"
+            [class.on]="openDocument.searchScope() === 'folder'"
+            [attr.aria-pressed]="openDocument.searchScope() === 'folder'"
+            (click)="openDocument.setSearchScope('folder')"
+          >This folder</button>
+          <button
+            type="button"
+            [class.on]="openDocument.searchScope() === 'all'"
+            [attr.aria-pressed]="openDocument.searchScope() === 'all'"
+            (click)="openDocument.setSearchScope('all')"
+          >All documents</button>
+        </span>
+      }
+      @if (searching()) {
+        <button type="button" class="search-clear" (click)="clearSearch()" aria-label="Clear search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      } @else {
+        <kbd class="search-hint" aria-hidden="true">/</kbd>
+        <!-- Mobile shows a close affordance where desktop shows the /
+             hint — a keyboard shortcut means nothing on touch. -->
+        <button type="button" class="search-clear search-close" (click)="closeSearch()" aria-label="Close search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      }
+    </div>
     <div class="toolbar-actions">
+      <!-- The mobile search affordance (issue #121) — swaps the collapsed
+           field in for the title on its own row; desktop shows the field. -->
+      <button type="button" class="btn-search" (click)="revealSearch()" aria-label="Search">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/></svg>
+      </button>
       <button type="button" class="btn btn-secondary btn-new-folder" (click)="dialog.set({ kind: 'new-folder' })">New folder</button>
       <button type="button" class="btn btn-primary btn-upload" (click)="openUpload()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V4.5M7.5 9 12 4.5 16.5 9M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3"/></svg>
@@ -74,8 +119,24 @@
     (dragleave)="onGridDragLeave($event)"
     (drop)="onGridDrop($event)"
   >
+    <!-- While the mobile field sits open and idle (host .search-idle), this
+         prompt fills the content area instead of the whole library — the
+         grid would only distract under an empty field. -->
+    <div class="search-prompt">
+      <p class="prompt-title">Type to search</p>
+      <p class="prompt-sub">Documents, folders, and document insights.</p>
+    </div>
     @if (store.visible() === null) {
       <div class="library-loading"><span class="spinner" role="status" aria-label="Loading"></span></div>
+    } @else if (searching() && results(); as results) {
+      <!-- Searching swaps the grid for the inline result list (issue #121). -->
+      <app-search-results
+        [results]="results"
+        [query]="query()"
+        [reading]="reading()"
+        (folderOpened)="openFolder($event)"
+        (documentOpened)="openSearchResult($event)"
+      />
     } @else if (store.visible()!.length === 0 && store.visibleFolders().length === 0) {
       <div class="empty">
         <svg width="72" height="58" viewBox="0 0 52 42" fill="none" aria-hidden="true">
