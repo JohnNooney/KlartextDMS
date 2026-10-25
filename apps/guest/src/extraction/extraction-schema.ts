@@ -19,12 +19,13 @@ import type {
  * assembled by the provider.
  *
  * `validateExtractionContent` is the canonical Zod validator the spec assigns
- * to the Guest's extraction pipeline. It enforces the rules the wire schema
- * cannot: required-conditionals (`documentTypeLabel` iff `OTHER`,
- * `statusExplanation` iff non-`COMPLETE`), the 200-word summary cap, BCP 47
- * `sourceLanguage`, quote bounds, one-based `page`, the list caps, and the
- * per-`kind` `timing` invariants (the wire schema is a flat object because
- * `SchemaRequest` has no `oneOf`).
+ * to the Guest's extraction pipeline. The wire schema uses one `anyOf`
+ * variant per `timing.kind` so each kind's contract-required fields are
+ * required at generation time; Zod still enforces what the wire schema
+ * cannot express — foreign-`kind` field absence, the cross-field
+ * required-conditionals (`documentTypeLabel` iff `OTHER`, `statusExplanation`
+ * iff non-`COMPLETE`), the 200-word summary cap, BCP 47 `sourceLanguage`,
+ * quote bounds, one-based `page`, and the list caps.
  * Model-emitted `null`s normalize to absent — shape fixups, not semantic
  * coercion; nothing else is repaired silently.
  */
@@ -82,18 +83,47 @@ export const extractionResponseSchema: SchemaRequest = {
           sourceQuote: { type: 'string' },
           page: { type: 'integer', minimum: 1, nullable: true },
           timing: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string', enum: [...TIMING_KINDS] },
-              dueDate: { type: 'string', nullable: true },
-              cadence: { type: 'string', enum: [...CADENCES], nullable: true },
-              dayOfMonth: { type: 'integer', minimum: 1, maximum: 31, nullable: true },
-              scheduleLabel: { type: 'string', nullable: true },
-              duration: { type: 'integer', minimum: 1, nullable: true },
-              unit: { type: 'string', enum: [...NOTICE_UNITS], nullable: true },
-              anchor: { type: 'string', nullable: true },
-            },
-            required: ['kind'],
+            // One variant per kind: each declares and requires exactly the
+            // contract's fields for that kind, so a required field can no
+            // longer be omitted at generation time. Foreign-kind fields
+            // stay undeclared — Zod still audits for their absence.
+            anyOf: [
+              {
+                type: 'object',
+                properties: {
+                  kind: { type: 'string', enum: ['FIXED_DATE'] },
+                  dueDate: { type: 'string' },
+                },
+                required: ['kind', 'dueDate'],
+              },
+              {
+                type: 'object',
+                properties: {
+                  kind: { type: 'string', enum: ['RECURRING'] },
+                  cadence: { type: 'string', enum: [...CADENCES] },
+                  dayOfMonth: { type: 'integer', minimum: 1, maximum: 31, nullable: true },
+                  scheduleLabel: { type: 'string' },
+                },
+                required: ['kind', 'cadence', 'scheduleLabel'],
+              },
+              {
+                type: 'object',
+                properties: {
+                  kind: { type: 'string', enum: ['NOTICE_PERIOD'] },
+                  duration: { type: 'integer', minimum: 1 },
+                  unit: { type: 'string', enum: [...NOTICE_UNITS] },
+                  anchor: { type: 'string' },
+                },
+                required: ['kind', 'duration', 'unit', 'anchor'],
+              },
+              {
+                type: 'object',
+                properties: {
+                  kind: { type: 'string', enum: ['NONE'] },
+                },
+                required: ['kind'],
+              },
+            ],
           },
         },
         required: ['text', 'sourceQuote', 'timing'],
@@ -171,21 +201,25 @@ const timingSchema = z
         fail(field, `${field} must be absent for timing kind ${kind}`);
       }
     }
-    const text = (field: 'scheduleLabel' | 'anchor', max: number) => {
+    const required = (field: string) =>
+      fail(field, `${field} is required for timing kind ${kind}`);
+    const label = (field: 'scheduleLabel' | 'anchor', max: number) => {
       const value = fields[field];
-      if (!value || value.length > max) fail(field, `${field} must be 1-${max} characters`);
+      if (!value) required(field);
+      else if (value.length > max) fail(field, `${field} must be 1-${max} characters`);
     };
     if (kind === 'FIXED_DATE') {
-      if (!fields.dueDate || !isCalendarDate(fields.dueDate)) {
+      if (!fields.dueDate) required('dueDate');
+      else if (!isCalendarDate(fields.dueDate)) {
         fail('dueDate', 'dueDate must be a valid ISO YYYY-MM-DD date');
       }
     } else if (kind === 'RECURRING') {
-      if (!fields.cadence) fail('cadence', 'cadence is required for RECURRING');
-      text('scheduleLabel', 60);
+      if (!fields.cadence) required('cadence');
+      label('scheduleLabel', 60);
     } else if (kind === 'NOTICE_PERIOD') {
-      if (fields.duration === undefined) fail('duration', 'duration is required for NOTICE_PERIOD');
-      if (!fields.unit) fail('unit', 'unit is required for NOTICE_PERIOD');
-      text('anchor', 80);
+      if (fields.duration === undefined) required('duration');
+      if (!fields.unit) required('unit');
+      label('anchor', 80);
     }
     const present = Object.fromEntries(
       Object.entries(fields).filter(([, value]) => value !== undefined),
