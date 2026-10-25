@@ -8,7 +8,13 @@
  *   A  Inset grouped list — one column, timing folded into the subtitle, chevron.
  *   B  By Document — Document/path stated once as a section header, items beneath.
  *   C  Top items + sheet — three one-line items, "See All" opens a sheet.
+ *
+ * Round 2 (C chosen): two independent pickers on C — `?marker=text|dot|icon`
+ * (urgency markers, applied identically in the card and the sheet) and
+ * `?badge=red-if-overdue|grey|none` (header count). `?sample=1` injects a
+ * "This week" item so the orange state shows on seed data.
  */
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, input, isDevMode, output, signal } from '@angular/core';
 import type { AttentionGroup, AttentionGroupKey, AttentionItem } from './attention-overview';
 import { AttentionPanel } from './attention-panel';
@@ -30,8 +36,12 @@ const flatten = (groups: AttentionGroup[]): Flat[] =>
   groups.flatMap((g) => g.items.map((item) => ({ ...item, key: g.key })));
 
 /** Short trailing timing for one-line rows: urgency words, not sentences. */
-const shortTiming = (item: Flat): string =>
-  item.key === 'overdue' ? 'Overdue' : item.key === 'noDate' ? '' : item.timingLabel.replace(/^Due /, '');
+const shortTiming = (item: Flat): string => {
+  if (item.key === 'overdue') return 'Overdue';
+  if (item.key === 'noDate') return '';
+  const label = item.timingLabel.replace(/^Due /, '');
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
 
 const SHARED_STYLES = `
   :host { display: block; margin-top: var(--kt-space-4); }
@@ -204,14 +214,52 @@ export class AttentionVariantB {
   });
 }
 
+export const MARKERS = ['text', 'dot', 'icon'] as const;
+export type Marker = (typeof MARKERS)[number];
+export const BADGES = ['red-if-overdue', 'grey', 'none'] as const;
+export type Badge = (typeof BADGES)[number];
+export const MARKER_NAMES: Record<Marker, string> = {
+  text: 'Coloured timing text',
+  dot: 'Dot on exceptions',
+  icon: 'Icon on exceptions',
+};
+export const BADGE_NAMES: Record<Badge, string> = {
+  'red-if-overdue': 'Grey total, red overdue',
+  grey: 'Grey total',
+  none: 'No badge',
+};
+
 /** C — glanceable: the three most urgent items on one line each; "See All" opens a sheet. */
 @Component({
   selector: 'app-attention-variant-c',
+  imports: [NgTemplateOutlet],
   template: `
+    <ng-template #markTpl let-key>
+      @if (marker() !== 'text') {
+        <span class="mark" aria-hidden="true">
+          @if (key === 'overdue' || key === 'thisWeek') {
+            @if (marker() === 'dot') {
+              <span class="dot" [attr.data-key]="key"></span>
+            } @else if (key === 'overdue') {
+              <svg class="icon" data-key="overdue" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M8 4v5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11.6" r="1.1" fill="#fff"/></svg>
+            } @else {
+              <svg class="icon" data-key="thisWeek" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M8 4.2V8l2.6 1.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            }
+          }
+        </span>
+      }
+    </ng-template>
+
     <section aria-label="Needs your attention" class="card">
       <div class="head pad">
         <span class="title">Needs your attention</span>
-        @if (total() > 0) { <span class="count">{{ total() }}</span> }
+        @if (badge() !== 'none' && total() > 0) {
+          @if (badge() === 'red-if-overdue' && overdue() > 0) {
+            <span class="count" [attr.aria-label]="overdue() + ' overdue'">{{ overdue() }}</span>
+          } @else {
+            <span class="count count-grey" [attr.aria-label]="total() + ' items'">{{ total() }}</span>
+          }
+        }
         @if (total() > top().length) {
           <button type="button" class="text-btn" (click)="sheet.set(true)">See All</button>
         }
@@ -223,10 +271,10 @@ export class AttentionVariantB {
       }
       @for (item of top(); track item.id) {
         <button type="button" class="line" (click)="itemOpened.emit(item)">
-          <span class="dot" [attr.data-key]="item.key" aria-hidden="true"></span>
+          <ng-container *ngTemplateOutlet="markTpl; context: { $implicit: item.key }" />
           <span class="line-text ellipsis">{{ item.text }}</span>
           @if (shortTiming(item); as t) {
-            <span class="line-when" [class.is-overdue]="item.key === 'overdue'">{{ t }}</span>
+            <span class="line-when" [attr.data-key]="marker() === 'text' ? item.key : null">{{ t }}</span>
           }
           <span class="chev"><svg width="8" height="13" viewBox="0 0 8 13" aria-hidden="true"><path d="M1.5 1.5 6.5 6.5 1.5 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
@@ -247,13 +295,16 @@ export class AttentionVariantB {
             <div class="inset">
               @for (item of group.items; track item.id) {
                 <button type="button" class="sheet-row" (click)="sheet.set(false); itemOpened.emit(item)">
-                  <span class="sheet-text">{{ item.text }}</span>
-                  <span class="sheet-meta">
-                    @if (group.key !== 'noDate') {
-                      <span [class.is-overdue]="group.key === 'overdue'">{{ item.timingLabel }}</span><br />
-                    }
-                    <span lang="de">{{ item.documentTitle }}</span>@if (item.page) { · page {{ item.page }} }
-                    @if (item.path) { <br /><span lang="de">{{ item.path }}</span> }
+                  <ng-container *ngTemplateOutlet="markTpl; context: { $implicit: group.key }" />
+                  <span class="sheet-col">
+                    <span class="sheet-text">{{ item.text }}</span>
+                    <span class="sheet-meta">
+                      @if (group.key !== 'noDate') {
+                        <span [attr.data-key]="marker() === 'text' ? group.key : null" class="sheet-when">{{ item.timingLabel }}</span><br />
+                      }
+                      <span lang="de">{{ item.documentTitle }}</span>@if (item.page) { · page {{ item.page }} }
+                      @if (item.path) { <br /><span lang="de">{{ item.path }}</span> }
+                    </span>
                   </span>
                 </button>
               }
@@ -270,11 +321,17 @@ export class AttentionVariantB {
     .pad { padding: 0 var(--kt-space-4); }
     .line { display: flex; align-items: center; gap: var(--kt-space-3); width: 100%; min-height: var(--kt-touch-target); padding: 0 var(--kt-space-4); border-top: 0.5px solid var(--kt-border); }
     .line:active { background: var(--kt-fill); }
-    .dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--kt-text-faint); }
-    .dot[data-key='overdue'] { background: var(--kt-danger); border-color: var(--kt-danger); }
-    .dot[data-key='thisWeek'] { background: var(--kt-warning); border-color: var(--kt-warning); }
+    .count-grey { background: var(--kt-fill-strong); color: var(--kt-text-muted); }
+    .mark { flex-shrink: 0; width: 16px; display: flex; align-items: center; justify-content: center; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot[data-key='overdue'] { background: var(--kt-danger); }
+    .dot[data-key='thisWeek'] { background: var(--kt-warning); }
+    .icon[data-key='overdue'] { color: var(--kt-danger); }
+    .icon[data-key='thisWeek'] { color: var(--kt-warning); }
     .line-text { flex: 1; font-size: 15px; }
     .line-when { flex-shrink: 0; font-size: 13px; color: var(--kt-text-muted); }
+    [data-key='overdue'].line-when, [data-key='overdue'].sheet-when { color: var(--kt-danger); font-weight: 600; }
+    [data-key='thisWeek'].line-when, [data-key='thisWeek'].sheet-when { color: var(--kt-warning); font-weight: 600; }
     .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.3); z-index: 900; }
     .sheet { position: fixed; z-index: 901; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: var(--kt-bg); border-radius: 14px 14px 0 0; box-shadow: var(--kt-shadow-popover); }
     @media (min-width: 769px) { .sheet { top: 50%; bottom: auto; transform: translate(-50%, -50%); border-radius: 14px; max-height: 80vh; } .grabber { display: none; } }
@@ -284,7 +341,9 @@ export class AttentionVariantB {
     .sec { margin: var(--kt-space-3) 0 6px var(--kt-space-4); font-size: 13px; font-weight: 400; color: var(--kt-text-muted); }
     .sec.is-overdue { color: var(--kt-danger); font-weight: 600; }
     .inset { background: var(--kt-surface); border-radius: 10px; overflow: hidden; }
-    .sheet-row { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 12px var(--kt-space-4); }
+    .sheet-row { display: flex; align-items: flex-start; gap: var(--kt-space-3); width: 100%; padding: 12px var(--kt-space-4); }
+    .sheet-row .mark { height: 20px; }
+    .sheet-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     .sheet-row + .sheet-row { border-top: 0.5px solid var(--kt-border); }
     .sheet-text { font-size: 15px; line-height: 20px; overflow-wrap: anywhere; }
     .sheet-meta { font-size: 13px; color: var(--kt-text-muted); overflow-wrap: anywhere; }
@@ -294,17 +353,37 @@ export class AttentionVariantB {
 export class AttentionVariantC {
   readonly groups = input.required<AttentionGroup[]>();
   readonly reading = input<{ read: number; total: number } | null>(null);
+  readonly marker = input<Marker>('text');
+  readonly badge = input<Badge>('red-if-overdue');
   readonly itemOpened = output<AttentionItem>();
   protected readonly sheet = signal(false);
   protected readonly shortTiming = shortTiming;
   protected readonly total = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
+  protected readonly overdue = computed(() => this.groups().find((g) => g.key === 'overdue')?.items.length ?? 0);
   protected readonly top = computed(() => flatten(this.groups()).slice(0, 3));
 }
 
-const initialVariant = (): Variant => {
-  const raw = new URLSearchParams(location.search).get('variant');
-  const match = VARIANTS.find((v) => v.toLowerCase() === raw?.toLowerCase());
-  return match ?? 'A';
+const fromUrl = <T extends string>(param: string, options: readonly T[], fallback: T): T => {
+  const raw = new URLSearchParams(location.search).get(param)?.toLowerCase();
+  return options.find((o) => o.toLowerCase() === raw) ?? fallback;
+};
+
+const cycle = <T,>(options: readonly T[], current: T, delta: number): T =>
+  options[(options.indexOf(current) + delta + options.length) % options.length]!;
+
+/** Sample "This week" item so the orange state is visible on seed data, which has none. */
+const withSampleThisWeek = (groups: AttentionGroup[]): AttentionGroup[] => {
+  const donor = groups.flatMap((g) => g.items)[0];
+  if (!donor || groups.some((g) => g.key === 'thisWeek')) return groups;
+  const sample: AttentionItem = {
+    ...donor,
+    id: 'proto-this-week',
+    text: 'Send the signed SEPA mandate back to your landlord.',
+    timingLabel: 'Due in 3 days',
+  };
+  const out = [...groups];
+  out.splice(groups[0]?.key === 'overdue' ? 1 : 0, 0, { key: 'thisWeek', label: 'This week', items: [sample] });
+  return out;
 };
 
 /** Mounts the chosen variant in place of the real panel, plus the floating switcher. */
@@ -314,22 +393,44 @@ const initialVariant = (): Variant => {
   host: { '(document:keydown)': 'onKey($event)' },
   template: `
     @switch (variant()) {
-      @case ('current') { <app-attention-panel [groups]="groups()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
-      @case ('A') { <app-attention-variant-a [groups]="groups()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
-      @case ('B') { <app-attention-variant-b [groups]="groups()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
-      @case ('C') { <app-attention-variant-c [groups]="groups()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
+      @case ('current') { <app-attention-panel [groups]="shown()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
+      @case ('A') { <app-attention-variant-a [groups]="shown()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
+      @case ('B') { <app-attention-variant-b [groups]="shown()" [reading]="reading()" (itemOpened)="itemOpened.emit($event)" /> }
+      @case ('C') { <app-attention-variant-c [groups]="shown()" [reading]="reading()" [marker]="marker()" [badge]="badge()" (itemOpened)="itemOpened.emit($event)" /> }
     }
     @if (dev) {
       <div class="proto-switcher" role="toolbar" aria-label="Prototype variant">
-        <button type="button" (click)="step(-1)" aria-label="Previous variant">‹</button>
-        <span>{{ variant() }} · {{ names[variant()] }}</span>
-        <button type="button" (click)="step(1)" aria-label="Next variant">›</button>
+        @if (variant() === 'C') {
+          <div class="proto-row">
+            <span class="proto-key">Markers</span>
+            <button type="button" (click)="marker.set(cycleOf(markers, marker(), -1))" aria-label="Previous marker style">‹</button>
+            <span class="proto-val">{{ markerNames[marker()] }}</span>
+            <button type="button" (click)="marker.set(cycleOf(markers, marker(), 1))" aria-label="Next marker style">›</button>
+          </div>
+          <div class="proto-row">
+            <span class="proto-key">Badge</span>
+            <button type="button" (click)="badge.set(cycleOf(badges, badge(), -1))" aria-label="Previous badge style">‹</button>
+            <span class="proto-val">{{ badgeNames[badge()] }}</span>
+            <button type="button" (click)="badge.set(cycleOf(badges, badge(), 1))" aria-label="Next badge style">›</button>
+          </div>
+        }
+        <div class="proto-row">
+          <span class="proto-key">Variant</span>
+          <button type="button" (click)="step(-1)" aria-label="Previous variant">‹</button>
+          <span class="proto-val">{{ variant() }} · {{ names[variant()] }}</span>
+          <button type="button" (click)="step(1)" aria-label="Next variant">›</button>
+        </div>
+        <label class="proto-sample"><input type="checkbox" [checked]="sample()" (change)="sample.set(!sample())" /> Add a "This week" sample item</label>
       </div>
     }
   `,
   styles: `
-    .proto-switcher { position: fixed; z-index: 2000; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 999px; background: #111; color: #fff; font: 600 13px/1 system-ui, sans-serif; box-shadow: 0 6px 24px rgb(0 0 0 / 0.35); white-space: nowrap; }
-    .proto-switcher button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: #333; color: #fff; font-size: 18px; cursor: pointer; }
+    .proto-switcher { position: fixed; z-index: 2000; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 16px; background: #111; color: #fff; font: 600 13px/1 system-ui, sans-serif; box-shadow: 0 6px 24px rgb(0 0 0 / 0.35); white-space: nowrap; }
+    .proto-row { display: grid; grid-template-columns: 56px 28px 180px 28px; align-items: center; gap: 6px; }
+    .proto-key { color: #999; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .proto-val { text-align: center; overflow: hidden; text-overflow: ellipsis; }
+    .proto-switcher button { width: 28px; height: 28px; border-radius: 50%; border: 0; background: #333; color: #fff; font-size: 16px; cursor: pointer; }
+    .proto-sample { display: flex; align-items: center; gap: 6px; color: #bbb; font-weight: 500; font-size: 12px; padding-left: 2px; }
   `,
 })
 export class AttentionDensityPrototype {
@@ -338,19 +439,31 @@ export class AttentionDensityPrototype {
   readonly itemOpened = output<AttentionItem>();
   protected readonly dev = isDevMode() || new URLSearchParams(location.search).has('variant');
   protected readonly names = NAMES;
-  protected readonly variant = signal<Variant>(initialVariant());
+  protected readonly markers = MARKERS;
+  protected readonly badges = BADGES;
+  protected readonly markerNames = MARKER_NAMES;
+  protected readonly badgeNames = BADGE_NAMES;
+  protected readonly cycleOf = cycle;
+  protected readonly variant = signal<Variant>(fromUrl('variant', VARIANTS, 'C'));
+  protected readonly marker = signal<Marker>(fromUrl('marker', MARKERS, 'text'));
+  protected readonly badge = signal<Badge>(fromUrl('badge', BADGES, 'red-if-overdue'));
+  protected readonly sample = signal(new URLSearchParams(location.search).get('sample') === '1');
+  protected readonly shown = computed(() => (this.sample() ? withSampleThisWeek(this.groups()) : this.groups()));
 
   constructor() {
     effect(() => {
       const url = new URL(location.href);
       url.searchParams.set('variant', this.variant());
+      url.searchParams.set('marker', this.marker());
+      url.searchParams.set('badge', this.badge());
+      if (this.sample()) url.searchParams.set('sample', '1');
+      else url.searchParams.delete('sample');
       history.replaceState(history.state, '', url);
     });
   }
 
   protected step(delta: number): void {
-    const i = VARIANTS.indexOf(this.variant());
-    this.variant.set(VARIANTS[(i + delta + VARIANTS.length) % VARIANTS.length]!);
+    this.variant.set(cycle(VARIANTS, this.variant(), delta));
   }
 
   protected onKey(event: KeyboardEvent): void {
