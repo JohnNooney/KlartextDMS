@@ -252,18 +252,22 @@ export const BADGE_NAMES: Record<Badge, string> = {
 
     <section aria-label="Needs your attention" class="card">
       <div class="head pad">
-        <span class="title">Needs your attention</span>
-        @if (badge() !== 'none' && total() > 0) {
-          @if (badge() === 'red-if-overdue' && overdue() > 0) {
-            <span class="count" [attr.aria-label]="overdue() + ' overdue'">{{ overdue() }}</span>
-          } @else {
-            <span class="count count-grey" [attr.aria-label]="total() + ' items'">{{ total() }}</span>
+        <button type="button" class="toggle" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+          <svg class="chevron" [class.is-open]="open()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="title">Needs your attention</span>
+          @if (badge() !== 'none' && total() > 0) {
+            @if (badge() === 'red-if-overdue' && overdue() > 0) {
+              <span class="count" [attr.aria-label]="overdue() + ' overdue'">{{ overdue() }}</span>
+            } @else {
+              <span class="count count-grey" [attr.aria-label]="total() + ' items'">{{ total() }}</span>
+            }
           }
-        }
-        @if (total() > top().length) {
+        </button>
+        @if (open() && total() > top().length) {
           <button type="button" class="text-btn" (click)="sheet.set(true)">See All</button>
         }
       </div>
+      @if (open()) {
       @if (reading(); as r) {
         <p class="note pad">Reading {{ r.read }} of {{ r.total }} documents…</p>
       } @else if (total() === 0) {
@@ -278,6 +282,7 @@ export const BADGE_NAMES: Record<Badge, string> = {
           }
           <span class="chev"><svg width="8" height="13" viewBox="0 0 8 13" aria-hidden="true"><path d="M1.5 1.5 6.5 6.5 1.5 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
+      }
       }
     </section>
 
@@ -322,6 +327,9 @@ export const BADGE_NAMES: Record<Badge, string> = {
     .line { display: flex; align-items: center; gap: var(--kt-space-3); width: 100%; min-height: var(--kt-touch-target); padding: 0 var(--kt-space-4); border-top: 0.5px solid var(--kt-border); }
     .line:active { background: var(--kt-fill); }
     .count-grey { background: var(--kt-fill-strong); color: var(--kt-text-muted); }
+    .toggle { display: flex; align-items: center; gap: var(--kt-space-2); min-height: var(--kt-touch-target); min-width: 0; }
+    .chevron { flex-shrink: 0; transition: transform 0.15s; }
+    .chevron.is-open { transform: rotate(90deg); }
     .mark { flex-shrink: 0; width: 16px; display: flex; align-items: center; justify-content: center; }
     .dot { width: 10px; height: 10px; border-radius: 50%; }
     .dot[data-key='overdue'] { background: var(--kt-danger); }
@@ -356,6 +364,7 @@ export class AttentionVariantC {
   readonly marker = input<Marker>('text');
   readonly badge = input<Badge>('red-if-overdue');
   readonly itemOpened = output<AttentionItem>();
+  protected readonly open = signal(true);
   protected readonly sheet = signal(false);
   protected readonly shortTiming = shortTiming;
   protected readonly total = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
@@ -446,7 +455,7 @@ export class AttentionDensityPrototype {
   protected readonly cycleOf = cycle;
   protected readonly variant = signal<Variant>(fromUrl('variant', VARIANTS, 'C'));
   protected readonly marker = signal<Marker>(fromUrl('marker', MARKERS, 'text'));
-  protected readonly badge = signal<Badge>(fromUrl('badge', BADGES, 'red-if-overdue'));
+  protected readonly badge = signal<Badge>(fromUrl('badge', BADGES, 'grey'));
   protected readonly sample = signal(new URLSearchParams(location.search).get('sample') === '1');
   protected readonly shown = computed(() => (this.sample() ? withSampleThisWeek(this.groups()) : this.groups()));
 
