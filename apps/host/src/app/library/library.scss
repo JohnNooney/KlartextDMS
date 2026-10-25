@@ -99,7 +99,8 @@
 }
 
 .toolbar-actions {
-  margin-left: auto;
+  // No margin-left:auto on desktop — .search carries it, so the field and
+  // the buttons form one right-anchored group at a static x position.
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;
@@ -279,6 +280,12 @@
     order: 3;
     flex-basis: 100%;
     font-size: kt.$kt-text-3xl;
+  }
+
+  // The navigation row still pushes the + affordance right (mobile keeps
+  // the auto margin desktop gave up for the search field's anchor).
+  .toolbar-actions {
+    margin-left: auto;
   }
 
   // The standalone pills collapse into the + affordance's add menu.
