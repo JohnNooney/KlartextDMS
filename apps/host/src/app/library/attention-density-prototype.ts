@@ -295,25 +295,32 @@ export const BADGE_NAMES: Record<Badge, string> = {
           <button type="button" class="text-btn" (click)="sheet.set(false)">Done</button>
         </div>
         <div class="sheet-body">
-          @for (group of groups(); track group.key) {
-            <h3 class="sec" [class.is-overdue]="group.key === 'overdue'">{{ group.label }}</h3>
-            <div class="inset">
-              @for (item of group.items; track item.id) {
-                <button type="button" class="sheet-row" (click)="sheet.set(false); itemOpened.emit(item)">
-                  <ng-container *ngTemplateOutlet="markTpl; context: { $implicit: group.key }" />
-                  <span class="sheet-col">
-                    <span class="sheet-text">{{ item.text }}</span>
-                    <span class="sheet-meta">
-                      @if (group.key !== 'noDate') {
-                        <span [attr.data-key]="marker() === 'text' ? group.key : null" class="sheet-when">{{ item.timingLabel }}</span><br />
-                      }
-                      <span lang="de">{{ item.documentTitle }}</span>@if (item.page) { · page {{ item.page }} }
-                      @if (item.path) { <br /><span lang="de">{{ item.path }}</span> }
-                    </span>
-                  </span>
-                </button>
-              }
-            </div>
+          @for (group of sheetGroups(); track group.key) {
+            <section class="g-section" [attr.data-key]="group.key">
+              <h3 class="g-title">
+                @if (group.key === 'overdue' || group.key === 'thisWeek') {
+                  <svg class="g-tri" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z" /><path d="M12 10v4" /><path d="M12 16.9v.2" /></svg>
+                }
+                {{ group.label }}
+              </h3>
+              <ul class="g-list">
+                @for (row of group.rows; track row.item.id) {
+                  <li class="g-li">
+                    <button type="button" class="g-row" (click)="sheet.set(false); itemOpened.emit(row.item)">
+                      <span class="g-num" aria-hidden="true">{{ row.n }}</span>
+                      <span class="g-body">
+                        <span class="g-text">{{ row.item.text }}</span>
+                        @if (group.key !== 'noDate') {
+                          <span class="g-chip">{{ row.item.timingLabel }}</span>
+                        }
+                        <span class="g-doc ellipsis" lang="de">{{ row.item.documentTitle }}@if (row.item.path) { · {{ row.item.path }} }</span>
+                      </span>
+                      @if (row.item.page) { <span class="g-page">p. {{ row.item.page }}</span> }
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
           }
         </div>
       </div>
@@ -341,7 +348,29 @@ export const BADGE_NAMES: Record<Badge, string> = {
     [data-key='overdue'].line-when, [data-key='overdue'].sheet-when { color: var(--kt-danger); font-weight: 600; }
     [data-key='thisWeek'].line-when, [data-key='thisWeek'].sheet-when { color: var(--kt-warning); font-weight: 600; }
     .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.3); z-index: 900; }
-    .sheet { position: fixed; z-index: 901; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: var(--kt-bg); border-radius: 14px 14px 0 0; box-shadow: var(--kt-shadow-popover); }
+    .sheet { position: fixed; z-index: 901; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: var(--kt-canvas); border-radius: 14px 14px 0 0; box-shadow: var(--kt-shadow-popover); }
+    .g-section { margin-top: var(--kt-space-5); }
+    .g-section:first-child { margin-top: var(--kt-space-2); }
+    .g-title { display: flex; align-items: center; gap: var(--kt-space-2); margin: 0; font-size: var(--kt-text-sm); font-weight: 600; color: var(--kt-text-muted); }
+    .g-list { list-style: none; margin: var(--kt-space-2) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--kt-border); border-radius: var(--kt-radius-lg); background: var(--kt-bg); }
+    .g-li { position: relative; }
+    .g-li + .g-li::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--kt-border); }
+    .g-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: start; gap: var(--kt-space-3); width: 100%; padding: var(--kt-space-3) var(--kt-space-4); }
+    .g-row:hover { background: var(--kt-fill); }
+    .g-num { margin-top: 1px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--kt-fill); color: var(--kt-text-muted); font-size: var(--kt-text-xs); font-weight: 600; }
+    .g-body { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--kt-space-1); }
+    .g-text { font-size: var(--kt-text-sm); overflow-wrap: anywhere; }
+    .g-chip { padding: 1px var(--kt-space-2); border-radius: 999px; background: var(--kt-fill); color: var(--kt-text-muted); font-size: var(--kt-text-xs); font-weight: 500; }
+    .g-doc { max-width: 100%; font-size: var(--kt-text-xs); color: var(--kt-text-muted); }
+    .g-page { margin-top: 2px; white-space: nowrap; font-size: var(--kt-text-xs); color: var(--kt-accent); }
+    [data-key='overdue'] .g-tri { color: var(--kt-danger); }
+    [data-key='overdue'] .g-list { border-color: color-mix(in srgb, var(--kt-danger) 40%, transparent); }
+    [data-key='overdue'] .g-num { background: var(--kt-danger); color: var(--kt-bg); }
+    [data-key='overdue'] .g-chip { background: var(--kt-danger-tint); color: var(--kt-danger); }
+    [data-key='thisWeek'] .g-tri { color: var(--kt-warning); }
+    [data-key='thisWeek'] .g-list { border-color: color-mix(in srgb, var(--kt-warning) 40%, transparent); }
+    [data-key='thisWeek'] .g-num { background: var(--kt-warning); color: var(--kt-bg); }
+    [data-key='thisWeek'] .g-chip { background: var(--kt-warning-tint); color: var(--kt-text); }
     @media (min-width: 769px) { .sheet { top: 50%; bottom: auto; transform: translate(-50%, -50%); border-radius: 14px; max-height: 80vh; } .grabber { display: none; } }
     .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--kt-border-strong); margin: 6px auto 0; }
     .sheet-head { display: flex; align-items: center; padding: var(--kt-space-2) var(--kt-space-4); }
@@ -370,6 +399,11 @@ export class AttentionVariantC {
   protected readonly total = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
   protected readonly overdue = computed(() => this.groups().find((g) => g.key === 'overdue')?.items.length ?? 0);
   protected readonly top = computed(() => flatten(this.groups()).slice(0, 3));
+  /** Sheet rows numbered across the whole list, like the Guest's Key Takeaway numbers. */
+  protected readonly sheetGroups = computed(() => {
+    let n = 0;
+    return this.groups().map((g) => ({ ...g, rows: g.items.map((item) => ({ item, n: ++n })) }));
+  });
 }
 
 const fromUrl = <T extends string>(param: string, options: readonly T[], fallback: T): T => {
