@@ -119,6 +119,13 @@
     (dragleave)="onGridDragLeave($event)"
     (drop)="onGridDrop($event)"
   >
+    <!-- While the mobile field sits open and idle (host .search-idle), this
+         prompt fills the content area instead of the whole library — the
+         grid would only distract under an empty field. -->
+    <div class="search-prompt">
+      <p class="prompt-title">Type to search</p>
+      <p class="prompt-sub">Documents, folders, and document insights.</p>
+    </div>
     @if (store.visible() === null) {
       <div class="library-loading"><span class="spinner" role="status" aria-label="Loading"></span></div>
     } @else if (searching() && results(); as results) {

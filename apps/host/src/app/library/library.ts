@@ -79,6 +79,9 @@ type DialogState =
     '[class.lane-open]': 'openDocument.docId() !== null && !openDocument.insightsLaneHidden()',
     // Mobile: the collapsed toolbar field expands while searching (#121).
     '[class.search-open]': 'searchOpen() || searching()',
+    // Mobile: the field is open but idle — the content area prompts for
+    // input instead of competing with the whole library (#121).
+    '[class.search-idle]': 'searchOpen() && !searching()',
   },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.

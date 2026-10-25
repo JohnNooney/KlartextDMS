@@ -98,6 +98,28 @@
   }
 }
 
+// The idle-search prompt (mobile only): while the expanded field is empty,
+// it stands in for the library content — a quiet "type here" rather than
+// the full grid behind the keyboard. Desktop never renders it.
+.search-prompt {
+  display: none;
+  margin: kt.$kt-space-8 0 0;
+  text-align: center;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+
+  .prompt-title {
+    margin: 0 0 kt.$kt-space-1;
+    font-size: kt.$kt-text-lg;
+    font-weight: 600;
+    color: kt.$kt-text;
+  }
+
+  .prompt-sub {
+    margin: 0;
+  }
+}
+
 // The mobile magnifier — desktop hides it; the field is always out there.
 .btn-search {
   display: none;
@@ -147,6 +169,18 @@
       padding: 4px kt.$kt-space-3;
       margin-left: 0;
       row-gap: kt.$kt-space-1;
+    }
+  }
+
+  // Field open but idle: the prompt shows, everything after it in
+  // .library-drop (loading, results, meta, grid) goes away.
+  :host(.search-idle) {
+    .search-prompt {
+      display: block;
+    }
+
+    .search-prompt ~ * {
+      display: none;
     }
   }
 }

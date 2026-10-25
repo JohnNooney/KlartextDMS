@@ -100,7 +100,12 @@ test('the mobile magnifier reveals the field and search stays inside the viewpor
   await magnifier.click();
   await expect(field()).toBeFocused();
 
+  // The idle field prompts for input instead of showing the library.
+  await expect(page().getByText('Type to search')).toBeVisible();
+  await expect(page().locator('.grid')).toBeHidden();
+
   await field().fill('mietvertrag');
+  await expect(page().getByText('Type to search')).toBeHidden();
   await expect(results().getByRole('button', { name: /Mietvertrag 2024/ })).toBeVisible();
   await expectNoHorizontalOverflow(page());
 

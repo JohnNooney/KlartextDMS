@@ -884,6 +884,20 @@ describe('Library', () => {
       expect(ctx.el.querySelector('.search-clear')).toBeTruthy();
     });
 
+    it('the open-but-idle field marks the host for the mobile prompt; a query clears it', async () => {
+      const ctx = await withLibrary();
+      expect(ctx.el.classList.contains('search-idle')).toBe(false);
+      expect(ctx.el.querySelector('.search-prompt')).toBeTruthy();
+
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-idle')).toBe(true);
+
+      ctx.openDocument.query.set('vertrag');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-idle')).toBe(false);
+    });
+
     it('a query restored from the URL fills the field', async () => {
       const ctx = await withLibrary();
       ctx.openDocument.query.set('restored');
