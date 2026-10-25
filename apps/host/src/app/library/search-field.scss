@@ -7,8 +7,9 @@
 // the title's row collapses (the prototype's "title swap") — the chrome
 // never grows a line, and collapsing restores the title exactly.
 .search {
-  flex: 1;
-  max-width: 420px;
+  // A fixed box — the field's width doesn't spring with the Folder title's
+  // length (it may still shrink on very narrow windows).
+  flex: 0 1 420px;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -19,7 +20,6 @@
   border-radius: 999px;
   background: kt.$kt-fill;
   color: kt.$kt-text-muted;
-  flex-shrink: 1;
 }
 
 .search-input {

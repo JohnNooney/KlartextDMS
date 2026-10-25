@@ -90,6 +90,12 @@
   margin: 0;
   font-size: kt.$kt-text-xl;
   font-weight: 700;
+  // A long Folder name ellipsizes rather than overflowing the toolbar —
+  // min-width:0 lets the flex child shrink below its content.
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-actions {
@@ -273,10 +279,6 @@
     order: 3;
     flex-basis: 100%;
     font-size: kt.$kt-text-3xl;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
   }
 
   // The standalone pills collapse into the + affordance's add menu.
