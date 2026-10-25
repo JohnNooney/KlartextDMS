@@ -263,7 +263,7 @@ export const BADGE_NAMES: Record<Badge, string> = {
             }
           }
         </button>
-        @if (open() && total() > top().length) {
+        @if (open() && total() > 0) {
           <button type="button" class="text-btn" (click)="sheet.set(true)">See All</button>
         }
       </div>
@@ -307,7 +307,6 @@ export const BADGE_NAMES: Record<Badge, string> = {
                 @for (row of group.rows; track row.item.id) {
                   <li class="g-li">
                     <button type="button" class="g-row" (click)="sheet.set(false); itemOpened.emit(row.item)">
-                      <span class="g-num" aria-hidden="true">{{ row.n }}</span>
                       <span class="g-body">
                         <span class="g-text">{{ row.item.text }}</span>
                         @if (group.key !== 'noDate') {
@@ -354,10 +353,9 @@ export const BADGE_NAMES: Record<Badge, string> = {
     .g-title { display: flex; align-items: center; gap: var(--kt-space-2); margin: 0; font-size: var(--kt-text-sm); font-weight: 600; color: var(--kt-text-muted); }
     .g-list { list-style: none; margin: var(--kt-space-2) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--kt-border); border-radius: var(--kt-radius-lg); background: var(--kt-bg); }
     .g-li { position: relative; }
-    .g-li + .g-li::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--kt-border); }
-    .g-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: start; gap: var(--kt-space-3); width: 100%; padding: var(--kt-space-3) var(--kt-space-4); }
+    .g-li + .g-li::before { content: ''; position: absolute; top: 0; left: var(--kt-space-4); right: 0; height: 1px; background: var(--kt-border); }
+    .g-row { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: var(--kt-space-3); width: 100%; padding: var(--kt-space-3) var(--kt-space-4); }
     .g-row:hover { background: var(--kt-fill); }
-    .g-num { margin-top: 1px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--kt-fill); color: var(--kt-text-muted); font-size: var(--kt-text-xs); font-weight: 600; }
     .g-body { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--kt-space-1); }
     .g-text { font-size: var(--kt-text-sm); overflow-wrap: anywhere; }
     .g-chip { padding: 1px var(--kt-space-2); border-radius: 999px; background: var(--kt-fill); color: var(--kt-text-muted); font-size: var(--kt-text-xs); font-weight: 500; }
@@ -365,11 +363,9 @@ export const BADGE_NAMES: Record<Badge, string> = {
     .g-page { margin-top: 2px; white-space: nowrap; font-size: var(--kt-text-xs); color: var(--kt-accent); }
     [data-key='overdue'] .g-tri { color: var(--kt-danger); }
     [data-key='overdue'] .g-list { border-color: color-mix(in srgb, var(--kt-danger) 40%, transparent); }
-    [data-key='overdue'] .g-num { background: var(--kt-danger); color: var(--kt-bg); }
     [data-key='overdue'] .g-chip { background: var(--kt-danger-tint); color: var(--kt-danger); }
     [data-key='thisWeek'] .g-tri { color: var(--kt-warning); }
     [data-key='thisWeek'] .g-list { border-color: color-mix(in srgb, var(--kt-warning) 40%, transparent); }
-    [data-key='thisWeek'] .g-num { background: var(--kt-warning); color: var(--kt-bg); }
     [data-key='thisWeek'] .g-chip { background: var(--kt-warning-tint); color: var(--kt-text); }
     @media (min-width: 769px) { .sheet { top: 50%; bottom: auto; transform: translate(-50%, -50%); border-radius: 14px; max-height: 80vh; } .grabber { display: none; } }
     .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--kt-border-strong); margin: 6px auto 0; }
@@ -399,11 +395,9 @@ export class AttentionVariantC {
   protected readonly total = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
   protected readonly overdue = computed(() => this.groups().find((g) => g.key === 'overdue')?.items.length ?? 0);
   protected readonly top = computed(() => flatten(this.groups()).slice(0, 3));
-  /** Sheet rows numbered across the whole list, like the Guest's Key Takeaway numbers. */
-  protected readonly sheetGroups = computed(() => {
-    let n = 0;
-    return this.groups().map((g) => ({ ...g, rows: g.items.map((item) => ({ item, n: ++n })) }));
-  });
+  protected readonly sheetGroups = computed(() =>
+    this.groups().map((g) => ({ ...g, rows: g.items.map((item) => ({ item })) })),
+  );
 }
 
 const fromUrl = <T extends string>(param: string, options: readonly T[], fallback: T): T => {
