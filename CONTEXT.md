@@ -29,8 +29,12 @@ The AI-produced plain-English reading of one Document: its document type, transl
 _Avoid_: analysis, summary, result, TL;DR
 
 **Action Item**:
-Something in a Document the user must do, comply with when acting, or track on a calendar to avoid losing money or rights (deadlines, recurring payment or filing obligations, notice periods, strict form rules such as paper-only cancellation), directly supported by a quotation from the Document and carrying structured timing when the Document states a deadline, cadence, or notice period.
+Something in a Document the user must do, comply with when acting, or track on a calendar to avoid losing money or rights (deadlines, recurring payment or filing obligations, notice periods, strict form rules such as paper-only cancellation), directly supported by a quotation from the Document and carrying structured timing when the Document states a deadline, cadence, or notice period. Its timing's distance from today gives the item its Urgency.
 _Avoid_: risk, alert, red flag, critical warning
+
+**Urgency**:
+How soon an Action Item's timing comes due, derived at read time and bucketed identically in Host and Guest: *Overdue* (a fixed deadline has passed), *This week* (a fixed deadline or the next occurrence of a monthly recurring item falls within 7 days), *Later* (further out, a recurrence too loosely specified to compute, or a notice period), or *No date*. Urgency is never stored and says nothing about importance — colour means Urgency, never the Action Item category itself.
+_Avoid_: priority, severity, status
 
 **Key Takeaway**:
 A passive reference fact directly supported by a quotation from a Document that explains how the agreement or letter works (amounts, coverage limits, repair caps, settlement rules) without requiring a scheduled action or compliance step.
