@@ -257,6 +257,12 @@ export class Library {
     setTimeout(() => this.searchBox()?.nativeElement.focus());
   }
 
+  /** The mobile ✕ — the empty field's close affordance (desktop has Escape). */
+  protected closeSearch(): void {
+    clearTimeout(this.searchTimer);
+    this.searchOpen.set(false);
+  }
+
   /**
    * Focus leaving the field collapses it (mobile) — unless it moved to
    * another control inside it (the scope pill, the clear button) or a query

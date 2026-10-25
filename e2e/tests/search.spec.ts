@@ -115,7 +115,14 @@ test('the mobile field collapses on blur and on navigation', async () => {
   await magnifier.click();
   await expect(field()).toBeFocused();
 
-  // Tapping away with an empty field collapses it back to the magnifier.
+  // The ✕ sits where desktop shows the / hint — it collapses the field.
+  await page().getByRole('button', { name: 'Close search' }).click();
+  await expect(field()).toBeHidden();
+  await expect(magnifier).toBeVisible();
+
+  // So does tapping away with an empty field.
+  await magnifier.click();
+  await expect(field()).toBeFocused();
   await page().locator('.library-drop').click({ position: { x: 12, y: 12 } });
   await expect(field()).toBeHidden();
   await expect(magnifier).toBeVisible();

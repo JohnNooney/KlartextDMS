@@ -863,6 +863,27 @@ describe('Library', () => {
       expect(ctx.el.classList.contains('search-open')).toBe(true);
     });
 
+    it('the mobile close button collapses the empty field', async () => {
+      const ctx = await withLibrary();
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(true);
+
+      (ctx.el.querySelector('.search-close') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(false);
+    });
+
+    it('the close button gives way to the clear button while searching', async () => {
+      const ctx = await withLibrary();
+      expect(ctx.el.querySelector('.search-close')).toBeTruthy();
+
+      ctx.openDocument.query.set('vertrag');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.querySelector('.search-close')).toBeNull();
+      expect(ctx.el.querySelector('.search-clear')).toBeTruthy();
+    });
+
     it('a query restored from the URL fills the field', async () => {
       const ctx = await withLibrary();
       ctx.openDocument.query.set('restored');

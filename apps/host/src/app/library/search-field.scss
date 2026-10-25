@@ -67,6 +67,11 @@
   flex-shrink: 0;
 }
 
+// The mobile close button takes the / hint's spot at the field's end.
+.search-close {
+  display: none;
+}
+
 .scope-pill {
   display: flex;
   padding: 2px;
@@ -115,6 +120,15 @@
 
   .search {
     display: none;
+  }
+
+  // No keyboard — the hint swaps for the ✕ close button.
+  .search-hint {
+    display: none;
+  }
+
+  .search-close {
+    display: grid;
   }
 
   :host(.search-open) {
