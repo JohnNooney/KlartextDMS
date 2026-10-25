@@ -1,0 +1,136 @@
+@use 'tokens' as kt;
+
+// The library toolbar's search field (issue #121): sunken fill, magnifier
+// left, `/` shortcut hint right, the "This folder | All documents" scope pill
+// (decision #103) inside it. On mobile the field collapses to the magnifier
+// in .toolbar-actions and expands to its own row while the host's
+// .search-open class holds.
+.search {
+  flex: 1;
+  max-width: 420px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  min-width: 0;
+  height: kt.$kt-control-height;
+  padding: 0 kt.$kt-space-2 0 kt.$kt-space-3;
+  border-radius: 999px;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+  flex-shrink: 1;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: kt.$kt-text-sm;
+  color: kt.$kt-text;
+  outline: none;
+
+  &::placeholder {
+    color: kt.$kt-text-faint;
+  }
+
+  // The custom clear button replaces the native one.
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.search-hint {
+  font-family: kt.$kt-font-sans;
+  font-size: kt.$kt-text-xs;
+  color: kt.$kt-text-faint;
+  border: 1px solid kt.$kt-border;
+  border-radius: 4px;
+  padding: 0 6px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: kt.$kt-fill-strong;
+  color: kt.$kt-text-muted;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scope-pill {
+  display: flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: kt.$kt-fill-strong;
+  flex-shrink: 0;
+
+  button {
+    border: 0;
+    border-radius: 999px;
+    padding: 3px 10px;
+    background: transparent;
+    font: inherit;
+    font-size: kt.$kt-text-xs;
+    color: kt.$kt-text-muted;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &.on {
+      background: kt.$kt-bg;
+      color: kt.$kt-text;
+      box-shadow: kt.$kt-shadow-raised;
+    }
+  }
+}
+
+// The mobile magnifier — desktop hides it; the field is always out there.
+.btn-search {
+  display: none;
+  width: kt.$kt-touch-target;
+  height: kt.$kt-touch-target;
+  border: 0;
+  border-radius: 50%;
+  background: kt.$kt-accent-tint;
+  color: kt.$kt-accent;
+  place-items: center;
+}
+
+@media (max-width: 768px) {
+  // The collapsed affordance sits with +; the field drops to its own row
+  // below the large title while .search-open holds.
+  .btn-search {
+    display: grid;
+  }
+
+  .search {
+    display: none;
+  }
+
+  :host(.search-open) {
+    .btn-search {
+      display: none;
+    }
+
+    .search {
+      display: flex;
+      order: 4;
+      flex-basis: 100%;
+      max-width: none;
+      height: auto;
+      min-height: kt.$kt-control-height;
+      flex-wrap: wrap;
+      padding: 4px kt.$kt-space-3;
+      margin-left: 0;
+      row-gap: kt.$kt-space-1;
+    }
+  }
+}

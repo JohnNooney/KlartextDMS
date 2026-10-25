@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type {
-  DocumentType,
   ExtractionRecord,
   ExtractionState,
   GuestShowPagePayload,
   PanelPresentation,
 } from '@klartext/bus-contract';
+import { documentTypeLabel } from '@klartext/bus-contract';
 import TakeawaySection from './TakeawaySection.vue';
 
 // The insights panel as one continuous scroll (issue #75, layout settled by
@@ -46,20 +46,9 @@ const emit = defineEmits<{
 const menuOpen = ref(false);
 const root = ref<HTMLElement>();
 
-const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  TENANCY_AGREEMENT: 'Tenancy agreement',
-  HEALTH_INSURANCE: 'Health insurance',
-  EMPLOYMENT_CONTRACT: 'Employment contract',
-  INTERNET_OR_PHONE: 'Internet or phone contract',
-  GOVERNMENT_LETTER: 'Government letter',
-  OTHER: 'Other',
-};
-
-const typeLabel = computed(() =>
-  props.extraction.documentType === 'OTHER'
-    ? (props.extraction.documentTypeLabel ?? DOCUMENT_TYPE_LABELS.OTHER)
-    : DOCUMENT_TYPE_LABELS[props.extraction.documentType],
-);
+// The shared Document type labels (bus-contract) — the Host's library search
+// reads the same names (#121).
+const typeLabel = computed(() => documentTypeLabel(props.extraction));
 
 const sourceLanguage = computed(
   () =>

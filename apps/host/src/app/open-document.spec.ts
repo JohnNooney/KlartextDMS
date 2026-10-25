@@ -147,4 +147,99 @@ describe('OpenDocument (issue #29 navigation seam)', () => {
     expect(open.docId()).toBeNull();
     expect(open.folderId()).toBeNull();
   });
+
+  // Library search (issue #121): the query lives in the URL as ?q= so browser
+  // back out of a result returns to the same results.
+
+  it('search() writes the query as ?q= on the browsed Folder', async () => {
+    const { router, open, stable } = await setup();
+    await router.navigateByUrl('/folder/vertraege');
+    open.search('deposit');
+    await stable();
+    expect(router.url).toBe('/folder/vertraege?q=deposit');
+    expect(open.query()).toBe('deposit');
+  });
+
+  it('clearing the field drops the param again', async () => {
+    const { router, open, stable } = await setup();
+    open.search('deposit');
+    await stable();
+    open.search('   ');
+    await stable();
+    expect(router.url).toBe('/folder/root');
+    expect(open.query()).toBeNull();
+  });
+
+  it('a ?q= deep link browses with the query already active', async () => {
+    const { router, open } = await setup();
+    await router.navigateByUrl('/folder/kranken?q=kaution');
+    expect(open.folderId()).toBe('kranken');
+    expect(open.query()).toBe('kaution');
+  });
+
+  it('an unchanged query writes nothing — no dead history entry', async () => {
+    const { router, open, stable } = await setup();
+    const navigate = vi.spyOn(router, 'navigate');
+    open.search('');
+    await stable();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(router.url).toBe('/folder/root');
+
+    open.search('tax');
+    await stable();
+    navigate.mockClear();
+    open.search('tax');
+    await stable();
+    // Still the single ?q= entry — no duplicate is stacked on top.
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('the scope pill widens into ?scope=all beside ?q=', async () => {
+    const { router, open, stable } = await setup();
+    open.search('tax');
+    await stable();
+    open.setSearchScope('all');
+    await stable();
+    expect(router.url).toBe('/folder/root?q=tax&scope=all');
+    expect(open.searchScope()).toBe('all');
+  });
+
+  it('a ?q=&scope=all URL restores the widened search on the way back', async () => {
+    const { open, location } = await setup();
+    location.simulateUrlPop('/folder/root?q=tax&scope=all');
+    await vi.waitFor(() => expect(open.query()).toBe('tax'));
+    expect(open.searchScope()).toBe('all');
+  });
+
+  it('browser back onto a ?q= URL restores the query', async () => {
+    const { router, open, location, stable } = await setup();
+    open.search('deposit');
+    await stable();
+    open.open({ id: 'doc-1', folderId: null });
+    await stable();
+    expect(open.query()).toBeNull();
+
+    location.simulateUrlPop('/folder/root?q=deposit');
+    await vi.waitFor(() => expect(open.query()).toBe('deposit'));
+    expect(router.url).toContain('q=deposit');
+  });
+
+  it('opening a Document or another Folder leaves the query behind', async () => {
+    const { open, stable } = await setup();
+    open.search('kaution');
+    await stable();
+    open.openFolder('wohnung');
+    await stable();
+    expect(open.query()).toBeNull();
+  });
+
+  it('search() is a no-op while a Document is open', async () => {
+    const { router, open, stable } = await setup();
+    open.open({ id: 'doc-1', folderId: null });
+    await stable();
+    open.search('sneaky');
+    await stable();
+    expect(router.url).toBe('/folder/root/doc/doc-1');
+    expect(open.query()).toBeNull();
+  });
 });

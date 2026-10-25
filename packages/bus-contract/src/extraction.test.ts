@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isExtractionCandidate, normalizeExtractionRecord } from './extraction.js';
+import {
+  documentTypeLabel,
+  isExtractionCandidate,
+  normalizeExtractionRecord,
+} from './extraction.js';
 import {
   goldenFixtureMessages,
   legacyV1ExtractionFixtures,
@@ -149,6 +153,22 @@ describe('normalizeExtractionRecord', () => {
   it('is idempotent on an already-normalized record', () => {
     const once = normalizeExtractionRecord(v1);
     expect(normalizeExtractionRecord(once)).toEqual(once);
+  });
+});
+
+describe('documentTypeLabel', () => {
+  it('names the enum types — the label Host search and the Guest panel share', () => {
+    expect(documentTypeLabel({ documentType: 'TENANCY_AGREEMENT' })).toBe('Tenancy agreement');
+    expect(documentTypeLabel({ documentType: 'INTERNET_OR_PHONE' })).toBe(
+      'Internet or phone contract',
+    );
+  });
+
+  it('prefers the free-text documentTypeLabel for OTHER records', () => {
+    expect(
+      documentTypeLabel({ documentType: 'OTHER', documentTypeLabel: 'Gym membership' }),
+    ).toBe('Gym membership');
+    expect(documentTypeLabel({ documentType: 'OTHER' })).toBe('Other');
   });
 });
 

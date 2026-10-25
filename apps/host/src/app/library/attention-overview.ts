@@ -105,11 +105,28 @@ export function readyDocumentsInScope(
   for (const doc of documents) {
     if (doc.status !== 'ready') continue;
     const chain = folderAncestry(folders, doc.folderId);
-    const start = scopeFolderId === null ? 0 : chain.findIndex((f) => f.id === scopeFolderId) + 1;
-    if (scopeFolderId !== null && start === 0) continue;
-    scoped.push({ doc, path: chain.slice(start).map((f) => f.name).join(' / ') || null });
+    // A Document inside a Folder that's deleting is leaving with it.
+    if (chain.some((f) => f.status !== 'ready')) continue;
+    const path = pathBelowScope(chain, scopeFolderId);
+    if (path === undefined) continue;
+    scoped.push({ doc, path });
   }
   return scoped;
+}
+
+/**
+ * Where an entry sits below the scope Folder: `null` when it lives directly
+ * in it, its ancestor names joined otherwise — `undefined` when it lies
+ * outside the scope's subtree entirely. The `chain` is the entry's ancestor
+ * Folders, outermost first, as `folderAncestry` returns them.
+ */
+export function pathBelowScope(
+  chain: readonly FolderRecord[],
+  scopeFolderId: string | null,
+): string | null | undefined {
+  const start = scopeFolderId === null ? 0 : chain.findIndex((f) => f.id === scopeFolderId) + 1;
+  if (scopeFolderId !== null && start === 0) return undefined;
+  return chain.slice(start).map((f) => f.name).join(' / ') || null;
 }
 
 /** Dated items first by due date then Document title; undated items keep feed order. */

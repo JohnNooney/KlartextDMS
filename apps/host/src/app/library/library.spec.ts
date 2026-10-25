@@ -88,10 +88,18 @@ class FakeOpenDocument {
   readonly docId = signal<string | null>(null);
   readonly folderId = signal<string | null>(null);
   readonly insightsLaneHidden = signal(false);
+  readonly query = signal<string | null>(null);
+  readonly searchScope = signal<'folder' | 'all'>('folder');
   open = vi.fn();
   openFolder = vi.fn();
   close = vi.fn();
   toggleInsightsLane = vi.fn();
+  search = vi.fn((q: string) => {
+    this.query.set(q.trim() || null);
+  });
+  setSearchScope = vi.fn((scope: 'folder' | 'all') => {
+    this.searchScope.set(scope);
+  });
 }
 
 const fakePdfEngine = {
@@ -620,6 +628,197 @@ describe('Library', () => {
       store.documents.set([]);
       fixture.detectChanges();
       expect(panel(el)).toBeNull();
+    });
+  });
+
+  // Library search (issue #121): toolbar field → ?q= → inline results with
+  // reason badges; item/quote matches open at the cited page via PageFocus.
+  describe('search', () => {
+    const searchExtraction = (documentId: string): ExtractionRecord => ({
+      documentId,
+      schemaVersion: 2,
+      promptVersion: 'klartext-extraction-v2',
+      model: 'm',
+      documentType: 'OTHER',
+      sourceLanguage: 'de',
+      plainEnglishSummary: 's',
+      extractionStatus: 'COMPLETE',
+      actionItems: [
+        {
+          id: 'ai-1',
+          text: 'Give three months notice',
+          sourceQuote: 'Die Kündigungsfrist beträgt drei Monate.',
+          page: 3,
+          timing: { kind: 'NONE' },
+        },
+      ],
+      keyTakeaways: [],
+      createdAt: { seconds: 1, nanoseconds: 0 },
+    });
+
+    async function withLibrary() {
+      const ctx = await setup();
+      ctx.store.folders.set([
+        folder('vertraege', 'Verträge', null),
+        folder('wohnung', 'Wohnung', 'vertraege'),
+      ]);
+      ctx.store.documents.set([
+        record('ready', { id: 'd-flat', title: 'Mietvertrag', folderId: 'wohnung' }),
+        record('ready', { id: 'd-tax', title: 'Steuerbescheid', folderId: null }),
+      ]);
+      ctx.store.visible.set(ctx.store.documents());
+      ctx.store.deepDocumentCount.set(2);
+      ctx.store.extractionsByDocId.set(new Map([['d-flat', searchExtraction('d-flat')]]));
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+
+    const field = (el: HTMLElement) =>
+      el.querySelector<HTMLInputElement>('.search-input')!;
+
+    async function type(ctx: Awaited<ReturnType<typeof withLibrary>>, text: string) {
+      const input = field(ctx.el);
+      input.value = text;
+      // The input debounces (issue #121) — run the clock through it.
+      vi.useFakeTimers();
+      input.dispatchEvent(new Event('input'));
+      vi.advanceTimersByTime(250);
+      vi.useRealTimers();
+      ctx.fixture.detectChanges();
+      await ctx.fixture.whenStable();
+      ctx.fixture.detectChanges();
+    }
+
+    it('the toolbar field writes the query to ?q=', async () => {
+      const ctx = await withLibrary();
+      await type(ctx, 'kündigung');
+      expect(ctx.openDocument.search).toHaveBeenCalledWith('kündigung');
+    });
+
+    it('an active query swaps the tile grid for inline results — Folders above Documents', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('vertrag');
+      ctx.fixture.detectChanges();
+
+      expect(ctx.el.querySelector('.grid')).toBeNull();
+      const results = ctx.el.querySelector('app-search-results')!;
+      const sections = [...results.querySelectorAll('h2')].map((h) => h.textContent!.trim());
+      expect(sections).toEqual(['Folders', 'Documents']);
+      const rows = [...results.querySelectorAll('.result-row')].map((r) => r.textContent!);
+      expect(rows[0]).toContain('Verträge');
+      expect(rows[1]).toContain('Mietvertrag');
+    });
+
+    it('rows wear reason badges and the matched field as a snippet', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('kündigungsfrist');
+      ctx.fixture.detectChanges();
+
+      const row = ctx.el.querySelector('app-search-results .result-row')!;
+      expect(row.querySelector('.badge')!.textContent).toContain('Quote');
+      expect(row.textContent).toContain('Die Kündigungsfrist beträgt drei Monate.');
+      expect(row.textContent).toContain('Mietvertrag');
+      expect(row.textContent).toContain('Verträge / Wohnung');
+    });
+
+    it('clicking an item/quote match opens the Document at the cited page', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('kündigungsfrist');
+      ctx.fixture.detectChanges();
+      (ctx.el.querySelector('app-search-results .result-row') as HTMLElement).click();
+      expect(ctx.store.openAt).toHaveBeenCalledWith('d-flat', {
+        page: 3,
+        quote: 'Die Kündigungsfrist beträgt drei Monate.',
+      });
+    });
+
+    it('clicking a title match opens the Document plainly; a Folder row browses it', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('mietvertrag');
+      ctx.fixture.detectChanges();
+      const row = ctx.el.querySelector('app-search-results .result-row') as HTMLElement;
+      expect(row.textContent).toContain('Mietvertrag');
+      row.click();
+      expect(ctx.store.open).toHaveBeenCalledWith('d-flat');
+
+      ctx.openDocument.query.set('wohnung');
+      ctx.fixture.detectChanges();
+      (ctx.el.querySelector('app-search-results .result-row') as HTMLElement).click();
+      expect(ctx.openDocument.openFolder).toHaveBeenCalledWith('wohnung');
+    });
+
+    it('scopes to the browsed Folder by default and widens via the All documents pill', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.folderId.set('vertraege');
+      ctx.openDocument.query.set('steuer');
+      ctx.fixture.detectChanges();
+
+      // d-tax sits at root — outside Verträge — so the scoped search misses it.
+      expect(ctx.el.textContent).toContain('No matches');
+
+      const pill = [...ctx.el.querySelectorAll<HTMLButtonElement>('.scope-pill button')].find(
+        (b) => b.textContent!.includes('All documents'),
+      )!;
+      pill.click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.querySelector('app-search-results')!.textContent).toContain('Steuerbescheid');
+    });
+
+    it('shows the scope pill only inside a Folder while searching', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('steuer');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.querySelector('.scope-pill')).toBeNull();
+
+      ctx.openDocument.folderId.set('vertraege');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.querySelector('.scope-pill')).toBeTruthy();
+    });
+
+    it('/ and Cmd/Ctrl+K focus the field', async () => {
+      const ctx = await withLibrary();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }));
+      ctx.fixture.detectChanges();
+      expect(document.activeElement).toBe(field(ctx.el));
+
+      (document.activeElement as HTMLElement).blur();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+      ctx.fixture.detectChanges();
+      expect(document.activeElement).toBe(field(ctx.el));
+    });
+
+    it('/ does not steal focus from another field', async () => {
+      const ctx = await withLibrary();
+      const other = document.createElement('input');
+      ctx.el.appendChild(other);
+      other.focus();
+      // A real keypress targets the focused element — the guard reads it.
+      other.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }));
+      ctx.fixture.detectChanges();
+      expect(document.activeElement).toBe(other);
+    });
+
+    it('Escape in the field clears the query', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('xy');
+      ctx.fixture.detectChanges();
+      field(ctx.el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(ctx.openDocument.search).toHaveBeenCalledWith('');
+    });
+
+    it('the mobile magnifier reveals the field', async () => {
+      const ctx = await withLibrary();
+      expect(ctx.el.classList.contains('search-open')).toBe(false);
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(true);
+    });
+
+    it('a query restored from the URL fills the field', async () => {
+      const ctx = await withLibrary();
+      ctx.openDocument.query.set('restored');
+      ctx.fixture.detectChanges();
+      expect(field(ctx.el).value).toBe('restored');
     });
   });
 });

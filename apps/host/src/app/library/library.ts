@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
@@ -17,8 +25,13 @@ import { FolderTile, type FolderTileAction } from './folder-tile';
 import { FolderTreeView } from './folder-tree';
 import { MoveDialog } from './move-dialog';
 import { RenameDialog } from './rename-dialog';
+import { SearchResults } from './search-results';
+import { buildSearchResults, type DocumentSearchResult } from './library-search';
 import { UploadDialog } from './upload-dialog';
 import { LibraryStore } from './library.store';
+
+/** Typing settles this long before the query lands in `?q=` (issue #121). */
+const SEARCH_DEBOUNCE_MS = 200;
 
 type DialogState =
   | { kind: 'upload' }
@@ -43,7 +56,7 @@ type DialogState =
 @Component({
   selector: 'app-library',
   templateUrl: './library.html',
-  styleUrl: './library.scss',
+  styleUrls: ['./library.scss', './search-field.scss'],
   imports: [
     AttentionPanel,
     DocumentTile,
@@ -56,12 +69,16 @@ type DialogState =
     DeleteDialog,
     FolderNameDialog,
     FolderDeleteDialog,
+    SearchResults,
   ],
   host: {
     '(document:keydown.escape)': 'closeAddMenu()',
+    '(document:keydown)': 'onGlobalKeydown($event)',
     '[class.reading]': 'openDocument.docId() !== null',
     // Desktop: the card makes room for the floating insights lane beside it.
     '[class.lane-open]': 'openDocument.docId() !== null && !openDocument.insightsLaneHidden()',
+    // Mobile: the collapsed toolbar field expands while searching (#121).
+    '[class.search-open]': 'searchOpen() || searching()',
   },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
@@ -85,20 +102,29 @@ export class Library {
   );
 
   private readonly scoped = computed(() =>
-    readyDocumentsInScope(
-      this.store.documents() ?? [],
-      this.store.folders() ?? [],
-      this.openDocument.folderId(),
-    ),
+    this.scopedDocuments(this.openDocument.folderId()),
   );
 
   /** "Reading n of m documents…" while the Extraction index is still loading. */
   protected readonly reading = computed(() => {
     if (this.store.extractionsLoaded()) return null;
-    const scoped = this.scoped();
+    // While searching, the honest denominator is the search's own scope.
+    const scope =
+      this.searching() && this.openDocument.searchScope() === 'all'
+        ? null
+        : this.openDocument.folderId();
+    const scoped = this.scopedDocuments(scope);
     const index = this.store.extractionsByDocId();
     return { read: scoped.filter(({ doc }) => index.has(doc.id)).length, total: scoped.length };
   });
+
+  private scopedDocuments(scopeFolderId: string | null) {
+    return readyDocumentsInScope(
+      this.store.documents() ?? [],
+      this.store.folders() ?? [],
+      scopeFolderId,
+    );
+  }
 
   protected readonly dropHover = signal(false);
   protected readonly openDocument = inject(OpenDocument);
@@ -129,6 +155,99 @@ export class Library {
   protected back(): void {
     const target = this.backTarget();
     if (target !== undefined) this.openFolder(target);
+  }
+
+  /**
+   * Library search (issue #121): the toolbar field's query lives in the URL
+   * as `?q=` — typing calls `OpenDocument.search` (debounced; the field
+   * answers at two characters), browser back out of a result lands on the
+   * same results, and a deep link searches immediately. Scope defaults to
+   * the browsed Folder's subtree; the "All documents" pill widens it
+   * (`?scope=all`, so the round-trip restores it too). `/` and Cmd/Ctrl+K
+   * focus the field.
+   */
+  protected readonly searchOpen = signal(false);
+  private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+  protected readonly query = computed(() => this.openDocument.query() ?? '');
+  protected readonly searching = computed(() => this.query().trim().length >= 2);
+
+  protected readonly results = computed(() => {
+    if (!this.searching()) return null;
+    return buildSearchResults({
+      query: this.query(),
+      documents: this.store.documents() ?? [],
+      folders: this.store.folders() ?? [],
+      extractions: this.store.extractionsByDocId(),
+      scopeFolderId:
+        this.openDocument.searchScope() === 'all' ? null : this.openDocument.folderId(),
+      browsedFolderId: this.openDocument.folderId(),
+    });
+  });
+
+  constructor() {
+    // A query arriving via deep link or browser back fills the field.
+    effect(() => {
+      const box = this.searchBox()?.nativeElement;
+      const q = this.query();
+      if (box && box.value !== q) box.value = q;
+    });
+  }
+
+  /** `/` and Cmd/Ctrl+K focus the field — except inside fields and dialogs. */
+  protected onGlobalKeydown(event: KeyboardEvent): void {
+    const shortcut =
+      (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+      (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey));
+    if (!shortcut || event.defaultPrevented || this.dialog() !== null) return;
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+    ) {
+      return;
+    }
+    // The field doesn't render while a Document is open — nothing to focus.
+    const box = this.searchBox()?.nativeElement;
+    if (!box) return;
+    event.preventDefault();
+    this.searchOpen.set(true);
+    box.focus();
+    box.select();
+  }
+
+  /** Debounced — a `?q=` rewrite per keystroke would spam the router. */
+  protected onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.openDocument.search(value), SEARCH_DEBOUNCE_MS);
+  }
+
+  /** Escape clears the query; pressed again it collapses the field (mobile). */
+  protected onSearchEscape(): void {
+    clearTimeout(this.searchTimer);
+    if (this.query().trim().length > 0) this.openDocument.search('');
+    else this.searchOpen.set(false);
+  }
+
+  protected clearSearch(): void {
+    clearTimeout(this.searchTimer);
+    this.openDocument.search('');
+    this.searchBox()?.nativeElement.focus();
+  }
+
+  /** The mobile magnifier: expands the collapsed field and focuses it. */
+  protected revealSearch(): void {
+    this.searchOpen.set(true);
+    // The field is display:none until the class lands — focus after the frame.
+    setTimeout(() => this.searchBox()?.nativeElement.focus());
+  }
+
+  /** A Folder row browses it; a Document row opens at its cited passage when the match carried one. */
+  protected openSearchResult(result: DocumentSearchResult): void {
+    if (result.focus) this.store.openAt(result.doc.id, result.focus);
+    else this.store.open(result.doc.id);
   }
 
   /**
