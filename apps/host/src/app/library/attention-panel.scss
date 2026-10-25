@@ -1,0 +1,332 @@
+@use 'tokens' as kt;
+
+// AA-contrast text shades for urgency timing; brighter tokens stay for
+// shapes. Promoting these to the shared theme is #132 / #133.
+$danger-text: #d70015;
+$warning-text: #b35c00;
+
+.attention {
+  margin-top: kt.$kt-space-4;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-lg;
+  background: kt.$kt-surface;
+  overflow: hidden;
+}
+
+button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: kt.$kt-text;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.attention-head {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  padding: 0 kt.$kt-space-4;
+}
+
+.attention-toggle {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  min-width: 0;
+  min-height: kt.$kt-touch-target;
+  font-weight: 600;
+}
+
+.chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+
+  &.is-open {
+    transform: rotate(90deg);
+  }
+}
+
+.attention-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: kt.$kt-fill-strong;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+.attention-see-all {
+  margin-left: auto;
+  min-height: kt.$kt-touch-target;
+  padding: 0 kt.$kt-space-1;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-sm;
+  white-space: nowrap;
+}
+
+.attention-note {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  margin: 0;
+  padding: kt.$kt-space-2 kt.$kt-space-4 kt.$kt-space-4;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid kt.$kt-border-strong;
+  border-top-color: kt.$kt-text;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.attention-row {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  width: 100%;
+  min-height: kt.$kt-touch-target;
+  padding: 0 kt.$kt-space-4;
+  border-top: 1px solid kt.$kt-border;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+}
+
+.attention-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: kt.$kt-text-sm;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-when {
+  flex-shrink: 0;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  white-space: nowrap;
+}
+
+[data-urgency='overdue'].attention-when {
+  color: $danger-text;
+  font-weight: 600;
+}
+
+[data-urgency='thisWeek'].attention-when {
+  color: $warning-text;
+  font-weight: 600;
+}
+
+.attention-disclosure {
+  flex-shrink: 0;
+  color: kt.$kt-text-faint;
+}
+
+// See All: a bottom sheet on phones, a centred modal on desktop, styled
+// like the Guest's attention lists (TakeawaySection / KeyTakeawayRow).
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: default;
+}
+
+.sheet {
+  position: fixed;
+  z-index: 81;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(560px, 100%);
+  max-height: 88vh;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: kt.$kt-canvas;
+  border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
+  box-shadow: kt.$kt-shadow-popover;
+
+  @media (min-width: 769px) {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-height: 80vh;
+    border-radius: kt.$kt-radius-lg;
+  }
+}
+
+.sheet-grabber {
+  width: 36px;
+  height: 5px;
+  margin: 6px auto 0;
+  border-radius: 3px;
+  background: kt.$kt-border-strong;
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: kt.$kt-space-3;
+  padding: kt.$kt-space-2 kt.$kt-space-4;
+
+  h2 {
+    margin: 0;
+    font-size: kt.$kt-text-lg;
+    font-weight: 600;
+  }
+}
+
+.sheet-done {
+  min-height: kt.$kt-touch-target;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-sm;
+}
+
+.sheet-body {
+  overflow-y: auto;
+  padding: 0 kt.$kt-space-4 kt.$kt-space-6;
+}
+
+.sheet-group {
+  margin-top: kt.$kt-space-5;
+
+  &:first-child {
+    margin-top: kt.$kt-space-2;
+  }
+}
+
+.sheet-group-title {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-2;
+  margin: 0;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-sm;
+  font-weight: 600;
+}
+
+.sheet-list {
+  margin: kt.$kt-space-2 0 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-lg;
+  background: kt.$kt-bg;
+
+  li {
+    position: relative;
+  }
+
+  li + li::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: kt.$kt-space-4;
+    right: 0;
+    height: 1px;
+    background: kt.$kt-border;
+  }
+}
+
+.sheet-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: kt.$kt-space-3;
+  width: 100%;
+  padding: kt.$kt-space-3 kt.$kt-space-4;
+
+  &:hover {
+    background: kt.$kt-fill;
+  }
+}
+
+.sheet-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: kt.$kt-space-1;
+  min-width: 0;
+}
+
+.sheet-text {
+  font-size: kt.$kt-text-sm;
+  overflow-wrap: anywhere;
+}
+
+.sheet-chip {
+  padding: 1px kt.$kt-space-2;
+  border-radius: 999px;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  font-weight: 500;
+}
+
+.sheet-doc {
+  max-width: 100%;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+  overflow-wrap: anywhere;
+}
+
+.sheet-page {
+  margin-top: 2px;
+  color: kt.$kt-accent;
+  font-size: kt.$kt-text-xs;
+  white-space: nowrap;
+}
+
+[data-urgency='overdue'] {
+  .sheet-group-title svg {
+    color: kt.$kt-danger;
+  }
+
+  .sheet-list {
+    border-color: color-mix(in srgb, kt.$kt-danger 40%, transparent);
+  }
+
+  .sheet-chip {
+    background: kt.$kt-danger-tint;
+    color: $danger-text;
+  }
+}
+
+[data-urgency='thisWeek'] {
+  .sheet-group-title svg {
+    color: kt.$kt-warning;
+  }
+
+  .sheet-list {
+    border-color: color-mix(in srgb, kt.$kt-warning 40%, transparent);
+  }
+
+  .sheet-chip {
+    background: kt.$kt-warning-tint;
+    color: $warning-text;
+  }
+}

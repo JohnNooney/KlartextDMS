@@ -184,6 +184,48 @@ test('Move and Delete dialogs wrap long unbroken Document and Folder names insid
   }
 });
 
+// Issue #120: on a phone the attention card's rows stay one ellipsized line
+// with their timing and disclosure on screen, and the See All sheet wraps a
+// long unbroken Document title and Folder path instead of side-scrolling.
+test('the attention card and its See All sheet fit a phone with long unbroken names', async () => {
+  await browseRoot(page());
+
+  const docTitle = unique('Betriebskostenabrechnung_Wohnanlage_Gartenstrasse_Abrechnungszeitraum').replaceAll(' ', '_');
+  const folderName = unique('Mietunterlagen_Wohnanlage_Gartenstrasse_Nebenkostenbelege').replaceAll(' ', '_');
+  await createFolder(page(), folderName);
+  await tile(page(), folderName).click();
+  await expect(page().getByRole('heading', { level: 1, name: folderName })).toBeVisible();
+  await uploadViaDialog(page(), [{ name: `${docTitle}.pdf`, buffer: seededPdf('mietvertrag-2024.pdf') }]);
+  await expect(toast(page(), `Uploaded ${docTitle}.pdf`)).toBeVisible();
+  await browseRoot(page());
+
+  const overview = page().getByRole('region', { name: 'Needs your attention' });
+  const cardRows = overview.locator('.attention-row');
+  await expect(cardRows).toHaveCount(3);
+  for (const cardRow of await cardRows.all()) {
+    expect(await cardRow.locator('.attention-text').evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
+    await expectInsideViewport(page(), cardRow);
+    await expectInsideViewport(page(), cardRow.locator('.attention-disclosure'));
+  }
+  await expectInsideViewport(page(), overview.locator('.attention-when').first());
+  await expectNoHorizontalOverflow(page());
+
+  // The full title is the sheet row's accessible name; the fake provider's
+  // golden Extraction cites page 1.
+  await overview.getByRole('button', { name: 'See All' }).click();
+  const sheet = page().getByRole('dialog', { name: 'Needs your attention' });
+  const row = sheet.getByRole('button', { name: docTitle });
+  await row.scrollIntoViewIfNeeded();
+  await expect(row.locator('.sheet-doc')).toHaveText(`${docTitle} · ${folderName}`);
+  await expect(row.locator('.sheet-page')).toHaveText('p. 1');
+  await expectInsideViewport(page(), row);
+  await expectInsideViewport(page(), row.locator('.sheet-doc'));
+  await expectInsideViewport(page(), row.locator('.sheet-page'));
+  await expectNoHorizontalOverflow(page());
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(sheet).toBeHidden();
+});
+
 test.afterEach(async () => {
   releaseBytes();
   await page().unroute(byteFetches);

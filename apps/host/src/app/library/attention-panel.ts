@@ -1,0 +1,61 @@
+import { Component, computed, input, output, signal } from '@angular/core';
+import type { AttentionGroup, AttentionGroupKey, AttentionItem } from './attention-overview';
+
+/** How many of the most urgent Action Items the card shows; See All lists the rest. */
+const CARD_ITEMS = 3;
+
+interface CardItem {
+  item: AttentionItem;
+  key: AttentionGroupKey;
+  /** The card's short trailing timing: "Overdue", "In 3 days", "" for undated. */
+  when: string;
+}
+
+/**
+ * The Folder attention overview (issue #120): a collapsible "Needs your
+ * attention" card above the tile grid holding the most urgent Action Items
+ * on one line each, and a See All sheet with the full list grouped by
+ * urgency (design settled on `prototype/attention-panel-density`).
+ * Presentational — the Library derives the groups; a click reports the item
+ * so the Library can open its Document at the cited page and quote.
+ */
+@Component({
+  selector: 'app-attention-panel',
+  templateUrl: './attention-panel.html',
+  styleUrl: './attention-panel.scss',
+  host: {
+    '(document:keydown.escape)': 'sheetOpen.set(false)',
+  },
+})
+export class AttentionPanel {
+  readonly groups = input.required<AttentionGroup[]>();
+  /** Set while the Extraction index is still loading: "Reading read of total documents…". */
+  readonly reading = input<{ read: number; total: number } | null>(null);
+  readonly itemOpened = output<AttentionItem>();
+
+  protected readonly expanded = signal(true);
+  protected readonly sheetOpen = signal(false);
+  protected readonly toggle = (open: boolean): boolean => !open;
+
+  protected readonly count = computed(() =>
+    this.groups().reduce((sum, group) => sum + group.items.length, 0),
+  );
+
+  protected readonly cardItems = computed<CardItem[]>(() =>
+    this.groups()
+      .flatMap((group) => group.items.map((item) => ({ item, key: group.key, when: cardTiming(group.key, item) })))
+      .slice(0, CARD_ITEMS),
+  );
+
+  protected open(item: AttentionItem): void {
+    this.sheetOpen.set(false);
+    this.itemOpened.emit(item);
+  }
+}
+
+function cardTiming(key: AttentionGroupKey, item: AttentionItem): string {
+  if (key === 'overdue') return 'Overdue';
+  if (key === 'noDate') return '';
+  const label = item.timingLabel.replace(/^Due /, '');
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}

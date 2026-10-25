@@ -92,6 +92,13 @@
       </div>
     } @else {
       <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
+      @if (store.deepDocumentCount() > 0) {
+        <app-attention-panel
+          [groups]="attention()"
+          [reading]="reading()"
+          (itemOpened)="openAttentionItem($event)"
+        />
+      }
       <div class="grid">
         @for (folder of store.visibleFolders(); track folder.id) {
           <app-folder-tile

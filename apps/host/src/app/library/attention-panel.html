@@ -1,0 +1,80 @@
+<section class="attention" aria-labelledby="attention-title">
+  <div class="attention-head">
+    <button
+      type="button"
+      class="attention-toggle"
+      [attr.aria-expanded]="expanded()"
+      (click)="expanded.update(toggle)"
+    >
+      <svg class="chevron" [class.is-open]="expanded()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      <span id="attention-title" class="attention-title">Needs your attention</span>
+      @if (!reading() && count() > 0) {
+        <span class="attention-count">{{ count() }}</span>
+      }
+    </button>
+    @if (expanded() && count() > 0) {
+      <button type="button" class="attention-see-all" (click)="sheetOpen.set(true)">See All</button>
+    }
+  </div>
+
+  @if (expanded()) {
+    @if (reading(); as progress) {
+      <p class="attention-note" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        Reading {{ progress.read }} of {{ progress.total }} documents…
+      </p>
+    } @else if (count() === 0) {
+      <p class="attention-note">Nothing needs your attention.</p>
+    }
+    @for (row of cardItems(); track row.item.id) {
+      <button type="button" class="attention-row" (click)="open(row.item)">
+        <span class="attention-text">{{ row.item.text }}</span>
+        @if (row.when) {
+          <span class="attention-when" [attr.data-urgency]="row.key">{{ row.when }}</span>
+        }
+        <svg class="attention-disclosure" width="8" height="13" viewBox="0 0 8 13" aria-hidden="true"><path d="M1.5 1.5 6.5 6.5 1.5 11.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    }
+  }
+
+  @if (sheetOpen()) {
+    <button type="button" class="sheet-backdrop" (click)="sheetOpen.set(false)" aria-label="Close"></button>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="attention-sheet-title">
+      <div class="sheet-grabber" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 id="attention-sheet-title">Needs your attention</h2>
+        <button type="button" class="sheet-done" (click)="sheetOpen.set(false)">Done</button>
+      </header>
+      <div class="sheet-body">
+        @for (group of groups(); track group.key) {
+          <section class="sheet-group" [attr.data-urgency]="group.key">
+            <h3 class="sheet-group-title">
+              @if (group.key === 'overdue' || group.key === 'thisWeek') {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
+              }
+              {{ group.label }}
+            </h3>
+            <ul class="sheet-list">
+              @for (item of group.items; track item.id) {
+                <li>
+                  <button type="button" class="sheet-row" (click)="open(item)">
+                    <span class="sheet-main">
+                      <span class="sheet-text">{{ item.text }}</span>
+                      @if (group.key !== 'noDate') {
+                        <span class="sheet-chip">{{ item.timingLabel }}</span>
+                      }
+                      <span class="sheet-doc"><span lang="de">{{ item.documentTitle }}</span>@if (item.path) { · <span lang="de">{{ item.path }}</span>}</span>
+                    </span>
+                    @if (item.page) {
+                      <span class="sheet-page">p. {{ item.page }}</span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+    </div>
+  }
+</section>
