@@ -5,7 +5,7 @@ import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { OpenDocument } from '../open-document';
 import { Reader } from '../reader/reader';
-import { AttentionPanel } from './attention-panel';
+import { AttentionDensityPrototype } from './attention-density-prototype';
 import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
@@ -45,7 +45,7 @@ type DialogState =
   templateUrl: './library.html',
   styleUrl: './library.scss',
   imports: [
-    AttentionPanel,
+    AttentionDensityPrototype,
     DocumentTile,
     FolderTile,
     FolderTreeView,

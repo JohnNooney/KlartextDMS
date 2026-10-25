@@ -93,7 +93,7 @@
     } @else {
       <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
       @if (store.deepDocumentCount() > 0) {
-        <app-attention-panel
+        <app-attention-density-prototype
           [groups]="attention()"
           [reading]="reading()"
           (itemOpened)="openAttentionItem($event)"
