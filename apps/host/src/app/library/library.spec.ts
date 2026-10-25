@@ -545,25 +545,37 @@ describe('Library', () => {
 
     const panel = (el: HTMLElement) => el.querySelector('app-attention-panel');
 
-    it('lists Action Items grouped by urgency with deep path chips', async () => {
+    const seeAll = (el: HTMLElement) =>
+      [...panel(el)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent!.trim() === 'See All');
+
+    it('lists the most urgent Action Items on the card with short timing and a total count', async () => {
       const { el } = await withAttention();
-      const text = panel(el)!.textContent!;
-      expect(text).toContain('Needs your attention');
-      expect(text).toContain('Overdue');
-      expect(text).toContain('Pay the fee');
-      expect(text).toContain('No date');
-      expect(text).toContain('Give notice in writing');
-      expect(panel(el)!.querySelector('.attention-chip')?.textContent).toContain('Wohnung / Mietverträge');
+      const rows = [...panel(el)!.querySelectorAll('.attention-row')].map((r) => r.textContent!.trim());
+      expect(rows).toEqual([expect.stringContaining('Pay the fee'), expect.stringContaining('Give notice in writing')]);
+      expect(rows[0]).toContain('Overdue');
+      expect(panel(el)!.querySelector('.attention-count')?.textContent).toBe('2');
+    });
+
+    it('See All opens the full list grouped by urgency with Document, deep path and page', async () => {
+      const { fixture, el } = await withAttention();
+      seeAll(el)!.click();
+      fixture.detectChanges();
+      const sheet = panel(el)!.querySelector('[role="dialog"]')!;
+      expect([...sheet.querySelectorAll('h3')].map((h) => h.textContent!.trim())).toEqual(['Overdue', 'No date']);
+      const deep = [...sheet.querySelectorAll('.sheet-row')].find((r) => r.textContent!.includes('Give notice in writing'))!;
+      expect(deep.querySelector('.sheet-doc')!.textContent).toContain('Mietvertrag · Wohnung / Mietverträge');
+      expect(deep.querySelector('.sheet-page')!.textContent).toBe('p. 3');
     });
 
     it('collapses and expands from the header', async () => {
       const { fixture, el } = await withAttention();
-      const head = panel(el)!.querySelector<HTMLButtonElement>('.attention-head')!;
+      const head = panel(el)!.querySelector<HTMLButtonElement>('.attention-toggle')!;
       expect(head.getAttribute('aria-expanded')).toBe('true');
       head.click();
       fixture.detectChanges();
       expect(head.getAttribute('aria-expanded')).toBe('false');
       expect(panel(el)!.querySelector('.attention-row')).toBeNull();
+      expect(seeAll(el)).toBeUndefined();
     });
 
     it('clicking an item opens its Document at the cited page and quote', async () => {
@@ -574,6 +586,19 @@ describe('Library', () => {
       row.click();
       fixture.detectChanges();
       expect(store.openAt).toHaveBeenCalledWith('d-deep', { page: 3, quote: 'Schriftform' });
+    });
+
+    it('clicking an item in the sheet closes it and opens the Document at the cited page', async () => {
+      const { fixture, store, el } = await withAttention();
+      seeAll(el)!.click();
+      fixture.detectChanges();
+      const row = [...panel(el)!.querySelectorAll<HTMLButtonElement>('.sheet-row')].find((r) =>
+        r.textContent!.includes('Pay the fee'),
+      )!;
+      row.click();
+      fixture.detectChanges();
+      expect(store.openAt).toHaveBeenCalledWith('d-top', { page: 2, quote: 'Gebühr' });
+      expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
     });
 
     it('shows the empty state once every Extraction is read and nothing needs attention', async () => {
