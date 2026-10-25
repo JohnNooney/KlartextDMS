@@ -49,13 +49,14 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 
 # v2
 
-Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks, all decisions resolved. Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**.
+Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**.
 
 ## v2 architecture deltas
 
 - [Extraction schema is versioned; v1 records are normalized at read time](./adr/0010-extraction-schema-versioned-read-time-normalization.md) — `klartext-extraction-v2`, Action Items vs Key Takeaways, structured `timing`. ([#99](https://github.com/JohnNooney/KlartextDMS/issues/99))
 - [The Host holds one in-memory Extraction index](./adr/0011-host-extraction-index.md) — `LibraryStore.extractionsByDocId`. ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101))
 - [Translations run as on-demand Bus jobs and persist page by page](./adr/0009-translation-persisted-per-page.md) — ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105), research [#100](https://github.com/JohnNooney/KlartextDMS/issues/100))
+- [Action Item Urgency rules live in the shared Bus contract](./adr/0012-shared-action-item-urgency-rules.md) — one bucketing + labelling function in `bus-contract`; colour means Urgency, never category, in both apps. ([#132](https://github.com/JohnNooney/KlartextDMS/issues/132))
 
 Feature decisions without ADRs: [Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/102) (prototype `prototype/folder-attention-overview`, behavioral reference only — no code ports), [library search](https://github.com/JohnNooney/KlartextDMS/issues/103), [calendar reminders](https://github.com/JohnNooney/KlartextDMS/issues/104).
 
@@ -71,6 +72,7 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 | A4 | [Host Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/120) | #117, #119 | #102 |
 | A5 | [Library search across Documents, Folders, and Extractions](https://github.com/JohnNooney/KlartextDMS/issues/121) | #119 | #103 |
 | A6 | [Calendar reminders from Action Items](https://github.com/JohnNooney/KlartextDMS/issues/122) | #117, #118, #119, #120 | #104 |
+| A7 | [Shared Action Item urgency in Host and Guest](https://github.com/JohnNooney/KlartextDMS/issues/133) | #120 (+ #132 decision) | #132, ADR 0012 |
 | B1 | [Translation Bus contract and Guest translation client](https://github.com/JohnNooney/KlartextDMS/issues/123) | — | #105, ADR 0009 |
 | B2 | [Host Translation orchestration, persistence, and rules](https://github.com/JohnNooney/KlartextDMS/issues/124) | #123 | #105, ADR 0009 |
 | B3 | [Reader Translated view](https://github.com/JohnNooney/KlartextDMS/issues/125) | #124 | #105 |
