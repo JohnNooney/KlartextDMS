@@ -16,6 +16,10 @@
     />
   </aside>
   <div class="browse-main">
+  @if (protoVariant(); as protoVariant) {
+    <!-- PROTOTYPE (throwaway branch): replaces the production toolbar. -->
+    <app-proto-chrome [variant]="protoVariant" [ctx]="this" />
+  } @else {
   <header class="library-toolbar">
     @if (backTarget() !== undefined) {
       <!-- ‹ up a level — the mobile-only counterpart of the hidden sidebar
@@ -106,6 +110,7 @@
       </span>
     </div>
   </header>
+  }
 
   <div
     class="library-drop"
@@ -177,6 +182,11 @@
   </div>
   </div>
   </div>
+}
+
+<!-- PROTOTYPE (throwaway branch): the variant bottom bar, dev builds only. -->
+@if (protoEnabled) {
+  <app-proto-switcher [value]="protoVariant()" (changed)="setProtoVariant($event)" />
 }
 
 @if (dialog(); as dialog) {

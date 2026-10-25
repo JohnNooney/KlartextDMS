@@ -4,6 +4,7 @@ import {
   effect,
   ElementRef,
   inject,
+  isDevMode,
   signal,
   viewChild,
 } from '@angular/core';
@@ -27,6 +28,12 @@ import { MoveDialog } from './move-dialog';
 import { RenameDialog } from './rename-dialog';
 import { SearchResults } from './search-results';
 import { buildSearchResults, type DocumentSearchResult } from './library-search';
+import {
+  ProtoChrome,
+  ProtoSwitcher,
+  PROTO_VARIANT_KEY,
+  type ProtoVariant,
+} from './prototype-mobile-search';
 import { UploadDialog } from './upload-dialog';
 import { LibraryStore } from './library.store';
 
@@ -70,6 +77,8 @@ type DialogState =
     FolderNameDialog,
     FolderDeleteDialog,
     SearchResults,
+    ProtoChrome,
+    ProtoSwitcher,
   ],
   host: {
     '(document:keydown.escape)': 'closeAddMenu()',
@@ -169,6 +178,22 @@ export class Library {
   protected readonly searchOpen = signal(false);
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
   private searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /**
+   * PROTOTYPE (throwaway branch): the mobile-chrome variant the bottom bar
+   * selects — `null` renders the production toolbar. Dev builds only.
+   */
+  protected readonly protoVariant = signal<ProtoVariant>(
+    isDevMode()
+      ? ((localStorage.getItem(PROTO_VARIANT_KEY) as ProtoVariant) ?? null)
+      : null,
+  );
+  protected readonly protoEnabled = isDevMode();
+  protected setProtoVariant(variant: ProtoVariant): void {
+    this.protoVariant.set(variant);
+    if (variant === null) localStorage.removeItem(PROTO_VARIANT_KEY);
+    else localStorage.setItem(PROTO_VARIANT_KEY, variant);
+  }
 
   protected readonly query = computed(() => this.openDocument.query() ?? '');
   protected readonly searching = computed(() => this.query().trim().length >= 2);
