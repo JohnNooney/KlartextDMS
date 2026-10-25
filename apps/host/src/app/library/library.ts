@@ -166,6 +166,11 @@ export class Library {
    * (`?scope=all`, so the round-trip restores it too). `/` and Cmd/Ctrl+K
    * focus the field.
    */
+  /**
+   * The mobile field's expanded state — the magnifier swaps it in for the
+   * title; navigation and blur collapse it back (issue #121). Desktop
+   * ignores it — the field is always out there.
+   */
   protected readonly searchOpen = signal(false);
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
   private searchTimer: ReturnType<typeof setTimeout> | undefined;
@@ -192,6 +197,14 @@ export class Library {
       const box = this.searchBox()?.nativeElement;
       const q = this.query();
       if (box && box.value !== q) box.value = q;
+    });
+    // The component instance is reused across Folders and reader mounts, so
+    // `searchOpen` would otherwise outlive the tap that set it — navigation
+    // collapses the expanded field back to the magnifier.
+    effect(() => {
+      this.openDocument.folderId();
+      this.openDocument.docId();
+      this.searchOpen.set(false);
     });
   }
 
@@ -242,6 +255,17 @@ export class Library {
     this.searchOpen.set(true);
     // The field is display:none until the class lands — focus after the frame.
     setTimeout(() => this.searchBox()?.nativeElement.focus());
+  }
+
+  /**
+   * Focus leaving the field collapses it (mobile) — unless it moved to
+   * another control inside it (the scope pill, the clear button) or a query
+   * is still active, in which case the field is showing real state.
+   */
+  protected onSearchFocusOut(event: FocusEvent): void {
+    const into = event.relatedTarget;
+    if (into instanceof Node && (event.currentTarget as HTMLElement).contains(into)) return;
+    if (!this.searching()) this.searchOpen.set(false);
   }
 
   /** A Folder row browses it; a Document row opens at its cited passage when the match carried one. */

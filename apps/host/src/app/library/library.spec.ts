@@ -814,6 +814,62 @@ describe('Library', () => {
       expect(ctx.el.classList.contains('search-open')).toBe(true);
     });
 
+    it('navigation collapses the expanded field back to the magnifier', async () => {
+      const ctx = await withLibrary();
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(true);
+
+      ctx.openDocument.folderId.set('vertraege');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(false);
+
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      ctx.openDocument.docId.set('d-flat');
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(false);
+    });
+
+    const blurFromSearch = (ctx: Awaited<ReturnType<typeof withLibrary>>, into: EventTarget | null) =>
+      ctx.el.querySelector('.search')!.dispatchEvent(
+        new FocusEvent('focusout', { bubbles: true, relatedTarget: into }),
+      );
+
+    it('focus leaving the empty field collapses it', async () => {
+      const ctx = await withLibrary();
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+
+      blurFromSearch(ctx, document.body);
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(false);
+    });
+
+    it('focus moving within the field keeps it open — as does an active query', async () => {
+      const ctx = await withLibrary();
+      (ctx.el.querySelector('.btn-search') as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+
+      blurFromSearch(ctx, field(ctx.el));
+      ctx.fixture.detectChanges();
+      expect(ctx.el.classList.contains('search-open')).toBe(true);
+
+      ctx.openDocument.query.set('vertrag');
+      ctx.fixture.detectChanges();
+      blurFromSearch(ctx, document.body);
+      ctx.fixture.detectChanges();
+      // searching() holds the field — it is showing the active query.
+      expect(ctx.el.classList.contains('search-open')).toBe(true);
+    });
+
+    it('the title carries the Folder count on mobile', async () => {
+      const ctx = await withLibrary();
+      const count = ctx.el.querySelector('.library-title .title-count')!;
+      expect(count.textContent).toContain('2');
+      expect(count.getAttribute('aria-hidden')).toBe('true');
+    });
+
     it('a query restored from the URL fills the field', async () => {
       const ctx = await withLibrary();
       ctx.openDocument.query.set('restored');

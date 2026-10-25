@@ -106,3 +106,28 @@ test('the mobile magnifier reveals the field and search stays inside the viewpor
 
   await page().setViewportSize({ width: 1280, height: 800 });
 });
+
+test('the mobile field collapses on blur and on navigation', async () => {
+  await page().setViewportSize({ width: 390, height: 844 });
+  await browseRoot(page());
+
+  const magnifier = page().getByRole('button', { name: 'Search', exact: true });
+  await magnifier.click();
+  await expect(field()).toBeFocused();
+
+  // Tapping away with an empty field collapses it back to the magnifier.
+  await page().locator('.library-drop').click({ position: { x: 12, y: 12 } });
+  await expect(field()).toBeHidden();
+  await expect(magnifier).toBeVisible();
+
+  // Navigating doesn't leave it expanded either — the Folder result opens
+  // and the title takes its row back.
+  await magnifier.click();
+  await field().fill('vertrag');
+  await results().getByRole('button', { name: /^Verträge/ }).click();
+  await expect(field()).toBeHidden();
+  await expect(magnifier).toBeVisible();
+  await expect(page().getByRole('heading', { name: 'Verträge' })).toBeVisible();
+
+  await page().setViewportSize({ width: 1280, height: 800 });
+});

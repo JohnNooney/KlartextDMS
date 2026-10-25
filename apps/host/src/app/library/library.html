@@ -30,8 +30,8 @@
         <span class="back-label">{{ backLabel() }}</span>
       </button>
     }
-    <h1 class="library-title" lang="de">{{ title() }}</h1>
-    <div class="search" role="search">
+    <h1 class="library-title" lang="de">{{ title() }}@if (store.deepDocumentCount() > 0) {<span class="title-count" aria-hidden="true">· {{ store.deepDocumentCount() }}</span>}</h1>
+    <div class="search" role="search" (focusout)="onSearchFocusOut($event)">
       <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/></svg>
       <input
         #searchBox
@@ -67,8 +67,8 @@
       }
     </div>
     <div class="toolbar-actions">
-      <!-- The mobile search affordance (issue #121) — expands the collapsed
-           field onto its own toolbar row; the field itself is desktop-shown. -->
+      <!-- The mobile search affordance (issue #121) — swaps the collapsed
+           field in for the title on its own row; desktop shows the field. -->
       <button type="button" class="btn-search" (click)="revealSearch()" aria-label="Search">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/></svg>
       </button>

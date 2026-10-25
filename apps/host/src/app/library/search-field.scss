@@ -3,8 +3,9 @@
 // The library toolbar's search field (issue #121): sunken fill, magnifier
 // left, `/` shortcut hint right, the "This folder | All documents" scope pill
 // (decision #103) inside it. On mobile the field collapses to the magnifier
-// in .toolbar-actions and expands to its own row while the host's
-// .search-open class holds.
+// in .toolbar-actions; expanding swaps it in for the large title on the
+// title's own row (the "title swap") — the toolbar never grows an extra
+// line, and collapsing restores the title exactly.
 .search {
   flex: 1;
   max-width: 420px;
@@ -105,8 +106,9 @@
 }
 
 @media (max-width: 768px) {
-  // The collapsed affordance sits with +; the field drops to its own row
-  // below the large title while .search-open holds.
+  // The collapsed affordance sits with +; expanding hides the large title
+  // and the field takes the title's row (order 3, flex-basis 100% — the
+  // same slot library.scss gives .library-title).
   .btn-search {
     display: grid;
   }
@@ -116,13 +118,14 @@
   }
 
   :host(.search-open) {
-    .btn-search {
+    .btn-search,
+    .library-title {
       display: none;
     }
 
     .search {
       display: flex;
-      order: 4;
+      order: 3;
       flex-basis: 100%;
       max-width: none;
       height: auto;
