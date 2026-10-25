@@ -328,6 +328,7 @@ export const BADGE_NAMES: Record<Badge, string> = {
   styles: [
     SHARED_STYLES,
     `
+    :host { --kt-danger-text: #d70015; --kt-warning-text: #b35c00; }
     .card { background: var(--kt-surface); border: 1px solid var(--kt-border); border-radius: 12px; overflow: hidden; }
     .pad { padding: 0 var(--kt-space-4); }
     .line { display: flex; align-items: center; gap: var(--kt-space-3); width: 100%; min-height: var(--kt-touch-target); padding: 0 var(--kt-space-4); border-top: 0.5px solid var(--kt-border); }
@@ -344,8 +345,8 @@ export const BADGE_NAMES: Record<Badge, string> = {
     .icon[data-key='thisWeek'] { color: var(--kt-warning); }
     .line-text { flex: 1; font-size: 15px; }
     .line-when { flex-shrink: 0; font-size: 13px; color: var(--kt-text-muted); }
-    [data-key='overdue'].line-when, [data-key='overdue'].sheet-when { color: var(--kt-danger); font-weight: 600; }
-    [data-key='thisWeek'].line-when, [data-key='thisWeek'].sheet-when { color: var(--kt-warning); font-weight: 600; }
+    [data-key='overdue'].line-when, [data-key='overdue'].sheet-when { color: var(--kt-danger-text); font-weight: 600; }
+    [data-key='thisWeek'].line-when, [data-key='thisWeek'].sheet-when { color: var(--kt-warning-text); font-weight: 600; }
     .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.3); z-index: 900; }
     .sheet { position: fixed; z-index: 901; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: var(--kt-canvas); border-radius: 14px 14px 0 0; box-shadow: var(--kt-shadow-popover); }
     .g-section { margin-top: var(--kt-space-5); }
@@ -363,10 +364,10 @@ export const BADGE_NAMES: Record<Badge, string> = {
     .g-page { margin-top: 2px; white-space: nowrap; font-size: var(--kt-text-xs); color: var(--kt-accent); }
     [data-key='overdue'] .g-tri { color: var(--kt-danger); }
     [data-key='overdue'] .g-list { border-color: color-mix(in srgb, var(--kt-danger) 40%, transparent); }
-    [data-key='overdue'] .g-chip { background: var(--kt-danger-tint); color: var(--kt-danger); }
+    [data-key='overdue'] .g-chip { background: var(--kt-danger-tint); color: var(--kt-danger-text); }
     [data-key='thisWeek'] .g-tri { color: var(--kt-warning); }
     [data-key='thisWeek'] .g-list { border-color: color-mix(in srgb, var(--kt-warning) 40%, transparent); }
-    [data-key='thisWeek'] .g-chip { background: var(--kt-warning-tint); color: var(--kt-text); }
+    [data-key='thisWeek'] .g-chip { background: var(--kt-warning-tint); color: var(--kt-warning-text); }
     @media (min-width: 769px) { .sheet { top: 50%; bottom: auto; transform: translate(-50%, -50%); border-radius: 14px; max-height: 80vh; } .grabber { display: none; } }
     .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--kt-border-strong); margin: 6px auto 0; }
     .sheet-head { display: flex; align-items: center; padding: var(--kt-space-2) var(--kt-space-4); }
