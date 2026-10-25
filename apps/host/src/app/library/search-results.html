@@ -1,5 +1,9 @@
 <section class="results" aria-label="Search results">
-  <p class="meta-line">{{ summary() }}</p>
+  <!-- Zero results gets the single "No matches" statement below — a
+       "0 results" line on top of it would say the same thing twice. -->
+  @if (count() > 0) {
+    <p class="meta-line">{{ summary() }}</p>
+  }
   @if (reading(); as progress) {
     <p class="results-note" role="status">
       <span class="spinner" aria-hidden="true"></span>
