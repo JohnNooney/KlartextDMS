@@ -112,14 +112,32 @@
 .attention-text {
   font-size: kt.$kt-text-sm;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .attention-sub {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
   color: kt.$kt-text-muted;
   font-size: kt.$kt-text-xs;
+  white-space: nowrap;
+}
+
+.attention-doc,
+.attention-chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attention-page {
+  flex-shrink: 0;
 }
 
 .attention-chip {
+  flex-shrink: 0;
+  max-width: 50%;
   margin-left: kt.$kt-space-1;
   padding: 1px 7px;
   border-radius: kt.$kt-radius-sm;

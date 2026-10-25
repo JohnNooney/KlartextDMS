@@ -184,6 +184,46 @@ test('Move and Delete dialogs wrap long unbroken Document and Folder names insid
   }
 });
 
+// Issue #120: an attention overview row whose Document title and Folder path
+// are long unbroken names ellipsizes both on its one-line sub line, keeps the
+// page reference whole, and never side-scrolls.
+test('an attention overview row ellipsizes a long unbroken Document title and Folder path', async () => {
+  await browseRoot(page());
+
+  const docTitle = unique('Betriebskostenabrechnung_Wohnanlage_Gartenstrasse_Abrechnungszeitraum').replaceAll(' ', '_');
+  const folderName = unique('Mietunterlagen_Wohnanlage_Gartenstrasse_Nebenkostenbelege').replaceAll(' ', '_');
+  await createFolder(page(), folderName);
+  await tile(page(), folderName).click();
+  await expect(page().getByRole('heading', { level: 1, name: folderName })).toBeVisible();
+  await uploadViaDialog(page(), [{ name: `${docTitle}.pdf`, buffer: seededPdf('mietvertrag-2024.pdf') }]);
+  await expect(toast(page(), `Uploaded ${docTitle}.pdf`)).toBeVisible();
+  await browseRoot(page());
+
+  // The full title stays in the row's accessible name, however it's clipped.
+  // The fake provider's golden Extraction cites page 1.
+  const row = page()
+    .getByRole('region', { name: 'Needs your attention' })
+    .getByRole('button', { name: docTitle });
+  await row.scrollIntoViewIfNeeded();
+  await expect(row).toBeVisible();
+  await expect(row.locator('.attention-chip')).toHaveText(folderName);
+  await expect(row.locator('.attention-page')).toHaveText(/· p\.1$/);
+
+  const clipping = (el: Element) => ({
+    ellipsis: getComputedStyle(el).textOverflow === 'ellipsis',
+    clipped: el.scrollWidth > el.clientWidth,
+  });
+  expect(await row.locator('.attention-doc').evaluate(clipping)).toEqual({ ellipsis: true, clipped: true });
+  expect(await row.locator('.attention-chip').evaluate(clipping)).toEqual({ ellipsis: true, clipped: true });
+  expect(await row.locator('.attention-page').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+
+  await expectInsideViewport(page(), row);
+  await expectInsideViewport(page(), row.locator('.attention-page'));
+  await expectInsideViewport(page(), row.locator('.attention-chip'));
+  await expectInsideViewport(page(), row.locator('.attention-when'));
+  await expectNoHorizontalOverflow(page());
+});
+
 test.afterEach(async () => {
   releaseBytes();
   await page().unroute(byteFetches);

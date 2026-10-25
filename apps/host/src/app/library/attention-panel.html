@@ -30,9 +30,9 @@
           <span class="attention-main">
             <span class="attention-text">{{ item.text }}</span>
             <span class="attention-sub">
-              <span lang="de">{{ item.documentTitle }}</span>
+              <span class="attention-doc" lang="de">{{ item.documentTitle }}</span>
               @if (item.page) {
-                <span> · p.{{ item.page }}</span>
+                <span class="attention-page">&nbsp;· p.{{ item.page }}</span>
               }
               @if (item.path) {
                 <span class="attention-chip" lang="de">{{ item.path }}</span>
