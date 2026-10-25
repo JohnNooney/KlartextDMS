@@ -8,9 +8,10 @@
 // never grows a line, and collapsing restores the title exactly.
 .search {
   // A fixed box — the field's width doesn't spring with the Folder title's
-  // length (it may still shrink on very narrow windows).
+  // length (it may still shrink on very narrow windows). Desktop centers
+  // it via equal flexible shares on .library-title and .toolbar-actions
+  // (see library.scss) — no margin here or it would eat the free space.
   flex: 0 1 420px;
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;

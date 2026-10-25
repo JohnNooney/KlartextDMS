@@ -99,12 +99,24 @@
 }
 
 .toolbar-actions {
-  // No margin-left:auto on desktop — .search carries it, so the field and
-  // the buttons form one right-anchored group at a static x position.
   display: flex;
   align-items: center;
   gap: kt.$kt-space-2;
   flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  // Three-column centering: the title and the button group take equal
+  // flexible shares either side of the fixed-width search field, which
+  // therefore sits dead-center in the toolbar whatever the title says.
+  .library-title {
+    flex: 1 1 0;
+  }
+
+  .toolbar-actions {
+    flex: 1 1 0;
+    justify-content: flex-end;
+  }
 }
 
 .library-drop {
