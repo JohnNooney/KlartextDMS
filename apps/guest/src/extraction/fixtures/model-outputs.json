@@ -1,0 +1,485 @@
+{
+  "passing": [
+    {
+      "documentType": "INTERNET_OR_PHONE",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "This document outlines the statutory cancellation policy (Widerrufsbelehrung) and provides standard withdrawal forms for consumer contracts with 1&1 Telecom GmbH. It covers three scenarios: the provision of telecom services, single delivery of goods, and separate deliveries of multiple goods. In each case, consumers have the legal right to cancel the contract within 14 days without providing any reason. The document explains how to submit a cancellation notice, the deadlines for returning goods, cost obligations for return shipping and used services, and how 1&1 issues refunds.",
+      "extractionStatus": "COMPLETE",
+      "actionItems": [
+        {
+          "text": "To exercise your cancellation right, you must notify 1&1 via an unambiguous declaration sent by mail, email, or their online form within the 14-day cancellation window.",
+          "sourceQuote": "Um Ihr Widerrufsrecht auszuüben, müssen Sie uns 1&1 Telecom GmbH, Elgendorfer Str. 57, 56410 Montabaur Telefon: 0800 271 1127 E-Mail: stornierung@1und1.de mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 1
+        },
+        {
+          "text": "If you requested services to begin during the cancellation period, you must pay a proportional amount for services rendered up to the time you submitted your cancellation notice.",
+          "sourceQuote": "Haben Sie verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen sollen, so haben Sie uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 1
+        },
+        {
+          "text": "You must return any received goods within 14 days of notifying 1&1 of your withdrawal, and you must pay the direct costs of return shipping.",
+          "sourceQuote": "Sie haben die Waren unverzüglich und in jedem Fall spätestens binnen vierzehn Tagen ab dem Tag, an dem Sie uns über den Widerruf dieses Vertrags unterrichten, an uns zurückzusenden oder zu übergeben. Die Frist ist gewahrt, wenn Sie die Waren vor Ablauf der Frist von vierzehn Tagen absenden. Sie tragen die unmittelbaren Kosten der Rücksendung der Waren.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 3
+        },
+        {
+          "text": "You are liable for any loss in the value of returned goods if it resulted from handling them beyond what was necessary to inspect their condition and functionality.",
+          "sourceQuote": "Sie müssen für einen etwaigen Wertverlust der Waren nur aufkommen, wenn dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen zurückzuführen ist.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 3
+        }
+      ],
+      "keyTakeaways": [
+        {
+          "text": "For service contracts, the 14-day cancellation window begins on the date the contract is concluded.",
+          "sourceQuote": "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.",
+          "page": 1
+        },
+        {
+          "text": "For goods ordered and delivered together, the 14-day cancellation period begins when you or an authorized third party receives the goods.",
+          "sourceQuote": "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von Ihnen benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz genommen haben bzw. hat.",
+          "page": 3
+        },
+        {
+          "text": "For goods delivered in separate shipments, the 14-day cancellation period begins upon receipt of the final item.",
+          "sourceQuote": "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von Ihnen benannter Dritter, der nicht der Beförderer ist, die letzte Ware in Besitz genommen haben bzw. hat.",
+          "page": 5
+        },
+        {
+          "text": "1&1 will refund all payments, including standard delivery costs, within 14 days of receiving your cancellation notice.",
+          "sourceQuote": "Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist.",
+          "page": 1
+        },
+        {
+          "text": "Refunds are processed using your original payment method at no additional charge unless expressly agreed otherwise.",
+          "sourceQuote": "Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben, es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.",
+          "page": 1
+        },
+        {
+          "text": "For goods orders, 1&1 may withhold your refund until the items are received back or proof of return shipment is supplied.",
+          "sourceQuote": "Wir können die Rückzahlung verweigern, bis wir die Waren wieder zurückerhalten haben oder bis Sie den Nachweis erbracht haben, dass Sie die Waren zurückgesandt haben, je nachdem, welches der frühere Zeitpunkt ist.",
+          "page": 3
+        },
+        {
+          "text": "Revoking the contract cancels the agreement entirely, including any bundled goods or services.",
+          "sourceQuote": "Wenn Sie den Vertrag widerrufen, betrifft dies den Vertrag im Ganzen. Beinhaltet der Vertrag z. B. auch eine Warenlieferung, dann wird auch diese vom Widerruf erfasst.",
+          "page": 1
+        }
+      ]
+    }
+  ],
+  "failing": [
+    {
+      "documentType": "INTERNET_OR_PHONE",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "This document outlines the statutory right of withdrawal (cancellation) for consumers contracting with 1&1 Telecom GmbH via remote communication. Consumers may cancel services within 14 days of contract conclusion, and goods within 14 days of receipt, without providing a reason. Notice can be sent by postal mail, email, or via the online customer portal, optionally using the provided model withdrawal form. Following withdrawal, 1&1 will refund payments within 14 days, though they may withhold refunds until goods are returned or proof of dispatch is provided. Customers must return physical goods within 14 days of notice at their own expense and may be required to pay for any services already provided upon prior request during the withdrawal window.",
+      "extractionStatus": "COMPLETE",
+      "actionItems": [
+        {
+          "text": "To cancel a service contract, you must submit a clear declaration of withdrawal within 14 days of the contract conclusion date.",
+          "sourceQuote": "Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.",
+          "timing": {
+            "kind": "NOTICE_PERIOD",
+            "duration": 14,
+            "unit": "DAYS"
+          },
+          "page": 1
+        },
+        {
+          "text": "To exercise your cancellation right, you must inform 1&1 by sending an explicit notice by postal mail, email, or through their online form before the deadline expires.",
+          "sourceQuote": "Um Ihr Widerrufsrecht auszuüben, müssen Sie uns 1&1 Telecom GmbH, Elgendorfer Str. 57, 56410 Montabaur Telefon: 0800 271 1127 E-Mail: stornierung@1und1.de mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 1
+        },
+        {
+          "text": "If you requested services to start during the withdrawal window, you must pay a proportionate amount for the services provided up to your cancellation notice.",
+          "sourceQuote": "Haben Sie verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen sollen, so haben Sie uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 1
+        },
+        {
+          "text": "After cancelling an order involving goods, you must ship or hand back the physical goods within 14 days of giving notice and pay the direct return shipping costs.",
+          "sourceQuote": "Sie haben die Waren unverzüglich und in jedem Fall spätestens binnen vierzehn Tagen ab dem Tag, an dem Sie uns über den Widerruf dieses Vertrags unterrichten, an uns zurückzusenden oder zu übergeben. Die Frist ist gewahrt, wenn Sie die Waren vor Ablauf der Frist von vierzehn Tagen absenden. Sie tragen die unmittelbaren Kosten der Rücksendung der Waren.",
+          "timing": {
+            "kind": "NOTICE_PERIOD",
+            "duration": 14,
+            "unit": "DAYS"
+          },
+          "page": 3
+        }
+      ],
+      "keyTakeaways": [
+        {
+          "text": "When ordering physical goods delivered all at once, the 14-day cancellation window begins when you or an authorized third party takes possession of the goods.",
+          "sourceQuote": "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von Ihnen benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz genommen haben bzw. hat.",
+          "page": 3
+        },
+        {
+          "text": "When multiple goods ordered together are delivered separately, the 14-day withdrawal period begins upon receipt of the final item.",
+          "sourceQuote": "Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von Ihnen benannter Dritter, der nicht der Beförderer ist, die letzte Ware in Besitz genommen haben bzw. hat.",
+          "page": 5
+        },
+        {
+          "text": "1&1 must reimburse all received payments, including standard delivery costs, within 14 days of receiving your cancellation notice using the original payment method without extra fees.",
+          "sourceQuote": "Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist.",
+          "page": 1
+        },
+        {
+          "text": "1&1 has the right to withhold your refund until the returned goods are received or until you provide proof that the goods were sent back.",
+          "sourceQuote": "Wir können die Rückzahlung verweigern, bis wir die Waren wieder zurückerhalten haben oder bis Sie den Nachweis erbracht haben, dass Sie die Waren zurückgesandt haben, je nachdem, welches der frühere Zeitpunkt ist.",
+          "page": 3
+        },
+        {
+          "text": "You are only liable for any loss in the value of returned goods if it was caused by handling beyond what was necessary to inspect their condition, features, and functionality.",
+          "sourceQuote": "Sie müssen für einen etwaigen Wertverlust der Waren nur aufkommen, wenn dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen zurückzuführen ist.",
+          "page": 3
+        },
+        {
+          "text": "Exercising your right of withdrawal applies to the contract as a whole, meaning any connected services or physical merchandise are revoked together.",
+          "sourceQuote": "Hinweis: Wenn Sie den Vertrag widerrufen, betrifft dies den Vertrag im Ganzen. Beinhaltet der Vertrag z. B. auch eine Warenlieferung, dann wird auch diese vom Widerruf erfasst.",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "documentType": "INTERNET_OR_PHONE",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "This document contains the General Terms and Conditions (AGB) of 1&1 Telecom GmbH governing telecommunications, mobile services, fixed-line internet (DSL and fiber), web hosting, and digital TV/cinema services. It outlines contract formation, standard 24-month minimum terms, monthly billing, and cancellation procedures requiring at least text form with a one-month notice period. Customers must pay exclusively via SEPA direct debit, report lost SIM cards or compromised credentials immediately, and raise invoice disputes within eight weeks. The agreement details provisions for price adjustments, service transfer limitations, and compensation rights for interrupted provider switches or missed installation appointments. Consumers are also informed of statutory 14-day withdrawal rights for services and delivered hardware.",
+      "extractionStatus": "COMPLETE",
+      "actionItems": [
+        {
+          "text": "Provide written or text-form termination notice at least one month prior to the end of the initial minimum term or at any time thereafter.",
+          "sourceQuote": "Alle Verträge sind zum Ende der Mindestvertragslaufzeit oder jederzeit danach mit einer Frist von einem Monat kündbar. Verträge ohne eine Mindestvertragslaufzeit sind jederzeit mit einer Frist von einem Monat kündbar.",
+          "timing": {
+            "kind": "NOTICE_PERIOD",
+            "duration": 1,
+            "unit": "MONTHS"
+          },
+          "page": 2
+        },
+        {
+          "text": "Submit any objections to an invoice in text form to 1&1 within eight weeks of receiving the bill, or it will be deemed accepted.",
+          "sourceQuote": "Einwendungen gegen die Abrechnung sind innerhalb von acht Wochen nach Zugang der Rechnung in Textform bei 1&1 zu erheben. Erhebt der Kunde innerhalb dieser Frist keine Einwendungen, gilt die Rechnung als genehmigt.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 3
+        },
+        {
+          "text": "Exercise your statutory right of withdrawal within 14 days of contract conclusion or receipt of goods using a clear statement.",
+          "sourceQuote": "Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 10
+        },
+        {
+          "text": "Immediately report any loss, theft, or unauthorized use of your SIM card to 1&1 to trigger a block and cap your liability.",
+          "sourceQuote": "Der Kunde hat ab dem Zeitpunkt, ab dem ihm die SIM von 1&1 zur Verfügung gestellt wird, das Abhandenkommen oder die unbefugte Drittnutzung unverzüglich mitzuteilen. 1&1 wird die SIM sofort sperren und dem Kunden eine neue SIM zur Verfügung stellen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 4
+        },
+        {
+          "text": "Ensure invoice balances are received within 5 working days of invoice receipt to prevent automatic payment default.",
+          "sourceQuote": "Der Kunde kommt automatisch, auch ohne Mahnung, in Verzug, wenn er den fälligen Betrag nicht innerhalb von spätestens 5 Werktagen ab Rechnungszugang so leistet, dass dieser bis dahin bei 1&1 auf dem in der Rechnung jeweils angegebenen Konto eingeht.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 3
+        },
+        {
+          "text": "Exercise your extraordinary right of termination within three months of receiving notification if 1&1 unilaterally increases prices or alters contract terms.",
+          "sourceQuote": "Der Kunde kann die Kündigung innerhalb von drei Monaten ab Zugang der Änderungsmitteilung erklären. Auf den Inhalt und den Zeitpunkt der Vertragsänderung und ein bestehendes Kündigungsrecht auf Grund der Änderung wird 1&1 den Kunden in der Änderungsmitteilung besonders hinweisen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 3
+        }
+      ],
+      "keyTakeaways": [
+        {
+          "text": "Unless expressly agreed otherwise, the standard initial minimum contract duration is 24 months.",
+          "sourceQuote": "Die Mindestlaufzeit eines Vertrags beträgt 24 Monate, soweit nicht ausdrücklich anders vereinbart.",
+          "page": 2
+        },
+        {
+          "text": "Payments are collected exclusively by direct debit, and 1&1 initiates debits at the earliest 5 business days after invoice receipt.",
+          "sourceQuote": "Die Zahlung der Entgelte kann ausschließlich durch Lastschrifteinzug erfolgen. ... Der Einzug erfolgt frühestens 5 Werktage nach Rechnungszugang.",
+          "page": 2
+        },
+        {
+          "text": "Physical SIM cards remain the legal property of 1&1 at all times.",
+          "sourceQuote": "Erhält der Kunde im Rahmen eines Mobilfunk-Tarifs eine physische SIM-Karte, verbleibt diese im Eigentum von 1&1.",
+          "page": 4
+        },
+        {
+          "text": "Liability for unauthorized phone calls after a lost SIM card is capped at 50 euros, provided the loss was reported promptly without gross negligence.",
+          "sourceQuote": "Bei unverzüglicher Mitteilung haftet der Kunde nur für die bis zum Eingang der Mitteilung geführten Gespräche und nur bis zu 50,00 EUR.",
+          "page": 4
+        },
+        {
+          "text": "If internet service is interrupted for more than one business day during a provider switch, the customer is entitled to statutory daily compensation of at least 10 euros or 20% of the monthly fee.",
+          "sourceQuote": "Wird der Dienst des Kunden bei einem Anbieterwechsel länger als einen Arbeitstag unterbrochen und ist 1&1 der abgebende Anbieter, kann der Kunde für jeden weiteren Arbeitstag der Unterbrechung eine Entschädigung in Höhe von 10 Euro oder 20 Prozent des vertraglich vereinbarten Monatsentgeltes bei Verträgen mit gleichbleibendem monatlichem Entgelt, je nachdem welcher Betrag höher ist, verlangen, es sei denn, der Kunde hat die Verzögerung zu vertreten.",
+          "page": 3
+        },
+        {
+          "text": "If 1&1 misses an agreed service or installation appointment, the customer may claim compensation of 10 euros or 20% of the monthly contract fee.",
+          "sourceQuote": "Wird ein vereinbarter Kundendienst- oder Installationstermin von 1&1 versäumt, kann der Kunde von 1&1 für jeden versäumten Termin eine Entschädigung in Höhe von 10 Euro oder 20 Prozent des vertraglich vereinbarten Monatsentgeltes bei Verträgen mit gleichbleibendem monatlichem Entgelt, je nachdem welcher Betrag höher ist, verlangen",
+          "page": 3
+        },
+        {
+          "text": "Inactivity on the digital TV product for 90 consecutive days results in automatic logout and deletion of stored settings and recordings.",
+          "sourceQuote": "Nutzt der Kunde 90 Kalendertage infolge das 1&1 Digital-TV Produkt nicht, wird er automatisch ausgeloggt. In diesem Fall werden seine Einstellungen und Aufnahmen gelöscht.",
+          "page": 6
+        },
+        {
+          "text": "Purchased Video-on-Demand content remains accessible for streaming for a minimum guaranteed duration of 10 years.",
+          "sourceQuote": "Bei Kauf eines VoD Inhaltes hat der Kunde die Möglichkeit, den erworbenen Inhalt ab erstmaliger Bereitstellung des VoD Inhaltes für eine Mindestdauer von 10 Jahren zu streamen.",
+          "page": 6
+        },
+        {
+          "text": "1&1 reserves the right to suspend the 1&1 Cinema account if monthly purchases reach a spending threshold of 250 euros.",
+          "sourceQuote": "1&1 ist berechtigt, aber nicht verpflichtet, das 1&1 Cinema Konto des Kunden zu sperren, sofern der Kunde ein Umsatzlimit in Höhe von 250,00 € in einem Abrechnungsmonat erreicht, oder wenn der Kunde mit der Zahlung seiner Entgelte in Verzug gerät.",
+          "page": 7
+        },
+        {
+          "text": "Hardware ownership transferred under a contract with a minimum term passes to the customer after 24 months from conclusion.",
+          "sourceQuote": "Bei Ware, die im Rahmen eines Vertrags mit Mindestvertragslaufzeit überlassen wird, geht das Eigentum nach Ablauf von 24 Monaten nach Vertragsschluss auf den Kunden über, es sei denn, es ist etwas anderes vereinbart.",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "documentType": "TENANCY_AGREEMENT",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "This document is a residential lease agreement for an apartment located at Neugäßchen 6, 4th floor, unit 127 in Saarbrücken, between the landlord (Union Investment Institutional Property GmbH, represented by moovin Immobilien GmbH and managed by CAPERA Immobilien Service GmbH) and tenants Daniela Andriyanova Todorova and John Francis Nooney. The lease starts on October 1, 2026, for an indefinite term, with an ordinary termination exclusion until September 30, 2027. The total monthly rent is €1,600.00 (€1,420.00 net cold rent plus €180.00 advance operating costs), subject to indexation based on the Consumer Price Index. A security deposit of €4,260.00 is required, payable in up to three monthly installments. Utilities including electricity, district heating, cable, and water must be obtained directly by the tenants from suppliers. Permission is granted to keep two cats, with tenant liability for any damages. The contract also contains standard terms regarding minor repairs, house rules, and data protection notices.",
+      "extractionStatus": "COMPLETE",
+      "actionItems": [
+        {
+          "text": "Pay the total monthly rent of €1,600.00 in advance, no later than the 3rd working day of each month.",
+          "sourceQuote": "Die Miete und Nebenkosten sind monatlich im Voraus, spätestens am 3. Werktag des Monats, bargeldlos und für den Vermieter kostenfrei auf das nachstehend benannte Konto zu zahlen.",
+          "timing": {
+            "kind": "RECURRING",
+            "cadence": "MONTHLY",
+            "scheduleLabel": "Monthly by the 3rd working day",
+            "unit": null
+          },
+          "page": 6
+        },
+        {
+          "text": "Pay the security deposit of €4,260.00, either as a lump sum at the start or in three equal installments by the start of the lease and by the 3rd working day of the 2nd and 3rd months.",
+          "sourceQuote": "Der Mieter ist berechtigt, die Mietsicherheit in drei gleichen monatlichen Teilzahlungen zu leisten, wobei die erste Teilzahlung zu Beginn des Mietverhältnisses fällig ist. Die 2. Teilzahlung ist bis zum 3. Werktag des 2. Mietmonats und die 3. Teilzahlung ist bis zum 3. Werktag des 3. Mietmonats zu zahlen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 7
+        },
+        {
+          "text": "Register the electricity and gas meters with energy providers within three days of the start of the lease, and de-register before moving out.",
+          "sourceQuote": "Der Mieter verpflichtet sich, unverzüglich, spätestens jedoch innerhalb von drei Tagen nach Mietbeginn, die der Wohnung zugeordneten Strom- und Gaszählern bei den jeweiligen Energieversorgern anzumelden und diese vor Auszug – unter Mitteilung des aktuellen Zählerstandes – auch wieder abzumelden.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 16
+        },
+        {
+          "text": "Ordinary termination is mutually excluded until September 30, 2027, after which statutory notice applies to the end of a calendar month.",
+          "sourceQuote": "Die Vertragsparteien sind sich darüber einig, dass das Mietverhältnis ab Vertragsschluss für beide Mietparteien frühestens zum Ablauf eines Jahres nach dem oben genannten Mietbeginn mit gesetzlicher Kündigungsfrist zum Ende des Kalendermonats, also zum 30.09.2027, ordentlich kündbar ist.",
+          "timing": {
+            "kind": "FIXED_DATE",
+            "dueDate": "2027-09-30"
+          },
+          "page": 3
+        },
+        {
+          "text": "Notify the landlord immediately of any defects or urgent dangers to the rental property during the tenancy.",
+          "sourceQuote": "Zeigt sich im Laufe der Mietzeit ein Mangel der Mietsache oder wird eine Maßnahme zum Schutz der Mietsache gegen eine nicht vorhergesehene Gefahr erforderlich, so hat der Mieter dies dem Vermieter unverzüglich anzuzeigen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 9
+        },
+        {
+          "text": "Provide at least one month's advance notice in text form before the due date if setting off claims or exercising retention against rent payments.",
+          "sourceQuote": "Der Mieter kann gegen eine Mietforderung mit einer Forderung aus den §§ 536a, 539 BGB oder aus ungerechtfertigter Bereicherung wegen zu viel gezahlter Miete nur aufrechnen oder wegen einer solchen Forderung ein Zurückbehaltungsrecht ausüben, wenn er seine Absicht dem Vermieter mindestens einen Monat vor der Fälligkeit der Miete mindestens in Textform angezeigt hat.",
+          "timing": {
+            "kind": "NOTICE_PERIOD",
+            "duration": 1,
+            "unit": "MONTHS"
+          },
+          "page": 6
+        }
+      ],
+      "keyTakeaways": [
+        {
+          "text": "The tenancy commences on October 1, 2026, for an indefinite term.",
+          "sourceQuote": "Das Mietverhältnis beginnt am 01.10.2026 und läuft auf unbestimmte Zeit.",
+          "page": 3
+        },
+        {
+          "text": "The rent is structured as an index-linked rent (Indexmiete) tied to Germany's Consumer Price Index (VPI) and generally remains unchanged for at least one year between adjustments.",
+          "sourceQuote": "Die Vertragsparteien vereinbaren hiermit, dass die Nettokaltmiete durch den vom Statistischen Bundesamt ermittelten Preisindex für die Lebenshaltung aller privaten Haushalte in Deutschland (= Verbraucherpreisindex Deutschland (VPI)) bestimmt wird (Indexmiete).",
+          "page": 3
+        },
+        {
+          "text": "Electricity, district heating, cable TV, and water are not covered by the operating cost prepayment and must be contracted and paid directly by the tenant.",
+          "sourceQuote": "Entgegen der vorstehenden Umlagevereinbarung bezieht der Mieter folgende Versorgungsleistungen für seine Wohnung direkt von einem Versorger auf eigene Rechnung: x Strom x Kabel x Fernwärme x Wasser",
+          "page": 5
+        },
+        {
+          "text": "The tenant is responsible for minor repairs up to €100.00 gross per individual incident, capped annually at 6% of the annual net cold rent or €300.00 gross per lease year.",
+          "sourceQuote": "Eine kleine Instandhaltung (Kleinreparatur) ist gegeben, wenn der Reparaturaufwand 100,00 EUR brutto im Einzelfall nicht übersteigt. Der entstehende jährliche Aufwand ist auf 6% der vereinbarten Jahresnettomiete maximal aber auf 300,00 EUR brutto beschränkt.",
+          "page": 8
+        },
+        {
+          "text": "The tenants are granted explicit permission to keep two cats in the apartment, provided they assume full liability for animal-related damages.",
+          "sourceQuote": "Dem Mieter wird die Genehmigung erteilt zwei Katzen in den oben genannten Mieträumen zu halten. Die genannten Mieter haben für alle eventuell entstehenden Schäden, welche augenscheinlich durch die Tiere entstehen voll zu haften, und diese vor Auszug auf eigene Kosten zu beseitigen.",
+          "page": 16
+        },
+        {
+          "text": "The apartment is located in a new construction and additional construction works or outdoor installations may generate typical noise and dust.",
+          "sourceQuote": "Die Wohnung befindet sich in einem Neubau. In dem Gebäude werden künftig noch weitere Flächen ausgebaut werden. Auch steht eine Fertigstellung der Außenanlagen noch aus. Die Durchführung dieser Arbeiten wird zu baustellentypischen Beeinträchtigungen – insbesondere zu Lärm- und Staubentwicklung - führen, die auch auf die Mietsache einwirken.",
+          "page": 2
+        },
+        {
+          "text": "Tenants act as joint and several debtors (Gesamtschuldner) and mutually authorize each other to receive landlord notices.",
+          "sourceQuote": "Mehrere Personen als Mieter haften für alle Verpflichtungen aus dem Mietvertrag als Gesamtschuldner.",
+          "page": 15
+        },
+        {
+          "text": "Installing outdoor satellite dishes, stationary antennas, or mobile antennas is prohibited.",
+          "sourceQuote": "Das Anbringen, Aufstellen und die Benutzung von Außenantennen und/ oder Satellitenschüsseln ist nicht gestattet. Das Anbringen von Funkantennen ist nicht gestattet.",
+          "page": 9
+        },
+        {
+          "text": "Property management representation is assigned to CAPERA Immobilien Service GmbH.",
+          "sourceQuote": "Die zum Zeitpunkt des Vertragsabschlusses tätige Hausverwaltung ist die CAPERA Immobilien Service GmbH, Dornhofstraße 100, 63263 Neu-Isenburg.",
+          "page": 15
+        }
+      ]
+    },
+    {
+      "documentType": "TENANCY_AGREEMENT",
+      "sourceLanguage": "de",
+      "plainEnglishSummary": "This document is a residential lease agreement for an apartment located at Neugäßchen 6, 4th floor, unit 127 in Saarbrücken, between the landlord (Union Investment Institutional Property GmbH, represented by moovin Immobilien GmbH and managed by CAPERA Immobilien Service GmbH) and tenants Daniela Andriyanova Todorova and John Francis Nooney. The lease starts on October 1, 2026, for an indefinite term, with an ordinary termination exclusion until September 30, 2027. The total monthly rent is €1,600.00 (€1,420.00 net cold rent plus €180.00 advance operating costs), subject to indexation based on the Consumer Price Index. A security deposit of €4,260.00 is required, payable in up to three monthly installments. Utilities including electricity, district heating, cable, and water must be obtained directly by the tenants from suppliers. Permission is granted to keep two cats, with tenant liability for any damages. The contract also contains standard terms regarding minor repairs, house rules, and data protection notices.",
+      "extractionStatus": "COMPLETE",
+      "actionItems": [
+        {
+          "text": "Pay the total monthly rent of €1,600.00 in advance, no later than the 3rd working day of each month.",
+          "sourceQuote": "Die Miete und Nebenkosten sind monatlich im Voraus, spätestens am 3. Werktag des Monats, bargeldlos und für den Vermieter kostenfrei auf das nachstehend benannte Konto zu zahlen.",
+          "timing": {
+            "kind": "RECURRING",
+            "cadence": "MONTHLY",
+            "scheduleLabel": "Monthly by the 3rd working day"
+          },
+          "page": 6
+        },
+        {
+          "text": "Pay the security deposit of €4,260.00, either as a lump sum at the start or in three equal installments by the start of the lease and by the 3rd working day of the 2nd and 3rd months.",
+          "sourceQuote": "Der Mieter ist berechtigt, die Mietsicherheit in drei gleichen monatlichen Teilzahlungen zu leisten, wobei die erste Teilzahlung zu Beginn des Mietverhältnisses fällig ist. Die 2. Teilzahlung ist bis zum 3. Werktag des 2. Mietmonats und die 3. Teilzahlung ist bis zum 3. Werktag des 3. Mietmonats zu zahlen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 7
+        },
+        {
+          "text": "Register the electricity and gas meters with energy providers within three days of the start of the lease, and de-register before moving out.",
+          "sourceQuote": "Der Mieter verpflichtet sich, unverzüglich, spätestens jedoch innerhalb von drei Tagen nach Mietbeginn, die der Wohnung zugeordneten Strom- und Gaszählern bei den jeweiligen Energieversorgern anzumelden und diese vor Auszug – unter Mitteilung des aktuellen Zählerstandes – auch wieder abzumelden.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 16
+        },
+        {
+          "text": "Ordinary termination is mutually excluded until September 30, 2027, after which statutory notice applies to the end of a calendar month.",
+          "sourceQuote": "Die Vertragsparteien sind sich darüber einig, dass das Mietverhältnis ab Vertragsschluss für beide Mietparteien frühestens zum Ablauf eines Jahres nach dem oben genannten Mietbeginn mit gesetzlicher Kündigungsfrist zum Ende des Kalendermonats, also zum 30.09.2027, ordentlich kündbar ist.",
+          "timing": {
+            "kind": "FIXED_DATE",
+            "dueDate": "2027-09-30"
+          },
+          "page": 3
+        },
+        {
+          "text": "Notify the landlord immediately of any defects or urgent dangers to the rental property during the tenancy.",
+          "sourceQuote": "Zeigt sich im Laufe der Mietzeit ein Mangel der Mietsache oder wird eine Maßnahme zum Schutz der Mietsache gegen eine nicht vorhergesehene Gefahr erforderlich, so hat der Mieter dies dem Vermieter unverzüglich anzuzeigen.",
+          "timing": {
+            "kind": "NONE"
+          },
+          "page": 9
+        },
+        {
+          "text": "Provide at least one month's advance notice in text form before the due date if setting off claims or exercising retention against rent payments.",
+          "sourceQuote": "Der Mieter kann gegen eine Mietforderung mit einer Forderung aus den §§ 536a, 539 BGB oder aus ungerechtfertigter Bereicherung wegen zu viel gezahlter Miete nur aufrechnen oder wegen einer solchen Forderung ein Zurückbehaltungsrecht ausüben, wenn er seine Absicht dem Vermieter mindestens einen Monat vor der Fälligkeit der Miete mindestens in Textform angezeigt hat.",
+          "timing": {
+            "kind": "NOTICE_PERIOD",
+            "duration": 1,
+            "unit": "MONTHS"
+          }
+        }
+      ],
+      "keyTakeaways": [
+        {
+          "text": "The tenancy commences on October 1, 2026, for an indefinite term.",
+          "sourceQuote": "Das Mietverhältnis beginnt am 01.10.2026 und läuft auf unbestimmte Zeit.",
+          "page": 3
+        },
+        {
+          "text": "The rent is structured as an index-linked rent (Indexmiete) tied to Germany's Consumer Price Index (VPI) and generally remains unchanged for at least one year between adjustments.",
+          "sourceQuote": "Die Vertragsparteien vereinbaren hiermit, dass die Nettokaltmiete durch den vom Statistischen Bundesamt ermittelten Preisindex für die Lebenshaltung aller privaten Haushalte in Deutschland (= Verbraucherpreisindex Deutschland (VPI)) bestimmt wird (Indexmiete).",
+          "page": 3
+        },
+        {
+          "text": "Electricity, district heating, cable TV, and water are not covered by the operating cost prepayment and must be contracted and paid directly by the tenant.",
+          "sourceQuote": "Entgegen der vorstehenden Umlagevereinbarung bezieht der Mieter folgende Versorgungsleistungen für seine Wohnung direkt von einem Versorger auf eigene Rechnung: x Strom x Kabel x Fernwärme x Wasser",
+          "page": 5
+        },
+        {
+          "text": "The tenant is responsible for minor repairs up to €100.00 gross per individual incident, capped annually at 6% of the annual net cold rent or €300.00 gross per lease year.",
+          "sourceQuote": "Eine kleine Instandhaltung (Kleinreparatur) ist gegeben, wenn der Reparaturaufwand 100,00 EUR brutto im Einzelfall nicht übersteigt. Der entstehende jährliche Aufwand ist auf 6% der vereinbarten Jahresnettomiete maximal aber auf 300,00 EUR brutto beschränkt.",
+          "page": 8
+        },
+        {
+          "text": "The tenants are granted explicit permission to keep two cats in the apartment, provided they assume full liability for animal-related damages.",
+          "sourceQuote": "Dem Mieter wird die Genehmigung erteilt zwei Katzen in den oben genannten Mieträumen zu halten. Die genannten Mieter haben für alle eventuell entstehenden Schäden, welche augenscheinlich durch die Tiere entstehen voll zu haften, und diese vor Auszug auf eigene Kosten zu beseitigen.",
+          "page": 16
+        },
+        {
+          "text": "The apartment is located in a new construction and additional construction works or outdoor installations may generate typical noise and dust.",
+          "sourceQuote": "Die Wohnung befindet sich in einem Neubau. In dem Gebäude werden künftig noch weitere Flächen ausgebaut werden. Auch steht eine Fertigstellung der Außenanlagen noch aus. Die Durchführung dieser Arbeiten wird zu baustellentypischen Beeinträchtigungen – insbesondere zu Lärm- und Staubentwicklung - führen, die auch auf die Mietsache einwirken.",
+          "page": 2
+        },
+        {
+          "text": "Tenants act as joint and several debtors (Gesamtschuldner) and mutually authorize each other to receive landlord notices.",
+          "sourceQuote": "Mehrere Personen als Mieter haften für alle Verpflichtungen aus dem Mietvertrag als Gesamtschuldner.",
+          "page": 15
+        },
+        {
+          "text": "Installing outdoor satellite dishes, stationary antennas, or mobile antennas is prohibited.",
+          "sourceQuote": "Das Anbringen, Aufstellen und die Benutzung von Außenantennen und/ oder Satellitenschüsseln ist nicht gestattet. Das Anbringen von Funkantennen ist nicht gestattet.",
+          "page": 9
+        },
+        {
+          "text": "Property management representation is assigned to CAPERA Immobilien Service GmbH.",
+          "sourceQuote": "Die zum Zeitpunkt des Vertragsabschlusses tätige Hausverwaltung ist die CAPERA Immobilien Service GmbH, Dornhofstraße 100, 63263 Neu-Isenburg.",
+          "page": 15
+        }
+      ]
+    }
+  ]
+}

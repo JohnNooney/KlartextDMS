@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { validateExtractionContent } from './extraction-schema';
+import { extractionResponseSchema, validateExtractionContent } from './extraction-schema';
 import type { ExtractionContent } from '@klartext/bus-contract';
+import modelOutputs from './fixtures/model-outputs.json';
 
 /**
  * The #8 contract rules the Guest enforces on Gemini's output: required
@@ -235,6 +236,27 @@ describe('validateExtractionContent', () => {
     });
   });
 
+  /**
+   * Production captures (2026-10-25): the flat wire schema let the model omit
+   * the contract-required `anchor`/`scheduleLabel` — the validator is the last
+   * line of defence and must keep refusing such output.
+   */
+  it('rejects captured model outputs that omit contract-required timing fields', () => {
+    for (const output of modelOutputs.failing) {
+      const result = validateExtractionContent(output);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.issues.some((i) => i.includes('is required for timing kind'))).toBe(true);
+      }
+    }
+  });
+
+  it('accepts the captured output whose timings need no conditional fields', () => {
+    for (const output of modelOutputs.passing) {
+      expect(validateExtractionContent(output).ok).toBe(true);
+    }
+  });
+
   it('reports readable issues on failure', () => {
     const result = validateExtractionContent(valid({ extractionStatus: 'INSUFFICIENT_CONTENT' }));
     expect(result.ok).toBe(false);
@@ -242,5 +264,55 @@ describe('validateExtractionContent', () => {
       expect(result.issues.length).toBeGreaterThan(0);
       expect(result.issues.every((i) => typeof i === 'string')).toBe(true);
     }
+  });
+});
+
+/**
+ * Wire↔contract parity (the October 2026 re-analysis failures): every
+ * contract-required timing field must be required at generation time —
+ * the schema is the enforcement, the validator the audit.
+ */
+describe('extractionResponseSchema timing variants', () => {
+  type TimingVariant = {
+    required?: string[];
+    properties?: Record<string, { enum?: string[]; nullable?: boolean }>;
+  };
+  const timing = (
+    extractionResponseSchema.properties!.actionItems.items as {
+      properties: { timing: { anyOf: TimingVariant[] } };
+    }
+  ).properties.timing;
+
+  const variantFor = (kind: string) =>
+    timing.anyOf.find((v) => v.properties?.kind?.enum?.[0] === kind)!;
+
+  it('declares exactly one variant per kind, each pinning kind to a single value', () => {
+    expect(timing.anyOf).toHaveLength(4);
+    expect(timing.anyOf.map((v) => v.properties?.kind?.enum)).toEqual(
+      expect.arrayContaining([['FIXED_DATE'], ['RECURRING'], ['NOTICE_PERIOD'], ['NONE']]),
+    );
+  });
+
+  it.each([
+    ['FIXED_DATE', ['kind', 'dueDate']],
+    ['RECURRING', ['kind', 'cadence', 'scheduleLabel']],
+    ['NOTICE_PERIOD', ['kind', 'duration', 'unit', 'anchor']],
+    ['NONE', ['kind']],
+  ] as const)('requires exactly the contract fields for %s', (kind, required) => {
+    expect([...variantFor(kind).required!].sort()).toEqual([...required].sort());
+  });
+
+  it.each([
+    ['FIXED_DATE', ['kind', 'dueDate']],
+    ['RECURRING', ['kind', 'cadence', 'dayOfMonth', 'scheduleLabel']],
+    ['NOTICE_PERIOD', ['kind', 'duration', 'unit', 'anchor']],
+    ['NONE', ['kind']],
+  ] as const)('declares exactly the contract fields for %s', (kind, props) => {
+    expect(Object.keys(variantFor(kind).properties!).sort()).toEqual([...props].sort());
+  });
+
+  it('leaves dayOfMonth optional on RECURRING', () => {
+    expect(variantFor('RECURRING').required).not.toContain('dayOfMonth');
+    expect(variantFor('RECURRING').properties!.dayOfMonth).toMatchObject({ nullable: true });
   });
 });
