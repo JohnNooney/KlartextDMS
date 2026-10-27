@@ -7,6 +7,7 @@ import type {
   ExtractionState,
   GuestShowPagePayload,
   JobDocument,
+  ReminderRequest,
   Session,
   SessionUser,
 } from '@klartext/bus-contract';
@@ -18,6 +19,7 @@ import { DOCUMENT_REPOSITORY, EXTRACTION_REPOSITORY } from '../data/providers';
 import { LibraryStore, type ExtractionJobState } from '../library/library.store';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
+import { Reminders } from '../reminders/reminders';
 import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { HostBus } from './host-bus';
@@ -57,6 +59,7 @@ export class ExtractionFlow implements HostBusProbe {
   private readonly open = inject(OpenDocument);
   private readonly pageFocus = inject(PageFocus);
   private readonly sheetExpand = inject(SheetExpand);
+  private readonly reminders = inject(Reminders);
   private readonly auth = inject(AuthService);
   private readonly bus = inject(HostBus);
   private readonly toasts = inject(ToastService);
@@ -172,6 +175,15 @@ export class ExtractionFlow implements HostBusProbe {
    */
   panelExpandRequested(): void {
     this.sheetExpand.request();
+  }
+
+  /**
+   * GUEST_CREATE_REMINDER (issue #122): the adapter has already vetted the
+   * Session and the id's wire shape; Reminders resolves the Action Item
+   * from the Extraction index and opens the dialog the overview rows use.
+   */
+  reminderRequested(request: ReminderRequest): void {
+    this.reminders.open(request.documentId, request.actionItemId);
   }
 
   // -- Job queue feeders ----------------------------------------------------

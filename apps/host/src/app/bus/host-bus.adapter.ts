@@ -7,6 +7,7 @@ import {
   isBusMessage,
   isExtractionCandidate,
   normalizeExtractionRecord,
+  sanitizeCreateReminder,
   sanitizeShowPage,
 } from '@klartext/bus-contract';
 import type {
@@ -268,6 +269,21 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         // detents honour it is the frame's business, not the adapter's.
         if (currentSession && msg.sessionId === currentSession.sessionId) {
           ctx.probe.panelExpandRequested();
+        }
+        break;
+      }
+      case 'GUEST_CREATE_REMINDER': {
+        // Only the current Session may export a Reminder (issue #122); the
+        // Session's Document is bound in — the payload carried no
+        // documentId — and a malformed id kills the message.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeCreateReminder(msg.payload);
+          if (request) {
+            ctx.probe.reminderRequested({
+              documentId: currentSession.documentId,
+              ...request,
+            });
+          }
         }
         break;
       }

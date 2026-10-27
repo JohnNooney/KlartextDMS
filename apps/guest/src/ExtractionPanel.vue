@@ -42,6 +42,8 @@ const emit = defineEmits<{
   showPage: [request: GuestShowPagePayload];
   /** A jump-bar segment was tapped (issue #79) — the Host raises the sheet. */
   expandPanel: [];
+  /** An Action Item's "Add reminder" was tapped (issue #122). */
+  createReminder: [actionItemId: string];
 }>();
 const menuOpen = ref(false);
 const root = ref<HTMLElement>();
@@ -208,6 +210,14 @@ watch(
     void nextTick(updateScrollSpy);
   },
 );
+
+// "Add reminder" on an Action Item row (issue #122): the Host owns the
+// Reminder dialog and the export — the Guest sends just the item's stable
+// id; the row indices 0..M-1 address the Action Items list.
+function remindActionItem(index: number): void {
+  const item = props.extraction.actionItems[index];
+  if (item) emit('createReminder', item.id);
+}
 // The first PANEL_PRESENTATION often lands after mount — refresh the spy once
 // the rail (and its sections' final positions) has rendered.
 watch(
@@ -380,8 +390,10 @@ function reanalyze(): void {
           title="Needs your attention"
           :rows="criticalTakeaways"
           critical
+          remindable
           :selected-index="selectedTakeaway"
           @select="toggleTakeaway"
+          @remind="remindActionItem"
         />
         <TakeawaySection
           v-if="normalTakeaways.length"

@@ -11,9 +11,11 @@ defineProps<{
   section: string;
   rows: { takeaway: KeyTakeaway & { timing?: ActionTiming }; index: number; number: number }[];
   critical?: boolean;
+  /** Shows each row's "Add reminder" button — Action Items only (issue #122). */
+  remindable?: boolean;
   selectedIndex: number | null;
 }>();
-const emit = defineEmits<{ select: [index: number] }>();
+const emit = defineEmits<{ select: [index: number]; remind: [index: number] }>();
 </script>
 
 <template>
@@ -46,9 +48,11 @@ const emit = defineEmits<{ select: [index: number] }>();
         :takeaway="row.takeaway"
         :number="row.number"
         :critical="critical"
+        :remindable="remindable"
         :selected="selectedIndex === row.index"
         :divider="i > 0"
         @select="emit('select', row.index)"
+        @remind="emit('remind', row.index)"
       />
     </ul>
   </section>

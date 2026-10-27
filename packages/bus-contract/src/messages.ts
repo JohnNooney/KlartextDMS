@@ -5,9 +5,9 @@ import { BUS_PROTOCOL_VERSION, type Envelope } from './envelope.js';
  * Bus messages (issue #7, amended by #12). `sessionId` is Host-generated per
  * `INIT_SESSION` and echoed by the Guest; messages outside a Session —
  * `GUEST_READY`, `PANEL_PRESENTATION` (issue #77), and every Extraction Job
- * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78) and
- * `GUEST_EXPAND_PANEL` (issue #79) travel inside the Session: the Host drops
- * them for any other `sessionId`.
+ * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78),
+ * `GUEST_EXPAND_PANEL` (issue #79), and `GUEST_CREATE_REMINDER` (issue #122)
+ * travel inside the Session: the Host drops them for any other `sessionId`.
  *
  * Forward-compat rule: both apps ignore envelopes with an unknown `type`
  * (e.g. a v2 `AUTH_TOKEN_REFRESHED`). `isEnvelope` accepts them,
@@ -96,6 +96,27 @@ export interface GuestShowPagePayload {
   critical?: boolean;
 }
 
+/**
+ * The Guest asks the Host to export a Reminder for an Action Item (issue
+ * #122): the item's stable id only — the Session already binds the
+ * Document. The Host resolves the item from `extractionsByDocId` and owns
+ * the whole flow (confirm dialog, `.ics`, Google link); fire-and-forget
+ * like `GUEST_SHOW_PAGE`, since Klartext never tracks a Reminder.
+ */
+export interface GuestCreateReminderPayload {
+  /** The Action Item's Host-computed stable id (`actionItemId`). */
+  actionItemId: string;
+}
+
+/**
+ * A vetted reminder request as the Host sees it: the Session's Document
+ * (the envelope carried no `documentId` — the adapter binds it) plus the
+ * Action Item's id within its Extraction.
+ */
+export interface ReminderRequest extends GuestCreateReminderPayload {
+  documentId: string;
+}
+
 export type BusMessage =
   // Host → Guest
   | Envelope<'INIT_SESSION', Session>
@@ -109,7 +130,8 @@ export type BusMessage =
   | Envelope<'AI_PROCESSING_ERROR', { jobId: string; error: ExtractionError }>
   | Envelope<'RETRY_EXTRACTION', { documentId: string }>
   | Envelope<'GUEST_SHOW_PAGE', GuestShowPagePayload>
-  | Envelope<'GUEST_EXPAND_PANEL', EmptyPayload>;
+  | Envelope<'GUEST_EXPAND_PANEL', EmptyPayload>
+  | Envelope<'GUEST_CREATE_REMINDER', GuestCreateReminderPayload>;
 
 export type HostToGuestMessage = Extract<
   BusMessage,
@@ -136,6 +158,7 @@ export const MESSAGE_TYPES = [
   'RETRY_EXTRACTION',
   'GUEST_SHOW_PAGE',
   'GUEST_EXPAND_PANEL',
+  'GUEST_CREATE_REMINDER',
 ] as const satisfies readonly MessageType[];
 
 /**
@@ -156,6 +179,19 @@ export function sanitizeShowPage(payload: unknown): GuestShowPagePayload | null 
     quote: typeof quote === 'string' ? quote : undefined,
     critical: typeof critical === 'boolean' ? critical : undefined,
   };
+}
+
+/**
+ * Wire-level check for `GUEST_CREATE_REMINDER` (issue #122): a non-empty
+ * string `actionItemId` — the Host resolves items from
+ * `extractionsByDocId`, so anything else can't be honoured and drops the
+ * message. Extras are stripped, like `sanitizeShowPage`.
+ */
+export function sanitizeCreateReminder(payload: unknown): GuestCreateReminderPayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const actionItemId = (payload as Record<string, unknown>)['actionItemId'];
+  if (typeof actionItemId !== 'string' || actionItemId.length === 0) return null;
+  return { actionItemId };
 }
 
 /** Spine check only — accepts unknown `type`s so forward compat holds. */

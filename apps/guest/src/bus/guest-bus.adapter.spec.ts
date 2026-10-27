@@ -190,3 +190,28 @@ describe('GuestBus adapter — GUEST_EXPAND_PANEL (issue #79)', () => {
     );
   });
 });
+
+describe('GuestBus adapter — GUEST_CREATE_REMINDER (issue #122)', () => {
+  it('sends the reminder request under the applied Session’s id', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: INIT_SESSION, origin: PEER_ORIGIN, source: sink });
+
+    adapter.createReminder('ai_3f9c2e7b1d4a58');
+
+    expect(sink.postMessage).toHaveBeenCalledWith(
+      {
+        v: 1,
+        type: 'GUEST_CREATE_REMINDER',
+        sessionId: 'sess_1',
+        payload: { actionItemId: 'ai_3f9c2e7b1d4a58' },
+      },
+      PEER_ORIGIN,
+    );
+  });
+
+  it('sends nothing before a Session exists', () => {
+    const { sink, adapter } = setup();
+    adapter.createReminder('ai_3f9c2e7b1d4a58');
+    expect(sink.postMessage).not.toHaveBeenCalled();
+  });
+});

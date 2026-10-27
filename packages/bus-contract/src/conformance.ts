@@ -10,6 +10,7 @@ import type {
   JobDocument,
   ExtractDocumentPayload,
   PanelPresentation,
+  ReminderRequest,
   Session,
 } from './index.js';
 import {
@@ -46,6 +47,14 @@ export interface HostProbe {
    * reach its own frame's detent. Fire-and-forget, no payload to vet.
    */
   panelExpandRequested(): void;
+  /**
+   * GUEST_CREATE_REMINDER arrived for the current Session (issue #122):
+   * `documentId` is the Session's Document — the envelope carries only the
+   * Action Item's id, wire-vetted to a non-empty string. Fire-and-forget:
+   * the app resolves the item from `extractionsByDocId` and owns the
+   * Reminder export; Klartext never tracks it.
+   */
+  reminderRequested(request: ReminderRequest): void;
 }
 
 export interface HostAdapterContext {
@@ -116,6 +125,12 @@ export interface GuestAdapter {
    * the Host raises a peeking sheet to half and ignores it everywhere else.
    */
   expandPanel(): void;
+  /**
+   * An Action Item's "Add reminder" was tapped (issue #122):
+   * fire-and-forget `GUEST_CREATE_REMINDER` under the current Session — no
+   * reply, no watchdog, and silent while no Session exists.
+   */
+  createReminder(actionItemId: string): void;
   dispose(): void;
 }
 
@@ -227,6 +242,7 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         jobFailed: vi.fn(),
         pageRequested: vi.fn(),
         panelExpandRequested: vi.fn(),
+        reminderRequested: vi.fn(),
       };
       guestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
       jobDeferreds = [];
@@ -507,6 +523,63 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         payload: {},
       });
       expect(hostProbe.panelExpandRequested).not.toHaveBeenCalled();
+    });
+
+    it('carries an Add-reminder tap to the Host: GUEST_CREATE_REMINDER under the current Session (issue #122)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      guest.createReminder('ai_3f9c2e7b1d4a58');
+
+      expect(envelopesOf(wireToHost, 'GUEST_CREATE_REMINDER')).toEqual([
+        {
+          v: 1,
+          type: 'GUEST_CREATE_REMINDER',
+          sessionId: session.sessionId,
+          payload: { actionItemId: 'ai_3f9c2e7b1d4a58' },
+        },
+      ]);
+      // The adapter binds the Session's Document — the wire payload had none.
+      expect(hostProbe.reminderRequested).toHaveBeenCalledWith({
+        documentId: session.documentId,
+        actionItemId: 'ai_3f9c2e7b1d4a58',
+      });
+    });
+
+    it('createReminder before INIT_SESSION is silent', () => {
+      makeHost();
+      const guest = makeGuest();
+      guest.createReminder('ai_3f9c2e7b1d4a58');
+      expect(envelopesOf(wireToHost, 'GUEST_CREATE_REMINDER')).toEqual([]);
+      expect(hostProbe.reminderRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores GUEST_CREATE_REMINDER for a stale sessionId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_CREATE_REMINDER',
+        sessionId: 'sess-stale',
+        payload: { actionItemId: 'ai_3f9c2e7b1d4a58' },
+      });
+      expect(hostProbe.reminderRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores a missing, empty, or non-string actionItemId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      for (const payload of [{}, { actionItemId: '' }, { actionItemId: 7 }, null, 'ai_9f']) {
+        injectToHost({
+          v: 1,
+          type: 'GUEST_CREATE_REMINDER',
+          sessionId: session.sessionId,
+          payload,
+        });
+      }
+      expect(hostProbe.reminderRequested).not.toHaveBeenCalled();
     });
 
     it('recovers a Guest reload: resends the Session and re-issues the job under a fresh jobId', async () => {

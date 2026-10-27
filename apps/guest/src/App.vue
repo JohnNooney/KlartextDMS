@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import ExtractionPanel from './ExtractionPanel.vue';
 import {
+  createReminder,
   currentSession,
   expandPanel,
   presentationMode,
@@ -34,6 +35,7 @@ function reanalyze(): void {
       @reanalyze="reanalyze"
       @show-page="showPage"
       @expand-panel="expandPanel"
+      @create-reminder="createReminder"
     />
     <div v-else class="flex h-screen items-center justify-center">
       <div class="rounded-kt-lg bg-kt-surface p-kt-8 text-center shadow-kt-panel">

@@ -97,7 +97,6 @@ button {
 .attention-row {
   display: flex;
   align-items: center;
-  gap: kt.$kt-space-3;
   width: 100%;
   min-height: kt.$kt-touch-target;
   padding: 0 kt.$kt-space-4;
@@ -105,6 +104,31 @@ button {
 
   &:hover {
     background: kt.$kt-fill;
+  }
+}
+
+.attention-hit {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  flex: 1;
+  min-width: 0;
+  min-height: kt.$kt-touch-target;
+}
+
+.attention-remind,
+.sheet-remind {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: kt.$kt-radius-sm;
+  color: kt.$kt-text-muted;
+
+  &:hover {
+    background: kt.$kt-fill-strong;
+    color: kt.$kt-accent;
   }
 }
 
@@ -239,6 +263,8 @@ button {
 
   li {
     position: relative;
+    display: flex;
+    align-items: flex-start;
   }
 
   li + li::before {
@@ -257,12 +283,18 @@ button {
   grid-template-columns: 1fr auto;
   align-items: start;
   gap: kt.$kt-space-3;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: kt.$kt-space-3 kt.$kt-space-4;
 
   &:hover {
     background: kt.$kt-fill;
   }
+}
+
+.sheet-remind {
+  margin-top: kt.$kt-space-3;
+  margin-right: kt.$kt-space-3;
 }
 
 .sheet-main {

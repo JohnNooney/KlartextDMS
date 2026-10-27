@@ -5,6 +5,7 @@ import {
   isBusMessage,
   isEnvelope,
   isPanelPresentation,
+  sanitizeCreateReminder,
   type BusMessage,
   type GuestToHostMessage,
   type HostToGuestMessage,
@@ -77,6 +78,12 @@ describe('BusMessage union', () => {
         payload: { page: 3, quote: 'Die Kündigungsfrist beträgt drei Monate.', critical: true },
       },
       { v: 1, type: 'GUEST_EXPAND_PANEL', sessionId: 'sess-1', payload: {} },
+      {
+        v: 1,
+        type: 'GUEST_CREATE_REMINDER',
+        sessionId: 'sess-1',
+        payload: { actionItemId: 'ai_123' },
+      },
     ];
     for (const m of messages) expect(isBusMessage(m)).toBe(true);
   });
@@ -157,6 +164,24 @@ describe('isEnvelope', () => {
     ['non-string sessionId', { v: 1, type: 'GUEST_READY', sessionId: 3, payload: {} }],
   ])('rejects %s', (_label, value) => {
     expect(isEnvelope(value)).toBe(false);
+  });
+});
+
+describe('sanitizeCreateReminder', () => {
+  it('accepts a non-empty actionItemId and strips extras', () => {
+    expect(
+      sanitizeCreateReminder({ actionItemId: 'ai_9f', page: 3, quote: 7 }),
+    ).toEqual({ actionItemId: 'ai_9f' });
+  });
+
+  it.each([
+    ['a missing id', {}],
+    ['an empty id', { actionItemId: '' }],
+    ['a non-string id', { actionItemId: 7 }],
+    ['null', null],
+    ['a string', 'ai_9f'],
+  ])('rejects %s', (_label, payload) => {
+    expect(sanitizeCreateReminder(payload)).toBeNull();
   });
 });
 

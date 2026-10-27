@@ -28,6 +28,7 @@ import {
 } from '../data/providers';
 import { UploadPipeline } from '../data/upload-pipeline';
 import { LibraryStore } from '../library/library.store';
+import { Reminders } from '../reminders/reminders';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
 import { SheetExpand } from '../sheet-expand';
@@ -213,6 +214,7 @@ function setup(repository = new FakeDocumentRepository()) {
       { provide: Router, useValue: fakeRouter },
       HostBusEvents,
       LibraryStore,
+      Reminders,
       ExtractionFlow,
     ],
   });
@@ -228,6 +230,7 @@ function setup(repository = new FakeDocumentRepository()) {
     toasts: TestBed.inject(ToastService),
     open: TestBed.inject(OpenDocument),
     store: TestBed.inject(LibraryStore),
+    reminders: TestBed.inject(Reminders),
   };
 }
 
@@ -719,5 +722,35 @@ describe('ExtractionFlow — expand-panel requests (issue #79)', () => {
     events.panelExpandRequested();
 
     expect(request).toHaveBeenCalledOnce();
+  });
+});
+
+// Issue #122: a GUEST_CREATE_REMINDER outcome routes through HostBusEvents
+// to the flow and on to Reminders — the Session-bound Document's Extraction
+// index resolves the Action Item and the Reminder dialog opens.
+describe('ExtractionFlow — reminder requests (issue #122)', () => {
+  it('opens the Reminder draft for the Session Document’s Action Item', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const record = storedRecord(doc.id);
+    const { extractions, events, reminders, tick } = setup(repository);
+    extractions.records.set(doc.id, record);
+    tick();
+    await flush();
+
+    const item = record.actionItems[0]!;
+    events.reminderRequested({ documentId: doc.id, actionItemId: item.id });
+
+    expect(reminders.draft()?.doc.id).toBe(doc.id);
+    expect(reminders.draft()?.item).toEqual(item);
+  });
+
+  it('an unknown Action Item toasts instead of opening an empty dialog', async () => {
+    const { events, reminders, toasts } = setup();
+
+    events.reminderRequested({ documentId: 'doc-ghost', actionItemId: 'ai_ghost' });
+
+    expect(reminders.draft()).toBeNull();
+    expect(toasts.toasts().map((t) => t.title)).toContain("Couldn't create the reminder");
   });
 });

@@ -10,10 +10,12 @@ const props = defineProps<{
   takeaway: KeyTakeaway & { timing?: ActionTiming };
   number: number;
   critical?: boolean;
+  /** Offers the Action Item's "Add reminder" button (issue #122). */
+  remindable?: boolean;
   selected?: boolean;
   divider?: boolean;
 }>();
-const emit = defineEmits<{ select: [] }>();
+const emit = defineEmits<{ select: []; remind: [] }>();
 
 // Timing chip per Action Item kind (issue #118); NONE and Key Takeaways get none.
 const UNITS = { DAYS: 'day', WEEKS: 'week', MONTHS: 'month', YEARS: 'year' } as const;
@@ -36,7 +38,7 @@ const timingChip = computed(() => {
 </script>
 
 <template>
-  <li class="relative">
+  <li class="relative flex items-start">
     <span
       v-if="divider"
       aria-hidden="true"
@@ -44,7 +46,7 @@ const timingChip = computed(() => {
     ></span>
     <button
       type="button"
-      class="grid w-full grid-cols-[24px_1fr_auto] items-start gap-kt-3 px-kt-4 py-kt-3 text-left"
+      class="grid min-w-0 flex-1 grid-cols-[24px_1fr_auto] items-start gap-kt-3 px-kt-4 py-kt-3 text-left"
       :class="selected ? 'bg-kt-accent-tint' : 'hover:bg-kt-fill'"
       :aria-expanded="selected"
       @click="emit('select')"
@@ -74,6 +76,16 @@ const timingChip = computed(() => {
       <span v-if="takeaway.page" class="mt-0.5 whitespace-nowrap text-kt-xs text-kt-accent"
         >p. {{ takeaway.page }}</span
       >
+    </button>
+    <button
+      v-if="remindable"
+      type="button"
+      class="mr-kt-3 mt-kt-3 grid size-8 shrink-0 place-items-center rounded-kt-sm text-kt-text-muted hover:bg-kt-fill hover:text-kt-accent"
+      title="Add reminder"
+      aria-label="Add reminder"
+      @click="emit('remind')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M12 13v4M10 15h4"/></svg>
     </button>
   </li>
 </template>

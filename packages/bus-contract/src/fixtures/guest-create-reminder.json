@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "GUEST_CREATE_REMINDER",
+  "sessionId": "sess_7f3a9c2e",
+  "payload": {
+    "actionItemId": "ai_3f9c2e7b1d4a58"
+  }
+}

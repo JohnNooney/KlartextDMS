@@ -9,6 +9,7 @@ import { ExtractionFlow } from '../bus/extraction-flow';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { OpenDocument } from '../open-document';
 import { PDF_ENGINE } from '../reader/pdf-engine';
+import { Reminders } from '../reminders/reminders';
 import { Library } from './library';
 import { LibraryStore } from './library.store';
 
@@ -90,6 +91,9 @@ class FakeOpenDocument {
   readonly insightsLaneHidden = signal(false);
   readonly query = signal<string | null>(null);
   readonly searchScope = signal<'folder' | 'all'>('folder');
+  readonly deepLink = signal<{ documentId: string; page: number | null; item: string | null } | null>(null);
+  landDeepLink = vi.fn();
+  deepLinkMissed = vi.fn();
   open = vi.fn();
   openFolder = vi.fn();
   close = vi.fn();
@@ -116,6 +120,7 @@ async function setup() {
   const store = new FakeStore();
   const openDocument = new FakeOpenDocument();
   const flow = { retryRequested: vi.fn(() => true) };
+  const reminders = { draft: signal(null), open: vi.fn(), close: vi.fn() };
   Object.assign(URL, {
     createObjectURL: vi.fn(() => 'blob:fake'),
     revokeObjectURL: vi.fn(),
@@ -133,13 +138,14 @@ async function setup() {
         providers: [
           { provide: LibraryStore, useValue: store },
           { provide: ExtractionFlow, useValue: flow },
+          { provide: Reminders, useValue: reminders },
         ],
       },
     })
     .compileComponents();
   const fixture = TestBed.createComponent(Library);
   fixture.detectChanges();
-  return { fixture, store, openDocument, flow, el: fixture.nativeElement as HTMLElement };
+  return { fixture, store, openDocument, flow, reminders, el: fixture.nativeElement as HTMLElement };
 }
 
 function dropFiles(el: Element, files: File[]): void {
@@ -588,12 +594,38 @@ describe('Library', () => {
 
     it('clicking an item opens its Document at the cited page and quote', async () => {
       const { fixture, store, el } = await withAttention();
-      const row = [...panel(el)!.querySelectorAll<HTMLButtonElement>('.attention-row')].find((r) =>
+      const row = [...panel(el)!.querySelectorAll('.attention-row')].find((r) =>
         r.textContent!.includes('Give notice in writing'),
       )!;
-      row.click();
+      row.querySelector<HTMLButtonElement>('.attention-hit')!.click();
       fixture.detectChanges();
       expect(store.openAt).toHaveBeenCalledWith('d-deep', { page: 3, quote: 'Schriftform' });
+    });
+
+    // Issue #122: a row's Add reminder affordance routes to the Reminders
+    // draft — never the Document open that the row itself performs.
+    it('a row’s Add reminder affordance opens the Reminder draft, not the Document', async () => {
+      const { fixture, store, reminders, el } = await withAttention();
+      const row = [...panel(el)!.querySelectorAll('.attention-row')].find((r) =>
+        r.textContent!.includes('Give notice in writing'),
+      )!;
+      row.querySelector<HTMLButtonElement>('.attention-remind')!.click();
+      fixture.detectChanges();
+      expect(reminders.open).toHaveBeenCalledWith('d-deep', 'ai-2');
+      expect(store.openAt).not.toHaveBeenCalled();
+    });
+
+    it('the sheet’s Add reminder affordance closes the sheet and opens the draft', async () => {
+      const { fixture, reminders, el } = await withAttention();
+      seeAll(el)!.click();
+      fixture.detectChanges();
+      const row = [...panel(el)!.querySelectorAll('li')].find((r) =>
+        r.textContent!.includes('Pay the fee'),
+      )!;
+      row.querySelector<HTMLButtonElement>('.sheet-remind')!.click();
+      fixture.detectChanges();
+      expect(reminders.open).toHaveBeenCalledWith('d-top', 'ai-1');
+      expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
     });
 
     it('clicking an item in the sheet closes it and opens the Document at the cited page', async () => {

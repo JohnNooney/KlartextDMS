@@ -113,7 +113,7 @@ Every message crossing `window.postMessage` is wrapped in a versioned **Envelope
 ```ts
 {
   v: 1,
-  type: 'INIT_SESSION', // one of the 11 v1 message types
+  type: 'INIT_SESSION', // one of the 12 v1 message types
   sessionId: 'sess_1',  // correlates replies to the open Document Session, or '' for frame/job messages
   payload: { ... }      // strongly typed per message type
 }
@@ -418,6 +418,7 @@ interface Envelope<TType extends string = string, TPayload = unknown> {
 | `RETRY_EXTRACTION` | Guest → Host | `""` | `{ documentId: string }` | Requests Host to re-fetch PDF bytes from Storage, clear `extractionFailure`, and enqueue a fresh Extraction Job. |
 | `GUEST_SHOW_PAGE` | Guest → Host | Active `sessionId` | `{ page: number; quote?: string; critical?: boolean }` | Jumps Host PDF viewer to `page` (`1 <= page <= pageCount`), highlights `quote` in the text layer, and snaps mobile sheet to `half`. |
 | `GUEST_EXPAND_PANEL` | Guest → Host | Active `sessionId` | `{}` | Raises mobile bottom sheet from `peek` to `half` when the user taps a jump-bar section inside the Guest. |
+| `GUEST_CREATE_REMINDER` | Guest → Host | Active `sessionId` | `{ actionItemId: string }` | An Action Item's "Add reminder" — the Host resolves the item from the Extraction index, opens the Reminder dialog, and exports `.ics` / Google Calendar links. Fire-and-forget; Klartext never tracks a Reminder. |
 
 ### Protocol Timeouts & Queue Limits
 
