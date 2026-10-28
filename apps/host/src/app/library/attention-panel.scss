@@ -132,6 +132,10 @@ button {
   }
 }
 
+.attention-remind {
+  margin-right: kt.$kt-space-2;
+}
+
 .attention-text {
   flex: 1;
   min-width: 0;
@@ -265,13 +269,21 @@ button {
     position: relative;
     display: flex;
     align-items: flex-start;
+
+    // The whole row highlights — the Add-reminder icon sits inside it,
+    // not in its own column (issue #122 follow-up).
+    &:hover {
+      background: kt.$kt-fill;
+    }
   }
 
   li + li::before {
     content: '';
     position: absolute;
     top: 0;
-    left: kt.$kt-space-4;
+    // Inset past the Add-reminder icon column so the divider starts
+    // under the row text (issue #122 follow-up).
+    left: calc(#{kt.$kt-space-3} + 32px + #{kt.$kt-space-2});
     right: 0;
     height: 1px;
     background: kt.$kt-border;
@@ -285,16 +297,13 @@ button {
   gap: kt.$kt-space-3;
   flex: 1;
   min-width: 0;
-  padding: kt.$kt-space-3 kt.$kt-space-4;
-
-  &:hover {
-    background: kt.$kt-fill;
-  }
+  padding: kt.$kt-space-3 kt.$kt-space-4 kt.$kt-space-3 0;
 }
 
 .sheet-remind {
   margin-top: kt.$kt-space-3;
-  margin-right: kt.$kt-space-3;
+  margin-left: kt.$kt-space-3;
+  margin-right: kt.$kt-space-2;
 }
 
 .sheet-main {

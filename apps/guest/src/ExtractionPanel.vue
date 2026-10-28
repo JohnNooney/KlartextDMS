@@ -14,9 +14,8 @@ import TakeawaySection from './TakeawaySection.vue';
 // the title — the Host toolbar already names the Document — with a muted
 // language/date meta line (the model moved into the ⋯ menu). The summary,
 // a tinted "things need your attention" callout that scrolls to the
-// Critical Warnings, then HIG inset grouped lists of Key Takeaway rows
-// numbered by their place in the Extraction; a row's German source quote
-// expands on selection. Sections carry data-section anchors — the attention
+// Critical Warnings, then HIG inset grouped lists of Key Takeaway rows;
+// a row's German source quote expands on selection. Sections carry data-section anchors — the attention
 // callout and the lane-mode outline rail (issue #77) scroll to them. A
 // neutral block stands in for the sections
 // when the Extraction came back INSUFFICIENT_CONTENT / UNSUPPORTED_DOCUMENT.
@@ -66,16 +65,16 @@ const analyzedAt = computed(() =>
 
 const isComplete = computed(() => props.extraction.extractionStatus === 'COMPLETE');
 
-// Rows are numbered continuously across both sections (Action Items 1..M,
-// Key Takeaways M+1..M+K); `index` is the same position, used for selection.
+// `index` is a row's place in the Extraction (Action Items first, then Key
+// Takeaways) — selection is single across both sections.
 const criticalTakeaways = computed(() =>
-  props.extraction.actionItems.map((takeaway, index) => ({ takeaway, index, number: index + 1 })),
+  props.extraction.actionItems.map((takeaway, index) => ({ takeaway, index })),
 );
 const normalTakeaways = computed(() =>
-  props.extraction.keyTakeaways.map((takeaway, i) => {
-    const index = props.extraction.actionItems.length + i;
-    return { takeaway, index, number: index + 1 };
-  }),
+  props.extraction.keyTakeaways.map((takeaway, i) => ({
+    takeaway,
+    index: props.extraction.actionItems.length + i,
+  })),
 );
 
 // The outline rail (issue #77, prototype variant C2): a slim icon rail on

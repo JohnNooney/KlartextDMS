@@ -4,12 +4,12 @@ import KeyTakeawayRow from './KeyTakeawayRow.vue';
 
 // One HIG inset grouped list of Key Takeaway rows (issue #75): "Needs your
 // attention" gets the warning tint and triangle, "Key takeaways" stays
-// neutral. `section` is the stable data-section anchor; each row carries the
-// takeaway's Extraction-wide number and its index for selection.
+// neutral. `section` is the stable data-section anchor; each row carries
+// the takeaway's index for selection.
 defineProps<{
   title: string;
   section: string;
-  rows: { takeaway: KeyTakeaway & { timing?: ActionTiming }; index: number; number: number }[];
+  rows: { takeaway: KeyTakeaway & { timing?: ActionTiming }; index: number }[];
   critical?: boolean;
   /** Shows each row's "Add reminder" button — Action Items only (issue #122). */
   remindable?: boolean;
@@ -46,7 +46,6 @@ const emit = defineEmits<{ select: [index: number]; remind: [index: number] }>()
         v-for="(row, i) in rows"
         :key="row.index"
         :takeaway="row.takeaway"
-        :number="row.number"
         :critical="critical"
         :remindable="remindable"
         :selected="selectedIndex === row.index"
