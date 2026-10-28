@@ -370,7 +370,6 @@ function reanalyze(): void {
           class="mt-kt-5 flex w-full items-center gap-kt-3 rounded-kt-lg bg-kt-fill px-kt-4 py-kt-3 text-left text-kt-sm font-medium"
           @click="scrollToSection('attention')"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-kt-warning" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
           <span class="flex-1">{{ criticalTakeaways.length }} things need your attention</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
         </button>
@@ -389,7 +388,6 @@ function reanalyze(): void {
           section="attention"
           title="Needs your attention"
           :rows="criticalTakeaways"
-          critical
           remindable
           :selected-index="selectedTakeaway"
           @select="toggleTakeaway"

@@ -78,8 +78,15 @@ describe('ExtractionPanel', () => {
     expect(attentionButton(wrapper)).toBeUndefined();
   });
 
-  // ADR 0012: the attention section keeps its identity structurally (title
-  // and triangle); its callout, list border and quote border read neutral.
+  // ADR 0012: the attention section keeps its identity by its title alone —
+  // no caution triangle; its callout, list border and quote border read neutral.
+  it('shows no caution triangle on the attention heading or callout', () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    expect(wrapper.find('[data-section="attention"] h2').text()).toBe('Needs your attention');
+    expect(wrapper.find('[data-section="attention"] h2 svg').exists()).toBe(false);
+    expect(attentionButton(wrapper)!.findAll('svg')).toHaveLength(1); // the trailing chevron only
+  });
+
   it('styles the attention callout, list and quote neutrally, like Key Takeaways', async () => {
     const ex = record({
       extractionStatus: 'COMPLETE',
