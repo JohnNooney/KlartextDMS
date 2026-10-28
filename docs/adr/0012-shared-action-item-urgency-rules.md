@@ -19,4 +19,4 @@ Colour carries Urgency at item level in both apps — red for Overdue, orange fo
 
 - `bus-contract` gains presentation-adjacent domain logic beyond wire types — accepted deliberately so the same item reads identically in both apps.
 - The Guest's timing chip gains a clock (`today`) and urgency tint; Host's `classify`/`dueLabel` are replaced by the shared function.
-- Per-occurrence completion and user-set `NOTICE_PERIOD` anchor dates are out of scope here: done-state is decided by [#134](https://github.com/JohnNooney/KlartextDMS/issues/134), which may revisit the never-Overdue rule for recurring items once a done signal exists.
+- Per-occurrence completion and user-set `NOTICE_PERIOD` anchor dates are out of scope here: done-state is decided by [#134](https://github.com/JohnNooney/KlartextDMS/issues/134), which may revisit the never-Overdue rule for recurring items once a done signal exists. (Resolved: [ADR 0013](./0013-action-item-done-state-on-document-record.md) keeps never-Overdue; per-occurrence tracking deferred to [#143](https://github.com/JohnNooney/KlartextDMS/issues/143).)

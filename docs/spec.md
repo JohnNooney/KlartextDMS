@@ -49,7 +49,7 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 
 # v2
 
-Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**.
+Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**, **Done**.
 
 ## v2 architecture deltas
 
@@ -57,6 +57,7 @@ Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/i
 - [The Host holds one in-memory Extraction index](./adr/0011-host-extraction-index.md) — `LibraryStore.extractionsByDocId`. ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101))
 - [Translations run as on-demand Bus jobs and persist page by page](./adr/0009-translation-persisted-per-page.md) — ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105), research [#100](https://github.com/JohnNooney/KlartextDMS/issues/100))
 - [Action Item Urgency rules live in the shared Bus contract](./adr/0012-shared-action-item-urgency-rules.md) — one bucketing + labelling function in `bus-contract`; colour means Urgency, never category, in both apps. ([#132](https://github.com/JohnNooney/KlartextDMS/issues/132))
+- [Action Item Done state lives on the DocumentRecord, keyed by content-hash ids](./adr/0013-action-item-done-state-on-document-record.md) — one reversible **Done** state for every timing kind; monthly recurrences are Done per occurrence (`doneThrough`); shared `isDone` in `bus-contract`; Guest marks via `GUEST_SET_ACTION_ITEM_DONE`, Host pushes `ACTION_ITEM_STATES`. Host overview hides Done (Undo toast; "Done (n)" group in See All); Guest moves Done items to a collapsed group. ([#134](https://github.com/JohnNooney/KlartextDMS/issues/134))
 
 Feature decisions without ADRs: [Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/102) (prototype `prototype/folder-attention-overview`, behavioral reference only — no code ports), [library search](https://github.com/JohnNooney/KlartextDMS/issues/103), [calendar reminders](https://github.com/JohnNooney/KlartextDMS/issues/104).
 
@@ -73,6 +74,7 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 | A5 | [Library search across Documents, Folders, and Extractions](https://github.com/JohnNooney/KlartextDMS/issues/121) | #119 | #103 |
 | A6 | [Calendar reminders from Action Items](https://github.com/JohnNooney/KlartextDMS/issues/122) | #117, #118, #119, #120 | #104 |
 | A7 | [Shared Action Item urgency in Host and Guest](https://github.com/JohnNooney/KlartextDMS/issues/133) | #120 (+ #132 decision) | #132, ADR 0012 |
+| A8 | [Action Item Done state in Host and Guest](https://github.com/JohnNooney/KlartextDMS/issues/144) | #133 | #134, ADR 0013 |
 | B1 | [Translation Bus contract and Guest translation client](https://github.com/JohnNooney/KlartextDMS/issues/123) | — | #105, ADR 0009 |
 | B2 | [Host Translation orchestration, persistence, and rules](https://github.com/JohnNooney/KlartextDMS/issues/124) | #123 | #105, ADR 0009 |
 | B3 | [Reader Translated view](https://github.com/JohnNooney/KlartextDMS/issues/125) | #124 | #105 |
@@ -82,3 +84,4 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 - Direct Google Calendar API event creation via OAuth ([#104](https://github.com/JohnNooney/KlartextDMS/issues/104)).
 - Split original/translated view, search over Translations, Translations as Extraction input ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105)).
 - Search backend, fuzzy matching, EN↔DE query translation ([#103](https://github.com/JohnNooney/KlartextDMS/issues/103)); libraries beyond ~2,000 Documents ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101)).
+- Per-occurrence tracking of recurring Action Items, and missed cycles reading Overdue ([#143](https://github.com/JohnNooney/KlartextDMS/issues/143), deferred from [#134](https://github.com/JohnNooney/KlartextDMS/issues/134)).

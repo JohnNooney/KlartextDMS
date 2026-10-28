@@ -36,6 +36,10 @@ _Avoid_: risk, alert, red flag, critical warning
 How soon an Action Item's timing comes due, derived at read time and bucketed identically in Host and Guest: *Overdue* (a fixed deadline has passed), *This week* (a fixed deadline or the next occurrence of a monthly recurring item falls within 7 days), *Later* (further out, a recurrence too loosely specified to compute, or a notice period), or *No date*. Urgency is never stored and says nothing about importance — colour means Urgency, never the Action Item category itself.
 _Avoid_: priority, severity, status
 
+**Done**:
+The user's reversible mark that an Action Item no longer needs their attention — filed, paid, or simply acknowledged. One state for every kind of timing: a monthly recurring item is Done only for the occurrence it was marked against and returns when the next one comes up; any other Action Item stays Done until the user undoes it. An Action Item whose quotation changes on re-analysis counts as a new item and is no longer Done.
+_Avoid_: completed, dismissed, resolved, archived, acknowledged
+
 **Key Takeaway**:
 A passive reference fact directly supported by a quotation from a Document that explains how the agreement or letter works (amounts, coverage limits, repair caps, settlement rules) without requiring a scheduled action or compliance step.
 _Avoid_: highlight, bullet
