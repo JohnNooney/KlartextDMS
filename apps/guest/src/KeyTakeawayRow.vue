@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
+import { actionUrgency, type ActionTiming, type KeyTakeaway, type Urgency } from '@klartext/bus-contract';
 
 // One row in the panel's grouped Key Takeaway lists (issue #75, prototype
 // variant C2): the plain-English text and a trailing page label. Selecting
@@ -9,7 +9,6 @@ import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 // affordance (issue #122).
 const props = defineProps<{
   takeaway: KeyTakeaway & { timing?: ActionTiming };
-  critical?: boolean;
   /** Offers the Action Item's "Add reminder" button (issue #122). */
   remindable?: boolean;
   selected?: boolean;
@@ -17,23 +16,21 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ select: []; remind: [] }>();
 
-// Timing chip per Action Item kind (issue #118); NONE and Key Takeaways get none.
-const UNITS = { DAYS: 'day', WEEKS: 'week', MONTHS: 'month', YEARS: 'year' } as const;
+// Timing chip per Action Item (issue #118): text and Urgency tint from the
+// shared rules (ADR 0012, issue #133) — red Overdue, orange This week,
+// neutral otherwise, exactly as the Host's attention sheet. NONE and Key
+// Takeaways get no chip.
+const CHIP_TINTS: Record<Urgency, string> = {
+  overdue: 'bg-kt-danger-tint text-kt-danger-text',
+  thisWeek: 'bg-kt-warning-tint text-kt-warning-text',
+  later: 'bg-kt-fill text-kt-text-muted',
+  noDate: 'bg-kt-fill text-kt-text-muted',
+};
 const timingChip = computed(() => {
   const timing = props.takeaway.timing;
-  switch (timing?.kind) {
-    case 'FIXED_DATE':
-      return `Due ${new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${timing.dueDate}T00:00:00Z`))}`;
-    case 'RECURRING':
-      return timing.scheduleLabel;
-    case 'NOTICE_PERIOD': {
-      const { duration, unit, anchor } = timing;
-      const word = UNITS[unit] + (duration === 1 ? '’s' : 's’');
-      return `${duration} ${word} notice · ${anchor}`;
-    }
-    default:
-      return null;
-  }
+  if (!timing) return null;
+  const { urgency, label } = actionUrgency(timing, new Date());
+  return label === null ? null : { urgency, label, tint: CHIP_TINTS[urgency] };
 });
 </script>
 
@@ -70,14 +67,15 @@ const timingChip = computed(() => {
         <span
           v-if="timingChip"
           data-timing-chip
-          class="mt-kt-1 block w-fit rounded-full bg-kt-fill px-kt-2 py-px text-kt-xs font-medium text-kt-text-muted"
-          >{{ timingChip }}</span
+          :data-urgency="timingChip.urgency"
+          class="mt-kt-1 block w-fit rounded-full px-kt-2 py-px text-kt-xs font-medium"
+          :class="timingChip.tint"
+          >{{ timingChip.label }}</span
         >
         <blockquote
           v-if="selected"
           lang="de"
-          class="mt-kt-2 border-l-2 pl-kt-3 text-kt-sm italic text-kt-text-muted"
-          :class="critical ? 'border-kt-warning' : 'border-kt-border-strong'"
+          class="mt-kt-2 border-l-2 border-kt-border-strong pl-kt-3 text-kt-sm italic text-kt-text-muted"
         >
           “{{ takeaway.sourceQuote }}”
         </blockquote>

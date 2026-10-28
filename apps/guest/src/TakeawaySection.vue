@@ -3,9 +3,10 @@ import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 import KeyTakeawayRow from './KeyTakeawayRow.vue';
 
 // One HIG inset grouped list of Key Takeaway rows (issue #75): "Needs your
-// attention" gets the warning tint and triangle, "Key takeaways" stays
-// neutral. `section` is the stable data-section anchor; each row carries
-// the takeaway's index for selection.
+// attention" is marked by its title and warning triangle alone — the list
+// itself stays neutral like "Key takeaways", since colour means Urgency,
+// shown per item on the timing chip (ADR 0012). `section` is the stable
+// data-section anchor; each row carries the takeaway's index for selection.
 defineProps<{
   title: string;
   section: string;
@@ -38,15 +39,11 @@ const emit = defineEmits<{ select: [index: number]; remind: [index: number] }>()
       </svg>
       {{ title }}
     </h2>
-    <ul
-      class="mt-kt-2 overflow-hidden rounded-kt-lg border bg-kt-bg"
-      :class="critical ? 'border-kt-warning/40' : 'border-kt-border'"
-    >
+    <ul class="mt-kt-2 overflow-hidden rounded-kt-lg border border-kt-border bg-kt-bg">
       <KeyTakeawayRow
         v-for="(row, i) in rows"
         :key="row.index"
         :takeaway="row.takeaway"
-        :critical="critical"
         :remindable="remindable"
         :selected="selectedIndex === row.index"
         :divider="i > 0"

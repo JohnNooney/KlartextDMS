@@ -1,10 +1,5 @@
 @use 'tokens' as kt;
 
-// AA-contrast text shades for urgency timing; brighter tokens stay for
-// shapes. Promoting these to the shared theme is #132 / #133.
-$danger-text: #d70015;
-$warning-text: #b35c00;
-
 .attention {
   margin-top: kt.$kt-space-4;
   border: 1px solid kt.$kt-border;
@@ -153,12 +148,12 @@ button {
 }
 
 [data-urgency='overdue'].attention-when {
-  color: $danger-text;
+  color: kt.$kt-danger-text;
   font-weight: 600;
 }
 
 [data-urgency='thisWeek'].attention-when {
-  color: $warning-text;
+  color: kt.$kt-warning-text;
   font-weight: 600;
 }
 
@@ -353,7 +348,7 @@ button {
 
   .sheet-chip {
     background: kt.$kt-danger-tint;
-    color: $danger-text;
+    color: kt.$kt-danger-text;
   }
 }
 
@@ -368,6 +363,6 @@ button {
 
   .sheet-chip {
     background: kt.$kt-warning-tint;
-    color: $warning-text;
+    color: kt.$kt-warning-text;
   }
 }

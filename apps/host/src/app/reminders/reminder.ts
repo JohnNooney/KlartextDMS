@@ -83,29 +83,6 @@ export function cleanRrule(timing: ActionTiming, firstDateIso: string): string |
 }
 
 /**
- * The next date carrying `dayOfMonth` on or after `todayIso` — the prefilled
- * first occurrence for a clean cadence. Months too short for the day are
- * skipped (a 31st falls through to the next month that has one).
- */
-export function nextOccurrence(dayOfMonth: number, todayIso: string): string {
-  let year = Number(todayIso.slice(0, 4));
-  let month = Number(todayIso.slice(5, 7));
-  for (let i = 0; i < 14; i++) {
-    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    if (dayOfMonth <= daysInMonth) {
-      const candidate = `${year}-${pad2(month)}-${pad2(dayOfMonth)}`;
-      if (candidate >= todayIso) return candidate;
-    }
-    month += 1;
-    if (month === 13) {
-      month = 1;
-      year += 1;
-    }
-  }
-  return todayIso; // unreachable: dayOfMonth ≤ 31 and a 31-day month exists within 14 months
-}
-
-/**
  * Anchor minus a notice period (issue #104): DAYS/WEEKS are exact day
  * arithmetic; MONTHS/YEARS subtract calendar periods, clamping to the
  * target month's length (31 May minus one month is 30 April).

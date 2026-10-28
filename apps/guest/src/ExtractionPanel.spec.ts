@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages } from '@klartext/bus-contract';
 import type { ExtractionRecord, IdentifiedActionItem, KeyTakeaway } from '@klartext/bus-contract';
 import ExtractionPanel from './ExtractionPanel.vue';
@@ -76,6 +76,24 @@ describe('ExtractionPanel', () => {
     });
     const wrapper = mount(ExtractionPanel, { props: { extraction: calm } });
     expect(attentionButton(wrapper)).toBeUndefined();
+  });
+
+  // ADR 0012: the attention section keeps its identity structurally (title
+  // and triangle); its callout, list border and quote border read neutral.
+  it('styles the attention callout, list and quote neutrally, like Key Takeaways', async () => {
+    const ex = record({
+      extractionStatus: 'COMPLETE',
+      actionItems: [actionItem({ text: 'act' })],
+      keyTakeaways: [takeaway({ text: 'fact' })],
+    });
+    const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
+    expect(attentionButton(wrapper)!.classes()).not.toContain('bg-kt-warning-tint');
+    const list = (section: string) => wrapper.find(`[data-section="${section}"] ul`).classes();
+    expect(list('attention')).toEqual(list('takeaways'));
+
+    await wrapper.findAll('button').find((b) => b.text().includes('act'))!.trigger('click');
+    expect(wrapper.find('blockquote').classes()).not.toContain('border-kt-warning');
+    expect(wrapper.find('blockquote').classes()).toContain('border-kt-border-strong');
   });
 
   it('scrolls to the Needs your attention section when the callout is pressed', async () => {
@@ -385,15 +403,15 @@ describe('ExtractionPanel outline rail (issue #77)', () => {
     expect(railButton(wrapper, 'Key takeaways')!.text()).toBe('3');
   });
 
-  it('tints the Critical Warnings badge with the warning color', () => {
+  // ADR 0012: orange means Urgency, never the Action Item category — the
+  // attention badge reads neutral like the Key Takeaways one.
+  it('keeps the Action Items count badge neutral, like the Key Takeaways one', () => {
     const wrapper = mount(ExtractionPanel, {
       props: { extraction: ex, presentation: 'lane' },
     });
     const badge = railButton(wrapper, 'Needs your attention')!.find('span');
-    expect(badge.classes()).toContain('bg-kt-warning');
-    expect(railButton(wrapper, 'Key takeaways')!.find('span').classes()).not.toContain(
-      'bg-kt-warning',
-    );
+    expect(badge.classes()).not.toContain('bg-kt-warning');
+    expect(badge.classes()).toEqual(railButton(wrapper, 'Key takeaways')!.find('span').classes());
   });
 
   it('omits rail buttons for sections the Extraction does not render', () => {
@@ -553,6 +571,15 @@ describe('ExtractionPanel jump bar (issue #79)', () => {
     expect(segment(wrapper, 'Takeaways')!.text()).toBe('Takeaways');
   });
 
+  it('keeps the attention segment’s count badge neutral (ADR 0012)', () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: ex, presentation: 'sheet' },
+    });
+    const badge = segment(wrapper, 'Attention')!.find('span');
+    expect(badge.text()).toBe('2');
+    expect(badge.classes()).not.toContain('bg-kt-warning');
+  });
+
   it('omits the attention segment when nothing is critical', () => {
     const calm = record({
       extractionStatus: 'COMPLETE',
@@ -639,7 +666,15 @@ describe('ExtractionPanel jump bar (issue #79)', () => {
 
 // Issue #118: each Action Item carries a timing chip per kind, and a stored
 // schemaVersion 1 Extraction gets a ⋯ menu note offering re-analysis for dates.
+// Issue #133 / ADR 0012: the chip's text and tint come from the shared
+// Urgency rules against today — pinned here to Thu 22 Oct 2026.
 describe('ExtractionPanel timing chips and v1 note (issue #118)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 22, 9));
+  });
+  afterEach(() => vi.useRealTimers());
+
   const rowFor = (timing: IdentifiedActionItem['timing']) =>
     mount(ExtractionPanel, {
       props: {
@@ -651,9 +686,38 @@ describe('ExtractionPanel timing chips and v1 note (issue #118)', () => {
       },
     }).find('[data-section="attention"] li');
 
-  it('shows a due-date chip for FIXED_DATE', () => {
-    const chip = rowFor({ kind: 'FIXED_DATE', dueDate: '2026-01-31' }).find('[data-timing-chip]');
+  const chipFor = (timing: IdentifiedActionItem['timing']) => rowFor(timing).find('[data-timing-chip]');
+
+  it('tints a passed deadline red, labelled absolutely beyond the week window', () => {
+    const chip = chipFor({ kind: 'FIXED_DATE', dueDate: '2026-01-31' });
     expect(chip.text()).toBe('Due 31 Jan 2026');
+    expect(chip.attributes('data-urgency')).toBe('overdue');
+    expect(chip.classes()).toEqual(expect.arrayContaining(['bg-kt-danger-tint', 'text-kt-danger-text']));
+  });
+
+  it('tints a deadline within the week orange, labelled relatively', () => {
+    const chip = chipFor({ kind: 'FIXED_DATE', dueDate: '2026-10-25' });
+    expect(chip.text()).toBe('Due in 3 days');
+    expect(chip.attributes('data-urgency')).toBe('thisWeek');
+    expect(chip.classes()).toEqual(expect.arrayContaining(['bg-kt-warning-tint', 'text-kt-warning-text']));
+  });
+
+  it('keeps a later deadline neutral', () => {
+    const chip = chipFor({ kind: 'FIXED_DATE', dueDate: '2026-12-01' });
+    expect(chip.text()).toBe('Due 1 Dec 2026');
+    expect(chip.classes()).toEqual(expect.arrayContaining(['bg-kt-fill', 'text-kt-text-muted']));
+    expect(chip.classes()).not.toContain('bg-kt-warning-tint');
+  });
+
+  it('tints a monthly item whose next occurrence is near, prefixing its due label', () => {
+    const chip = chipFor({
+      kind: 'RECURRING',
+      cadence: 'MONTHLY',
+      dayOfMonth: 25,
+      scheduleLabel: 'Monthly by the 25th',
+    });
+    expect(chip.text()).toBe('Due in 3 days · Monthly by the 25th');
+    expect(chip.attributes('data-urgency')).toBe('thisWeek');
   });
 
   it('shows the schedule label for RECURRING', () => {

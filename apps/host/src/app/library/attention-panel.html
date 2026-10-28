@@ -68,7 +68,7 @@
                   <button type="button" class="sheet-row" (click)="open(item)">
                     <span class="sheet-main">
                       <span class="sheet-text">{{ item.text }}</span>
-                      @if (group.key !== 'noDate') {
+                      @if (item.timingLabel) {
                         <span class="sheet-chip">{{ item.timingLabel }}</span>
                       }
                       <span class="sheet-doc"><span lang="de">{{ item.documentTitle }}</span>@if (item.path) { · <span lang="de">{{ item.path }}</span>}</span>

@@ -7,7 +7,6 @@ import {
   googleCalendarUrl,
   isCleanCadence,
   isPast,
-  nextOccurrence,
   reminderDeepLink,
   reminderDescription,
   reminderTitle,
@@ -27,26 +26,6 @@ const item = (over: Partial<IdentifiedActionItem> = {}): IdentifiedActionItem =>
 });
 
 const DOC = { title: 'Brief vom Finanzamt' };
-
-describe('nextOccurrence', () => {
-  it('returns this month’s date when the day is still ahead', () => {
-    expect(nextOccurrence(15, '2026-10-27')).toBe('2026-11-15');
-    expect(nextOccurrence(28, '2026-10-27')).toBe('2026-10-28');
-  });
-
-  it('returns today itself when the day matches', () => {
-    expect(nextOccurrence(27, '2026-10-27')).toBe('2026-10-27');
-  });
-
-  it('skips months too short for the day', () => {
-    expect(nextOccurrence(31, '2026-02-10')).toBe('2026-03-31');
-    expect(nextOccurrence(31, '2026-04-01')).toBe('2026-05-31');
-  });
-
-  it('crosses the year boundary', () => {
-    expect(nextOccurrence(5, '2026-12-20')).toBe('2027-01-05');
-  });
-});
 
 describe('subtractNotice', () => {
   it('subtracts exact days and weeks', () => {
