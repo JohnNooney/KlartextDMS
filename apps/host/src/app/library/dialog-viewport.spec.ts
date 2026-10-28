@@ -60,4 +60,13 @@ describe('DialogViewport (issue #64)', () => {
     expect(dialog.style.top).toBe('');
     expect(dialog.style.maxHeight).toBe('');
   });
+
+  it('keeps an edge-anchored dialog anchored — it may fill the band', async () => {
+    const viewport = new FakeVisualViewport(800);
+    const dialog = await setup(viewport);
+    dialog.style.bottom = '0';
+    viewport.dispatchEvent(new Event('resize'));
+    expect(dialog.style.top).toBe('');
+    expect(dialog.style.maxHeight).toBe('800px');
+  });
 });

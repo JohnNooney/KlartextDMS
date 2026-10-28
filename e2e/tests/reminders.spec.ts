@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
-import { browseRoot, guestPanel, signedInPage } from './support';
+import { devices, expect, test } from '@playwright/test';
+import {
+  browseRoot,
+  expectInsideViewport,
+  expectNoHorizontalOverflow,
+  guestPanel,
+  signIn,
+  signedInPage,
+} from './support';
 
 const page = signedInPage();
 
@@ -115,4 +122,50 @@ test('a Reminder deep link opens the Document at the cited page', async () => {
   );
   await expect(page().locator('.pdf-pageno')).toHaveText('3 / 4');
   await expect(page().getByRole('img', { name: 'Page 3 of 4' })).toBeVisible();
+});
+
+// Journey: the same dialog on a phone — a full-screen sheet whose three
+// footer actions stack to full width instead of overflowing a narrow row.
+test('the Reminder dialog fills a phone — footer actions stack inside the viewport', async ({
+  browser,
+}) => {
+  const mobile = await browser.newPage({ ...devices['iPhone 13'] });
+  try {
+    await signIn(mobile);
+    await mobile.goto('/folder/wohnung/doc/doc-mietvertrag');
+    await mobile.getByRole('button', { name: 'Expand insights panel', exact: true }).tap();
+    await mobile
+      .getByRole('button', { name: 'Expand insights panel to full screen' })
+      .tap();
+
+    const panel = guestPanel(mobile);
+    await expect(panel.getByRole('heading', { name: 'Tenancy agreement' })).toBeVisible();
+    await panel
+      .locator('li', { hasText: "three months' notice" })
+      .getByRole('button', { name: 'Add reminder' })
+      .tap();
+
+    const dialog = mobile.getByRole('dialog', { name: 'Add reminder' });
+    await expect(dialog).toBeVisible();
+    // The Google link only renders once a date exists — anchor the notice.
+    await dialog.getByTestId('reminder-anchor').fill('2026-10-31');
+    await expect(dialog.getByTestId('reminder-deadline')).toHaveValue('2026-07-31');
+    await expectInsideViewport(mobile, dialog);
+    // The sheet covers the viewport, not just part of it.
+    const box = await dialog.boundingBox();
+    expect(box!.height).toBeGreaterThan(mobile.viewportSize()!.height * 0.95);
+    for (const name of ['Cancel', 'Google Calendar', 'Download .ics']) {
+      await expectInsideViewport(
+        mobile,
+        dialog.getByRole('button', { name }).or(dialog.getByRole('link', { name })),
+      );
+    }
+    // The footer stacks — the actions take the sheet's full width.
+    await expect
+      .poll(() => dialog.locator('.dialog-foot').evaluate((el) => getComputedStyle(el).flexDirection))
+      .toBe('column');
+    await expectNoHorizontalOverflow(mobile);
+  } finally {
+    await mobile.close();
+  }
 });

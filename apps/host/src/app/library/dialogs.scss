@@ -193,3 +193,34 @@
   color: kt.$kt-text-muted;
   margin-bottom: kt.$kt-space-3;
 }
+
+// The Reminder dialog on phones (issue #122): a full-screen sheet — three
+// footer actions don't fit a narrow row, and the centred translate
+// interferes with the anchored native date picker.
+@media (max-width: 768px) {
+  .dialog.reminder {
+    inset: 0;
+    transform: none;
+    width: 100%;
+    max-height: 100dvh;
+    padding: kt.$kt-space-5 kt.$kt-space-4;
+    border-radius: 0;
+    animation: sheet-in 0.18s ease;
+
+    .dialog-foot {
+      flex-direction: column;
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
