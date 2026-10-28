@@ -62,7 +62,8 @@ export class AttentionPanel {
 
 function cardTiming(key: AttentionGroupKey, item: AttentionItem): string {
   if (key === 'overdue') return 'Overdue';
-  if (key === 'noDate') return '';
-  const label = item.timingLabel.replace(/^Due /, '');
+  if (!item.timingLabel) return '';
+  // A near monthly item reads "Due in 3 days · Monthly by the 25th" — the card keeps the date part.
+  const label = (key === 'thisWeek' ? item.timingLabel.split(' · ')[0] : item.timingLabel).replace(/^Due /, '');
   return label.charAt(0).toUpperCase() + label.slice(1);
 }

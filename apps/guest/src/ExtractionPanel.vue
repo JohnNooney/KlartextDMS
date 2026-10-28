@@ -13,10 +13,9 @@ import TakeawaySection from './TakeawaySection.vue';
 // the reader-insights prototype's variant C2): the document-type label is
 // the title — the Host toolbar already names the Document — with a muted
 // language/date meta line (the model moved into the ⋯ menu). The summary,
-// a tinted "things need your attention" callout that scrolls to the
-// Critical Warnings, then HIG inset grouped lists of Key Takeaway rows;
-// a row's German source quote expands on selection. Sections carry data-section anchors — the attention
-// callout and the lane-mode outline rail (issue #77) scroll to them. A
+// then HIG inset grouped lists — Action Items first, then Key Takeaways;
+// a row's German source quote expands on selection. Sections carry data-section anchors — the
+// lane-mode outline rail (issue #77) and jump bar scroll to them. A
 // neutral block stands in for the sections
 // when the Extraction came back INSUFFICIENT_CONTENT / UNSUPPORTED_DOCUMENT.
 //
@@ -282,7 +281,7 @@ function reanalyze(): void {
             {{ item.label }}
             <span
               v-if="item.critical && item.count"
-              class="flex h-5 min-w-5 items-center justify-center rounded-full bg-kt-warning px-1.5 text-[12px] font-bold leading-none text-kt-canvas"
+              class="flex h-5 min-w-5 items-center justify-center rounded-full bg-kt-fill-strong px-1.5 text-[12px] font-bold leading-none text-kt-text"
             >{{ item.count }}</span>
           </button>
         </div>
@@ -363,16 +362,6 @@ function reanalyze(): void {
 
       <section data-section="summary" class="mt-kt-4 scroll-mt-kt-2">
         <p class="text-kt-base leading-relaxed">{{ extraction.plainEnglishSummary }}</p>
-        <button
-          v-if="isComplete && criticalTakeaways.length"
-          type="button"
-          class="mt-kt-5 flex w-full items-center gap-kt-3 rounded-kt-lg bg-kt-warning-tint px-kt-4 py-kt-3 text-left text-kt-sm font-medium"
-          @click="scrollToSection('attention')"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-kt-warning" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
-          <span class="flex-1">{{ criticalTakeaways.length }} things need your attention</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
-        </button>
       </section>
 
       <div
@@ -388,7 +377,6 @@ function reanalyze(): void {
           section="attention"
           title="Needs your attention"
           :rows="criticalTakeaways"
-          critical
           remindable
           :selected-index="selectedTakeaway"
           @select="toggleTakeaway"
@@ -429,8 +417,7 @@ function reanalyze(): void {
         ></span>
         <span
           v-if="item.count"
-          class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[12px] font-bold leading-none"
-          :class="item.critical ? 'bg-kt-warning text-kt-canvas' : 'bg-kt-fill-strong text-kt-text'"
+          class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-kt-fill-strong px-1.5 text-[12px] font-bold leading-none text-kt-text"
         >{{ item.count }}</span>
       </button>
     </nav>

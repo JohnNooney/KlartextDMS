@@ -5,6 +5,7 @@
  *
  * - `envelope.ts`    — `{ v, type, sessionId, payload }` spine.
  * - `extraction.ts`  — Extraction schema types (issue #8).
+ * - `urgency.ts`     — Action Item Urgency bucketing + labels (ADR 0012).
  * - `messages.ts`    — `BusMessage` discriminated union + guards (issue #7).
  * - `serialize.ts`   — reference JSON serializer; `EXTRACT_DOCUMENT` bytes are
  *                      base64 so every message has a canonical JSON form.
@@ -18,6 +19,7 @@
 export * from './endpoints.js';
 export * from './envelope.js';
 export * from './extraction.js';
+export * from './urgency.js';
 export * from './messages.js';
 export * from './serialize.js';
 export * from './fixtures.js';

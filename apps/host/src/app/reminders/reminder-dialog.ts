@@ -1,5 +1,5 @@
 import { Component, computed, input, OnInit, output, signal } from '@angular/core';
-import type { ActionTiming } from '@klartext/bus-contract';
+import { nextOccurrence, type ActionTiming } from '@klartext/bus-contract';
 import { DialogViewport } from '../library/dialog-viewport';
 import {
   buildIcs,
@@ -7,7 +7,6 @@ import {
   googleCalendarUrl,
   isCleanCadence,
   isPast,
-  nextOccurrence,
   reminderDeepLink,
   reminderDescription,
   reminderTitle,

@@ -122,12 +122,12 @@ describe('buildAttentionOverview', () => {
     ]);
   });
 
-  it('files recurring and notice-period items under Later and labels their timing', () => {
+  it('files loose recurring and notice-period items under Later and labels their timing', () => {
     const groups = build(
       [doc('d1', null)],
       [
         extraction('d1', [
-          { text: 'rent', timing: { kind: 'RECURRING', cadence: 'MONTHLY', scheduleLabel: 'Monthly by the 3rd' } },
+          { text: 'rent', timing: { kind: 'RECURRING', cadence: 'MONTHLY', scheduleLabel: 'Monthly by the 3rd working day' } },
           { text: 'notice', timing: { kind: 'NOTICE_PERIOD', duration: 3, unit: 'MONTHS', anchor: 'moving out' } },
           { text: 'one', timing: { kind: 'NOTICE_PERIOD', duration: 1, unit: 'WEEKS', anchor: 'x' } },
         ]),
@@ -136,13 +136,28 @@ describe('buildAttentionOverview', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].key).toBe('later');
     expect(groups[0].items.map((i) => i.timingLabel)).toEqual([
-      'Monthly by the 3rd',
+      'Monthly by the 3rd working day',
       '3 months’ notice · moving out',
-      '1 week’ notice · x',
+      '1 week’s notice · x',
     ]);
   });
 
-  it('labels dated items relative to today', () => {
+  it('files a monthly item whose next occurrence is near under This week, ordered by that date', () => {
+    const groups = build(
+      [doc('d1', null)],
+      [
+        extraction('d1', [
+          { text: 'fee', timing: fixed('2026-10-27') },
+          { text: 'rent', timing: { kind: 'RECURRING', cadence: 'MONTHLY', dayOfMonth: 25, scheduleLabel: 'Monthly by the 25th' } },
+        ]),
+      ],
+    );
+    expect(groups.map((g) => [g.key, g.items.map((i) => [i.text, i.timingLabel])])).toEqual([
+      ['thisWeek', [['rent', 'Due in 3 days · Monthly by the 25th'], ['fee', 'Due in 5 days']]],
+    ]);
+  });
+
+  it('labels dated items relative to today inside the week window, absolutely beyond it', () => {
     const groups = build(
       [doc('d1', null)],
       [
@@ -152,6 +167,8 @@ describe('buildAttentionOverview', () => {
           { text: 'c', timing: fixed('2026-10-26') },
           { text: 'd', timing: fixed('2026-12-01') },
           { text: 'e', timing: fixed('2026-10-21') },
+          { text: 'f', timing: fixed('2024-07-31') },
+          { text: 'g', timing: { kind: 'NONE' } },
         ]),
       ],
     );
@@ -162,6 +179,8 @@ describe('buildAttentionOverview', () => {
       c: 'Due in 4 days',
       d: 'Due 1 Dec 2026',
       e: 'Due yesterday',
+      f: 'Due 31 Jul 2024',
+      g: null,
     });
   });
 

@@ -18,8 +18,7 @@ test.describe('desktop lane', () => {
     const rail = panel.getByRole('navigation', { name: 'Insights outline' });
     await expect(rail).toBeVisible();
 
-    // Count badges mirror the section contents — Critical Warnings carry the
-    // warning tint; the summary has none.
+    // Count badges mirror the section contents; the summary has none.
     const fixture = seededExtraction('doc-mietvertrag');
     const critical = fixture.actionItems.length;
     const normal = fixture.keyTakeaways.length;

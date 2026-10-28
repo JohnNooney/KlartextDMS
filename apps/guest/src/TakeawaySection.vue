@@ -3,14 +3,14 @@ import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 import KeyTakeawayRow from './KeyTakeawayRow.vue';
 
 // One HIG inset grouped list of Key Takeaway rows (issue #75): "Needs your
-// attention" gets the warning tint and triangle, "Key takeaways" stays
-// neutral. `section` is the stable data-section anchor; each row carries
-// the takeaway's index for selection.
+// attention" is marked by its title alone — the list itself stays neutral
+// like "Key takeaways", since colour means Urgency, shown per item on the
+// timing chip (ADR 0012). `section` is the stable data-section anchor; each
+// row carries the takeaway's index for selection.
 defineProps<{
   title: string;
   section: string;
   rows: { takeaway: KeyTakeaway & { timing?: ActionTiming }; index: number }[];
-  critical?: boolean;
   /** Shows each row's "Add reminder" button — Action Items only (issue #122). */
   remindable?: boolean;
   selectedIndex: number | null;
@@ -20,33 +20,12 @@ const emit = defineEmits<{ select: [index: number]; remind: [index: number] }>()
 
 <template>
   <section :data-section="section" class="mt-kt-6 scroll-mt-kt-2">
-    <h2 class="flex items-center gap-kt-2 text-kt-sm font-semibold text-kt-text-muted">
-      <svg
-        v-if="critical"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.9"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="text-kt-warning"
-        aria-hidden="true"
-      >
-        <path d="M12 3.8 2.9 19.5h18.2z" /><path d="M12 10v4" /><path d="M12 16.9v.2" />
-      </svg>
-      {{ title }}
-    </h2>
-    <ul
-      class="mt-kt-2 overflow-hidden rounded-kt-lg border bg-kt-bg"
-      :class="critical ? 'border-kt-warning/40' : 'border-kt-border'"
-    >
+    <h2 class="text-kt-sm font-semibold text-kt-text-muted">{{ title }}</h2>
+    <ul class="mt-kt-2 overflow-hidden rounded-kt-lg border border-kt-border bg-kt-bg">
       <KeyTakeawayRow
         v-for="(row, i) in rows"
         :key="row.index"
         :takeaway="row.takeaway"
-        :critical="critical"
         :remindable="remindable"
         :selected="selectedIndex === row.index"
         :divider="i > 0"

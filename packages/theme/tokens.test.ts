@@ -14,6 +14,7 @@ const TOKENS = [
   '--kt-accent', '--kt-accent-hover', '--kt-accent-tint',
   '--kt-success', '--kt-warning', '--kt-warning-tint',
   '--kt-danger', '--kt-danger-tint', '--kt-folder',
+  '--kt-danger-text', '--kt-warning-text',
   '--kt-font-sans', '--kt-font-mono',
   '--kt-text-xs', '--kt-text-sm', '--kt-text-base', '--kt-text-lg', '--kt-text-xl', '--kt-text-2xl', '--kt-text-3xl',
   '--kt-space-1', '--kt-space-2', '--kt-space-3', '--kt-space-4', '--kt-space-5', '--kt-space-6', '--kt-space-8',
@@ -29,6 +30,9 @@ const SPEC_VALUES: Record<string, string> = {
   '--kt-warning': '#ff9500',
   '--kt-danger': '#ff3b30',
   '--kt-success': '#34c759',
+  // AA-contrast Urgency text shades (ADR 0012); the bright tokens stay for shapes.
+  '--kt-danger-text': '#d70015',
+  '--kt-warning-text': '#b35c00',
   '--kt-space-1': '4px',
   '--kt-control-height': '36px',
   '--kt-touch-target': '44px',

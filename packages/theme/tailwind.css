@@ -24,6 +24,8 @@
   --color-kt-warning-tint: var(--kt-warning-tint);
   --color-kt-danger: var(--kt-danger);
   --color-kt-danger-tint: var(--kt-danger-tint);
+  --color-kt-danger-text: var(--kt-danger-text);
+  --color-kt-warning-text: var(--kt-warning-text);
   --color-kt-folder: var(--kt-folder);
 
   --font-sans: var(--kt-font-sans);
