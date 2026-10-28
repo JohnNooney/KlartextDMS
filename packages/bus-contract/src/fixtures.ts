@@ -9,6 +9,7 @@ import retryExtraction from './fixtures/retry-extraction.json';
 import panelPresentation from './fixtures/panel-presentation.json';
 import guestShowPage from './fixtures/guest-show-page.json';
 import guestExpandPanel from './fixtures/guest-expand-panel.json';
+import guestCreateReminder from './fixtures/guest-create-reminder.json';
 import extractionsJson from './fixtures/extractions.json';
 import extractionsV1Json from './fixtures/extractions-v1.json';
 import type { BusMessage, MessageType } from './messages.js';
@@ -32,6 +33,7 @@ export const goldenFixtures = {
   PANEL_PRESENTATION: panelPresentation,
   GUEST_SHOW_PAGE: guestShowPage,
   GUEST_EXPAND_PANEL: guestExpandPanel,
+  GUEST_CREATE_REMINDER: guestCreateReminder,
 } as const satisfies Record<MessageType, unknown>;
 
 /**

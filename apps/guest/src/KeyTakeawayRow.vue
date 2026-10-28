@@ -3,17 +3,19 @@ import { computed } from 'vue';
 import type { ActionTiming, KeyTakeaway } from '@klartext/bus-contract';
 
 // One row in the panel's grouped Key Takeaway lists (issue #75, prototype
-// variant C2): the takeaway's number — stable across both sections — its
-// plain-English text, and a trailing page label. Selecting the row reveals
-// its German source quote; `divider` draws the inset separator between rows.
+// variant C2): the plain-English text and a trailing page label. Selecting
+// the row reveals its German source quote; `divider` draws the inset
+// separator between rows. Action Item rows lead with the "Add reminder"
+// affordance (issue #122).
 const props = defineProps<{
   takeaway: KeyTakeaway & { timing?: ActionTiming };
-  number: number;
   critical?: boolean;
+  /** Offers the Action Item's "Add reminder" button (issue #122). */
+  remindable?: boolean;
   selected?: boolean;
   divider?: boolean;
 }>();
-const emit = defineEmits<{ select: [] }>();
+const emit = defineEmits<{ select: []; remind: [] }>();
 
 // Timing chip per Action Item kind (issue #118); NONE and Key Takeaways get none.
 const UNITS = { DAYS: 'day', WEEKS: 'week', MONTHS: 'month', YEARS: 'year' } as const;
@@ -36,24 +38,33 @@ const timingChip = computed(() => {
 </script>
 
 <template>
-  <li class="relative">
+  <li
+    class="relative flex items-start"
+    :class="selected ? 'bg-kt-accent-tint' : 'hover:bg-kt-fill'"
+  >
     <span
       v-if="divider"
       aria-hidden="true"
-      class="absolute left-13 right-0 top-0 h-px bg-kt-border"
+      class="absolute right-0 top-0 h-px bg-kt-border"
+      :class="remindable ? 'left-13' : 'left-4'"
     ></span>
     <button
+      v-if="remindable"
       type="button"
-      class="grid w-full grid-cols-[24px_1fr_auto] items-start gap-kt-3 px-kt-4 py-kt-3 text-left"
-      :class="selected ? 'bg-kt-accent-tint' : 'hover:bg-kt-fill'"
+      class="ml-kt-3 mr-kt-2 mt-kt-3 grid size-8 shrink-0 place-items-center rounded-kt-sm text-kt-text-muted hover:bg-kt-fill hover:text-kt-accent"
+      title="Add reminder"
+      aria-label="Add reminder"
+      @click="emit('remind')"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M12 13v4M10 15h4"/></svg>
+    </button>
+    <button
+      type="button"
+      class="grid min-w-0 flex-1 grid-cols-[1fr_auto] items-start gap-kt-3 py-kt-3 pr-kt-4 text-left"
+      :class="remindable ? 'pl-0' : 'pl-kt-4'"
       :aria-expanded="selected"
       @click="emit('select')"
     >
-      <span
-        class="mt-px grid size-6 place-items-center rounded-full text-kt-xs font-semibold"
-        :class="critical ? 'bg-kt-warning text-kt-bg' : 'bg-kt-fill text-kt-text-muted'"
-        >{{ number }}</span
-      >
       <span class="min-w-0">
         <span class="text-kt-sm">{{ takeaway.text }}</span>
         <span

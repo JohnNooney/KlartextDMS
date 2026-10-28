@@ -24,7 +24,8 @@ import type { GuestAdapter, GuestAdapterContext } from '@klartext/bus-contract/c
  * `sessionId` and applied to the probe; `EXTRACT_DOCUMENT` answers with an
  * immediate `AI_PROCESSING_STARTED` followed by the `runJob` outcome.
  * `showPage` sends `GUEST_SHOW_PAGE` (issue #78) under the current Session —
- * fire-and-forget, and silent while no Session exists.
+ * fire-and-forget, and silent while no Session exists. `expandPanel` and
+ * `createReminder` (issues #79/#122) follow the same Session-bound pattern.
  */
 export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
   // The applied Session's id — SESSION_ACK echoes it and GUEST_SHOW_PAGE
@@ -98,6 +99,13 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
       // exists inside a Session, and the Host drops the message otherwise.
       if (sessionId === null) return;
       post('GUEST_EXPAND_PANEL', sessionId, {});
+    },
+    createReminder(actionItemId: string): void {
+      // Session-bound like the other panel write-backs (issue #122): the
+      // "Add reminder" button only exists inside a Session's Extraction,
+      // and the Host drops the message for any other sessionId.
+      if (sessionId === null) return;
+      post('GUEST_CREATE_REMINDER', sessionId, { actionItemId });
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

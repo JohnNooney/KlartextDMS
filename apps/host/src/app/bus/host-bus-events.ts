@@ -4,6 +4,7 @@ import type {
   ExtractionError,
   GuestShowPagePayload,
   JobDocument,
+  ReminderRequest,
 } from '@klartext/bus-contract';
 import type { HostBusProbe } from './host-bus.adapter';
 
@@ -72,5 +73,9 @@ export class HostBusEvents implements HostBusProbe {
 
   panelExpandRequested(): void {
     this.delegate?.panelExpandRequested();
+  }
+
+  reminderRequested(request: ReminderRequest): void {
+    this.delegate?.reminderRequested(request);
   }
 }

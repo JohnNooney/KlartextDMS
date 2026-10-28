@@ -32,6 +32,8 @@ export class AttentionPanel {
   /** Set while the Extraction index is still loading: "Reading read of total documents…". */
   readonly reading = input<{ read: number; total: number } | null>(null);
   readonly itemOpened = output<AttentionItem>();
+  /** A row's "Add reminder" affordance (issue #122) — the Library opens the dialog. */
+  readonly reminderRequested = output<AttentionItem>();
 
   protected readonly expanded = signal(true);
   protected readonly sheetOpen = signal(false);
@@ -50,6 +52,11 @@ export class AttentionPanel {
   protected open(item: AttentionItem): void {
     this.sheetOpen.set(false);
     this.itemOpened.emit(item);
+  }
+
+  protected remind(item: AttentionItem): void {
+    this.sheetOpen.set(false);
+    this.reminderRequested.emit(item);
   }
 }
 

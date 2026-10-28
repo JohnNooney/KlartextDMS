@@ -102,11 +102,10 @@ describe('ExtractionPanel', () => {
     expect(wrapper.find('[data-section="takeaways"]').exists()).toBe(true);
   });
 
-  // Grouped-list rows: one per Key Takeaway — a number stable across both
-  // sections (the takeaway's place in the Extraction), the plain-English
-  // text, and a trailing page label when the Extraction located one.
+  // Grouped-list rows: one per item — the plain-English text and a
+  // trailing page label when the Extraction located one.
 
-  it('numbers rows continuously: Action Items first, then Key Takeaways', () => {
+  it('renders Action Items first, then Key Takeaways — unnumbered', () => {
     const ex = record({
       extractionStatus: 'COMPLETE',
       actionItems: [actionItem({ text: 'critical mid', page: 2 })],
@@ -118,18 +117,15 @@ describe('ExtractionPanel', () => {
     const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
 
     const attention = wrapper.find('[data-section="attention"]');
-    expect(attention.text()).toContain('critical mid');
     expect(attention.findAll('li')).toHaveLength(1);
-    expect(attention.find('li').text()).toContain('1');
+    expect(attention.find('li').text()).toContain('critical mid');
     expect(attention.find('li').text()).toContain('p. 2');
 
     const takeaways = wrapper.find('[data-section="takeaways"]');
     const rows = takeaways.findAll('li');
     expect(rows).toHaveLength(2);
-    expect(rows[0]!.text()).toContain('2');
     expect(rows[0]!.text()).toContain('first normal');
     expect(rows[0]!.text()).toContain('p. 1');
-    expect(rows[1]!.text()).toContain('3');
     expect(rows[1]!.text()).toContain('last normal');
     expect(rows[1]!.text()).toContain('p. 4');
   });

@@ -16,10 +16,21 @@ export function parseFolderSegment(segment: string | null): string | null {
  * `/folder/<fid>/doc/<id>` reads a Document; `root` names the root Folder.
  * One matcher serves both shapes so the Library component — and the live
  * document/folder feeds behind it — survives open/close navigation.
+ *
+ * `/doc/<id>` (issue #122) is the Folder-independent form Reminder exports
+ * carry: the `docLink` marker lets the Library resolve the Document's
+ * Folder and rewrite to the canonical `/folder/<fid>/doc/<id>` URL.
  */
 export function libraryUrl(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length === 2 && segments[0]!.path === 'folder') {
     return { consumed: segments, posParams: { folderId: segments[1]! } };
+  }
+  if (segments.length === 2 && segments[0]!.path === 'doc') {
+    return {
+      consumed: segments,
+      // `docLink` is a presence marker — posParams only carry UrlSegments.
+      posParams: { docId: segments[1]!, docLink: segments[1]! },
+    };
   }
   if (
     segments.length === 4 &&

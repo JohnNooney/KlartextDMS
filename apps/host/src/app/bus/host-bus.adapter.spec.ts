@@ -37,6 +37,7 @@ function setup() {
     retryRequested: vi.fn(() => false),
     pageRequested: vi.fn(),
     panelExpandRequested: vi.fn(),
+    reminderRequested: vi.fn(),
   };
   const adapter = createHostBusAdapter({ source, sink, peerOrigin: PEER_ORIGIN, probe });
   return { source, sink, probe, adapter };
@@ -446,5 +447,74 @@ describe('HostBus adapter — GUEST_EXPAND_PANEL (issue #79)', () => {
       source: sink,
     });
     expect(probe.panelExpandRequested).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #122: GUEST_CREATE_REMINDER is Session-bound like the other panel
+// write-backs — the adapter binds the Session's Document and drops a
+// malformed `actionItemId`.
+describe('HostBus adapter — GUEST_CREATE_REMINDER (issue #122)', () => {
+  const session = {
+    ...goldenFixtureMessages.INIT_SESSION.payload,
+    sessionId: 'sess-open',
+    documentId: 'doc-1',
+  };
+
+  const createReminder = (sessionId: string, payload: unknown) => ({
+    v: 1,
+    type: 'GUEST_CREATE_REMINDER',
+    sessionId,
+    payload,
+  });
+
+  it('reports a valid request with the Session’s documentId bound in', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: createReminder('sess-open', { actionItemId: 'ai_3f9c2e7b1d4a58', extra: true }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.reminderRequested).toHaveBeenCalledWith({
+      documentId: 'doc-1',
+      actionItemId: 'ai_3f9c2e7b1d4a58',
+    });
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: createReminder(sessionId, { actionItemId: 'ai_9f' }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.reminderRequested).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a missing id', {}],
+    ['an empty id', { actionItemId: '' }],
+    ['a non-string id', { actionItemId: 7 }],
+    ['a non-object payload', 'ai_9f'],
+    ['a null payload', null],
+  ])('ignores %s', (_label, payload) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: createReminder('sess-open', payload),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.reminderRequested).not.toHaveBeenCalled();
   });
 });

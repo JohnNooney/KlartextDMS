@@ -1,0 +1,82 @@
+<button type="button" class="backdrop" (click)="closed.emit()" aria-label="Close"></button>
+<form
+  class="dialog reminder"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="reminder-title"
+  (submit)="$event.preventDefault()"
+>
+  <header class="dialog-head">
+    <h2 id="reminder-title">Add reminder</h2>
+    <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+    </button>
+  </header>
+
+  <p class="dialog-body">
+    <strong>{{ draft().item.text }}</strong><br />
+    <span lang="de">{{ draft().doc.title }}</span>
+  </p>
+
+  @if (past()) {
+    <p class="dialog-warning" role="status">This date is in the past — the reminder will still be exported.</p>
+  }
+
+  @switch (kind()) {
+    @case ('FIXED_DATE') {
+      <p class="dialog-body">Date: <strong>{{ fixedDateLabel() }}</strong></p>
+    }
+    @case ('RECURRING') {
+      <label class="field">
+        <span>First date</span>
+        <input type="date" [value]="date()" (input)="onDate($event)" data-testid="reminder-date" />
+      </label>
+      @if (!cleanRecurring()) {
+        <p class="dialog-body">
+          {{ timingNote() }} — calendar files can't express this pattern, so the cadence goes into the event's notes.
+        </p>
+      }
+    }
+    @case ('NOTICE_PERIOD') {
+      <label class="field">
+        <span>{{ anchorLabel() }}</span>
+        <input type="date" [value]="anchor()" (input)="onAnchor($event)" data-testid="reminder-anchor" />
+      </label>
+      <label class="field">
+        <span>Notice must be received by</span>
+        <input type="date" [value]="deadline()" (input)="onDeadline($event)" data-testid="reminder-deadline" />
+      </label>
+    }
+    @default {
+      <label class="field">
+        <span>Date</span>
+        <input type="date" [value]="date()" (input)="onDate($event)" data-testid="reminder-date" />
+      </label>
+    }
+  }
+
+  <label class="field">
+    <span>Remind me</span>
+    <select (change)="onAlarm($event)" data-testid="reminder-alarm">
+      @for (option of alarmOptions; track option.label) {
+        <option [value]="option.days === null ? '' : option.days" [selected]="option.days === alarmDays()">
+          {{ option.label }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <footer class="dialog-foot">
+    <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
+    @if (googleUrl(); as url) {
+      <a class="btn btn-secondary" [href]="url" target="_blank" rel="noopener" data-testid="reminder-google">Google Calendar</a>
+    }
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="!canExport()"
+      (click)="downloadIcs()"
+      data-testid="reminder-ics"
+    >Download .ics</button>
+  </footer>
+</form>

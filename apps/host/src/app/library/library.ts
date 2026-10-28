@@ -12,7 +12,10 @@ import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { OpenDocument } from '../open-document';
+import { PageFocus } from '../page-focus';
 import { Reader } from '../reader/reader';
+import { ReminderDialog } from '../reminders/reminder-dialog';
+import { Reminders } from '../reminders/reminders';
 import { AttentionPanel } from './attention-panel';
 import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
 import { DeleteDialog } from './delete-dialog';
@@ -69,6 +72,7 @@ type DialogState =
     DeleteDialog,
     FolderNameDialog,
     FolderDeleteDialog,
+    ReminderDialog,
     SearchResults,
   ],
   host: {
@@ -85,10 +89,11 @@ type DialogState =
   },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
-  providers: [...provideDocumentData(), ExtractionFlow],
+  providers: [...provideDocumentData(), ExtractionFlow, Reminders],
 })
 export class Library {
   protected readonly store = inject(LibraryStore);
+  protected readonly reminders = inject(Reminders);
   protected readonly dialog = signal<DialogState>(null);
   // Instantiating starts Session flow + Extraction Job orchestration for
   // the signed-in session (issue #31); it self-attaches to the Bus, and the
@@ -131,6 +136,7 @@ export class Library {
 
   protected readonly dropHover = signal(false);
   protected readonly openDocument = inject(OpenDocument);
+  private readonly pageFocus = inject(PageFocus);
   protected readonly describeContents = describeContents;
   protected readonly title = computed(
     () => this.store.folderById(this.openDocument.folderId())?.name ?? 'Documents',
@@ -209,6 +215,21 @@ export class Library {
       this.openDocument.docId();
       this.searchOpen.set(false);
     });
+    // The /doc/<id> deep link (issue #122) resolves here where the Document
+    // feed lives: the cited page rides PageFocus into the reader once the
+    // PDF loads, and the URL rewrites to the canonical Folder form.
+    effect(() => {
+      const link = this.openDocument.deepLink();
+      const documents = this.store.documents();
+      if (link === null || documents === null) return;
+      const doc = documents.find((d) => d.id === link.documentId && d.status === 'ready');
+      if (!doc) {
+        this.openDocument.deepLinkMissed();
+        return;
+      }
+      if (link.page !== null) this.pageFocus.showOnceOpen(doc.id, { page: link.page });
+      this.openDocument.landDeepLink(doc, link);
+    });
   }
 
   /** `/` and Cmd/Ctrl+K focus the field — except inside fields and dialogs. */
@@ -216,7 +237,7 @@ export class Library {
     const shortcut =
       (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) ||
       (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey));
-    if (!shortcut || event.defaultPrevented || this.dialog() !== null) return;
+    if (!shortcut || event.defaultPrevented || this.dialog() !== null || this.reminders.draft() !== null) return;
     const target = event.target;
     if (
       target instanceof HTMLElement &&

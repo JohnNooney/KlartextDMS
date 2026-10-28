@@ -22,6 +22,7 @@ import {
   isBusMessage,
   isExtractionError,
   isPanelPresentation,
+  sanitizeCreateReminder,
   sanitizeShowPage,
   JOB_RESULT_TIMEOUT_MS,
   JOB_START_TIMEOUT_MS,
@@ -310,6 +311,20 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         }
         break;
       }
+      case 'GUEST_CREATE_REMINDER': {
+        // Only the current Session may export a Reminder (issue #122); the
+        // Session's Document is bound in — the payload carried no documentId.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeCreateReminder(msg.payload);
+          if (request) {
+            ctx.probe.reminderRequested({
+              documentId: currentSession.documentId,
+              ...request,
+            });
+          }
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -424,6 +439,12 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
       // first INIT_SESSION.
       if (sessionId === null) return;
       post('GUEST_EXPAND_PANEL', sessionId, {});
+    },
+    createReminder(actionItemId: string): void {
+      // Session-bound like every Guest write-back inside a Session — the
+      // Host drops the message otherwise (issue #122).
+      if (sessionId === null) return;
+      post('GUEST_CREATE_REMINDER', sessionId, { actionItemId });
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

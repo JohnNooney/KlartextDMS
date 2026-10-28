@@ -17,6 +17,7 @@ describe('golden fixtures', () => {
       'AI_PROCESSING_STARTED',
       'AI_PROCESSING_SUCCESS',
       'EXTRACT_DOCUMENT',
+      'GUEST_CREATE_REMINDER',
       'GUEST_EXPAND_PANEL',
       'GUEST_READY',
       'GUEST_SHOW_PAGE',
@@ -25,7 +26,7 @@ describe('golden fixtures', () => {
       'RETRY_EXTRACTION',
       'SESSION_ACK',
     ]);
-    expect(new Set(types).size).toBe(11);
+    expect(new Set(types).size).toBe(12);
   });
 
   it.each(Object.entries(goldenFixtures))('%s round-trips through the reference serializer', (type, json) => {

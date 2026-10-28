@@ -75,3 +75,15 @@ export const expandPanelSender = shallowRef<(() => void) | null>(null);
 export function expandPanel(): void {
   expandPanelSender.value?.();
 }
+
+/**
+ * The Bus adapter's reminder sender (issue #122), wired by main.ts once the
+ * adapter exists. An Action Item's "Add reminder" sends
+ * `GUEST_CREATE_REMINDER` — the Host owns the dialog and the export;
+ * fire-and-forget since Klartext never tracks a Reminder.
+ */
+export const reminderSender = shallowRef<((actionItemId: string) => void) | null>(null);
+
+export function createReminder(actionItemId: string): void {
+  reminderSender.value?.(actionItemId);
+}

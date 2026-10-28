@@ -158,6 +158,7 @@
           [groups]="attention()"
           [reading]="reading()"
           (itemOpened)="openAttentionItem($event)"
+          (reminderRequested)="reminders.open($event.documentId, $event.id)"
         />
       }
       <div class="grid">
@@ -262,4 +263,10 @@
       />
     }
   }
+}
+
+<!-- The Reminder dialog isn't a `dialog()` case — it's a service-backed
+     draft so the Guest's Bus request can open it too (issue #122). -->
+@if (reminders.draft(); as draft) {
+  <app-reminder-dialog [draft]="draft" (closed)="reminders.close()" />
 }

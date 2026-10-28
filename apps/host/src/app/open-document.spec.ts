@@ -242,4 +242,45 @@ describe('OpenDocument (issue #29 navigation seam)', () => {
     expect(router.url).toBe('/folder/root/doc/doc-1');
     expect(open.query()).toBeNull();
   });
+
+  // Issue #122: Reminder exports deep-link back via the Folder-independent
+  // `/doc/<id>` form — the Library resolves the Folder and rewrites the URL.
+
+  it('a /doc/<id> deep link publishes the link awaiting Folder resolution', async () => {
+    const { router, open } = await setup();
+    await router.navigateByUrl('/doc/doc-mietvertrag?page=3&item=ai_abc');
+    expect(open.docId()).toBe('doc-mietvertrag');
+    expect(open.deepLink()).toEqual({
+      documentId: 'doc-mietvertrag',
+      page: 3,
+      item: 'ai_abc',
+    });
+  });
+
+  it('a malformed ?page= deep-links with no page', async () => {
+    const { router, open } = await setup();
+    await router.navigateByUrl('/doc/doc-1?page=0&item=ai_1');
+    expect(open.deepLink()).toEqual({ documentId: 'doc-1', page: null, item: 'ai_1' });
+  });
+
+  it('landDeepLink rewrites to the canonical Folder URL, keeping page and item', async () => {
+    const { router, open, stable } = await setup();
+    await router.navigateByUrl('/doc/doc-1?page=2&item=ai_1');
+    open.landDeepLink({ id: 'doc-1', folderId: 'vertraege' }, open.deepLink()!);
+    await stable();
+    expect(router.url).toBe('/folder/vertraege/doc/doc-1?page=2&item=ai_1');
+    // The rewrite consumed the marker — no second resolution fires.
+    expect(open.deepLink()).toBeNull();
+    expect(open.folderId()).toBe('vertraege');
+  });
+
+  it('a deep-linked Document that is missing falls back to the root Folder', async () => {
+    const { router, open, stable } = await setup();
+    await router.navigateByUrl('/doc/doc-ghost');
+    expect(open.deepLink()?.documentId).toBe('doc-ghost');
+    open.deepLinkMissed();
+    await stable();
+    expect(router.url).toBe('/folder/root');
+    expect(open.docId()).toBeNull();
+  });
 });

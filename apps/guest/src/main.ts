@@ -9,6 +9,7 @@ import { loadGuestConfig, referrerPeerOrigin } from './guest-config';
 import {
   expandPanelSender,
   loadFixtureSession,
+  reminderSender,
   retrySender,
   sessionProbe,
   showPageSender,
@@ -40,10 +41,12 @@ if (window.parent === window) {
   });
   // The panel's Analyze/Re-analyze/Try-again actions send RETRY_EXTRACTION;
   // a selected takeaway row sends GUEST_SHOW_PAGE (issue #78); a jump-bar
-  // tap sends GUEST_EXPAND_PANEL (issue #79).
+  // tap sends GUEST_EXPAND_PANEL (issue #79); an Action Item's "Add
+  // reminder" sends GUEST_CREATE_REMINDER (issue #122).
   retrySender.value = (documentId) => adapter.requestRetry(documentId);
   showPageSender.value = (request) => adapter.showPage(request);
   expandPanelSender.value = () => adapter.expandPanel();
+  reminderSender.value = (actionItemId) => adapter.createReminder(actionItemId);
   // GUEST_READY goes out only once anonymous sign-in resolves (issue #10).
   void signInThenReady(() => signInAnonymously(auth), adapter);
 }

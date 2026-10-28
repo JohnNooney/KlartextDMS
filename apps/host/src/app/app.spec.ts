@@ -18,6 +18,7 @@ import { HOST_CONFIG } from './host-config';
 import { Library } from './library/library';
 import { LibraryStore } from './library/library.store';
 import { OpenDocument } from './open-document';
+import { Reminders } from './reminders/reminders';
 
 const USER: SessionUser = { uid: 'u1', displayName: 'Test User', email: 'test-user@test.com' };
 
@@ -80,6 +81,7 @@ async function setup(
         { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
         { provide: UploadPipeline, useValue: fakePipeline },
         { provide: ExtractionFlow, useValue: {} },
+        { provide: Reminders, useValue: { draft: signal(null), open: vi.fn(), close: vi.fn() } },
         LibraryStore,
       ],
     },

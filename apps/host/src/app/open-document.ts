@@ -2,8 +2,17 @@ import { inject, Injectable, linkedSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import { folderSegment, parseFolderSegment } from './app.routes';
+import { folderSegment, parseFolderSegment, ROOT_FOLDER_SEGMENT } from './app.routes';
 import type { DocumentRecord } from './data/document';
+
+/** A `/doc/<id>` deep link awaiting Folder resolution (issue #122). */
+export interface DocDeepLink {
+  documentId: string;
+  /** The cited page — `null` when the link carries none. */
+  page: number | null;
+  /** The Action Item's stable id — `null` when the link carries none. */
+  item: string | null;
+}
 
 /**
  * Which Document is open for reading and which Folder the library browses
@@ -44,6 +53,12 @@ export class OpenDocument {
     source: this.docId,
     computation: () => false,
   });
+  /**
+   * The `/doc/<id>` deep-link form (issue #122): set while the bare-doc URL
+   * is live so the Library — which owns the Document feed — can resolve the
+   * Folder and rewrite to the canonical URL. `null` on every other route.
+   */
+  readonly deepLink = signal<DocDeepLink | null>(null);
 
   constructor() {
     this.router.events
@@ -96,6 +111,23 @@ export class OpenDocument {
   }
 
   /**
+   * Lands a resolved `/doc/<id>` deep link on the canonical Folder URL
+   * (issue #122): `?page&item` ride along so the link stays shareable, and
+   * `replaceUrl` keeps browser back out of a redirect loop.
+   */
+  landDeepLink(document: Pick<DocumentRecord, 'id' | 'folderId'>, link: DocDeepLink): void {
+    void this.router.navigate(
+      ['/folder', folderSegment(document.folderId), 'doc', document.id],
+      { queryParams: { page: link.page, item: link.item }, replaceUrl: true },
+    );
+  }
+
+  /** A deep-linked Document that isn't there falls back to the root Folder. */
+  deepLinkMissed(): void {
+    void this.router.navigate(['/folder', ROOT_FOLDER_SEGMENT], { replaceUrl: true });
+  }
+
+  /**
    * Writes the library search query into the browsed Folder's URL (issue
    * #121). The first entry pushes a history entry (so back from an opened
    * result returns to the results); edits and clears replace it — typing must
@@ -129,10 +161,12 @@ export class OpenDocument {
     let route = this.router.routerState.snapshot.root;
     let folderId: string | null = null;
     let docId: string | null = null;
+    let docLinked = false;
     while (route.firstChild) {
       route = route.firstChild;
       folderId = parseFolderSegment(route.paramMap.get('folderId')) ?? folderId;
       docId = route.paramMap.get('docId') ?? docId;
+      if (route.paramMap.get('docLink') !== null) docLinked = true;
     }
     this.folderId.set(folderId);
     this.docId.set(docId);
@@ -140,6 +174,16 @@ export class OpenDocument {
     // navigation (TestBed without a router outlet).
     this.query.set(route.queryParamMap?.get('q') ?? null);
     this.searchScope.set(route.queryParamMap?.get('scope') === 'all' ? 'all' : 'folder');
+    const page = Number(route.queryParamMap?.get('page'));
+    this.deepLink.set(
+      docLinked && docId !== null
+        ? {
+            documentId: docId,
+            page: Number.isInteger(page) && page >= 1 ? page : null,
+            item: route.queryParamMap?.get('item') ?? null,
+          }
+        : null,
+    );
   }
 
   private scopeParam(): 'all' | null {
