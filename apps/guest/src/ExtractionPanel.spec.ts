@@ -23,9 +23,6 @@ function actionItem(partial: Partial<IdentifiedActionItem>): IdentifiedActionIte
   return { id: `ai_${partial.text ?? 'x'}`, text: 'x', sourceQuote: 'q', timing: { kind: 'NONE' }, ...partial };
 }
 
-const attentionButton = (wrapper: ReturnType<typeof mount>) =>
-  wrapper.findAll('button').find((b) => b.text().includes('need your attention'));
-
 describe('ExtractionPanel', () => {
   // Issue #75: one continuous scroll (prototype variant C2). The panel title
   // is the document-type label — the Host toolbar already names the Document.
@@ -55,69 +52,36 @@ describe('ExtractionPanel', () => {
     expect(wrapper.text()).toContain('Re-analyze document');
   });
 
-  // The "N things need your attention ›" callout exists only while Critical
-  // Warnings do, and jumps to their section.
-
-  it('offers an attention callout carrying the Critical Warning count', () => {
-    const two = record({
-      extractionStatus: 'COMPLETE',
-      actionItems: [actionItem({ text: 'a' }), actionItem({ text: 'c' })],
-      keyTakeaways: [takeaway({ text: 'b' })],
-    });
-    const wrapper = mount(ExtractionPanel, { props: { extraction: two } });
-    expect(attentionButton(wrapper)?.text()).toContain('2 things need your attention');
-  });
-
-  it('omits the attention callout when nothing is critical', () => {
-    const calm = record({
-      extractionStatus: 'COMPLETE',
-      actionItems: [],
-      keyTakeaways: [takeaway({ text: 'a' }), takeaway({ text: 'b' })],
-    });
-    const wrapper = mount(ExtractionPanel, { props: { extraction: calm } });
-    expect(attentionButton(wrapper)).toBeUndefined();
+  // The Action Items section sits right below the summary — no "N things
+  // need your attention ›" callout duplicates it (issue #133 follow-up).
+  it('renders no attention callout under the summary', () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    expect(wrapper.find('[data-section="attention"]').exists()).toBe(true);
+    expect(wrapper.find('[data-section="summary"] button').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('need your attention');
   });
 
   // ADR 0012: the attention section keeps its identity by its title alone —
-  // no caution triangle; its callout, list border and quote border read neutral.
-  it('shows no caution triangle on the attention heading or callout', () => {
+  // no caution triangle; its list border and quote border read neutral.
+  it('shows no caution triangle on the attention heading', () => {
     const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
     expect(wrapper.find('[data-section="attention"] h2').text()).toBe('Needs your attention');
     expect(wrapper.find('[data-section="attention"] h2 svg').exists()).toBe(false);
-    expect(attentionButton(wrapper)!.findAll('svg')).toHaveLength(1); // the trailing chevron only
   });
 
-  it('styles the attention callout, list and quote neutrally, like Key Takeaways', async () => {
+  it('styles the attention list and quote neutrally, like Key Takeaways', async () => {
     const ex = record({
       extractionStatus: 'COMPLETE',
       actionItems: [actionItem({ text: 'act' })],
       keyTakeaways: [takeaway({ text: 'fact' })],
     });
     const wrapper = mount(ExtractionPanel, { props: { extraction: ex } });
-    expect(attentionButton(wrapper)!.classes()).not.toContain('bg-kt-warning-tint');
     const list = (section: string) => wrapper.find(`[data-section="${section}"] ul`).classes();
     expect(list('attention')).toEqual(list('takeaways'));
 
     await wrapper.findAll('button').find((b) => b.text().includes('act'))!.trigger('click');
     expect(wrapper.find('blockquote').classes()).not.toContain('border-kt-warning');
     expect(wrapper.find('blockquote').classes()).toContain('border-kt-border-strong');
-  });
-
-  it('scrolls to the Needs your attention section when the callout is pressed', async () => {
-    const scrollIntoView = vi.fn();
-    const original = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = scrollIntoView;
-    try {
-      const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
-      await attentionButton(wrapper)!.trigger('click');
-
-      const attention = wrapper.find('[data-section="attention"]');
-      expect(attention.exists()).toBe(true);
-      expect(scrollIntoView).toHaveBeenCalledOnce();
-      expect(scrollIntoView.mock.contexts[0]).toBe(attention.element);
-    } finally {
-      Element.prototype.scrollIntoView = original;
-    }
   });
 
   it('anchors the summary, attention, and takeaways sections', () => {
@@ -301,7 +265,6 @@ describe('ExtractionPanel', () => {
       expect(wrapper.text()).toContain('Not enough readable text');
       expect(wrapper.text()).toContain(stored.plainEnglishSummary);
       expect(wrapper.text()).not.toContain('Needs your attention');
-      expect(attentionButton(wrapper)).toBeUndefined();
       expect(wrapper.find('[data-section="attention"]').exists()).toBe(false);
     },
   );

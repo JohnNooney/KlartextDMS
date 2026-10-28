@@ -13,11 +13,9 @@ import TakeawaySection from './TakeawaySection.vue';
 // the reader-insights prototype's variant C2): the document-type label is
 // the title — the Host toolbar already names the Document — with a muted
 // language/date meta line (the model moved into the ⋯ menu). The summary,
-// a "things need your attention" callout (neutral fill — colour means
-// Urgency, never the Action Item category, ADR 0012) that scrolls to the
-// Critical Warnings, then HIG inset grouped lists of Key Takeaway rows;
-// a row's German source quote expands on selection. Sections carry data-section anchors — the attention
-// callout and the lane-mode outline rail (issue #77) scroll to them. A
+// then HIG inset grouped lists — Action Items first, then Key Takeaways;
+// a row's German source quote expands on selection. Sections carry data-section anchors — the
+// lane-mode outline rail (issue #77) and jump bar scroll to them. A
 // neutral block stands in for the sections
 // when the Extraction came back INSUFFICIENT_CONTENT / UNSUPPORTED_DOCUMENT.
 //
@@ -364,15 +362,6 @@ function reanalyze(): void {
 
       <section data-section="summary" class="mt-kt-4 scroll-mt-kt-2">
         <p class="text-kt-base leading-relaxed">{{ extraction.plainEnglishSummary }}</p>
-        <button
-          v-if="isComplete && criticalTakeaways.length"
-          type="button"
-          class="mt-kt-5 flex w-full items-center gap-kt-3 rounded-kt-lg bg-kt-fill px-kt-4 py-kt-3 text-left text-kt-sm font-medium"
-          @click="scrollToSection('attention')"
-        >
-          <span class="flex-1">{{ criticalTakeaways.length }} things need your attention</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-kt-text-muted" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
-        </button>
       </section>
 
       <div
