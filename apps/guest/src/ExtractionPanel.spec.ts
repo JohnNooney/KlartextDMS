@@ -279,6 +279,7 @@ describe('ExtractionPanel', () => {
     expect(item).toBeDefined();
     await item!.trigger('click');
     expect(wrapper.emitted('reanalyze')).toHaveLength(1);
+    expect(wrapper.find('div[role="menu"]').exists()).toBe(false);
   });
 
   it.each(['INSUFFICIENT_CONTENT', 'UNSUPPORTED_DOCUMENT'] as const)(
@@ -300,6 +301,51 @@ describe('ExtractionPanel', () => {
     await wrapper.find('button[aria-label="More actions"]').trigger('click');
     const item = wrapper.findAll('button').find((b) => b.text() === 'Re-analyze document');
     expect(item!.attributes('disabled')).toBeDefined();
+  });
+
+  // Issue #148: the ⋯ menu dismisses like every Host menu (ADR 0014) — a
+  // click anywhere outside is swallowed by the shield, Escape closes it and
+  // returns focus to the trigger.
+
+  it('a click outside the open menu closes it without acting', async () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    await wrapper.find('button[aria-label="More actions"]').trigger('click');
+    expect(wrapper.text()).toContain('Re-analyze document');
+
+    await wrapper.find('button.menu-shield').trigger('click');
+    expect(wrapper.text()).not.toContain('Re-analyze document');
+    expect(wrapper.emitted('reanalyze')).toBeUndefined();
+  });
+
+  it('Escape closes the open menu and returns focus to the ⋯ trigger', async () => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: fixture },
+      attachTo: document.body,
+    });
+    const trigger = wrapper.find('button[aria-label="More actions"]');
+    await trigger.trigger('click');
+    expect(wrapper.text()).toContain('Re-analyze document');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).not.toContain('Re-analyze document');
+    expect(document.activeElement).toBe(trigger.element);
+    wrapper.unmount();
+  });
+
+  it('exposes aria-haspopup="menu" and an aria-expanded that follows the open state', async () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: fixture } });
+    const trigger = wrapper.find('button[aria-label="More actions"]');
+    expect(trigger.attributes('aria-haspopup')).toBe('menu');
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+
+    await trigger.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.find('div[role="menu"]').exists()).toBe(true);
+
+    await trigger.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('false');
   });
 
   // The failed re-analysis banner is dismissible (issue #32): the stored

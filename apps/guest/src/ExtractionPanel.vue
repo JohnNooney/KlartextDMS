@@ -44,6 +44,7 @@ const emit = defineEmits<{
   createReminder: [actionItemId: string];
 }>();
 const menuOpen = ref(false);
+const menuTrigger = ref<HTMLButtonElement>();
 const root = ref<HTMLElement>();
 
 // The shared Document type labels (bus-contract) — the Host's library search
@@ -174,11 +175,29 @@ function updateScrollSpy(): void {
   activeSection.value = active;
 }
 
+// Issue #148: the ⋯ menu dismisses like every Host menu — the shield
+// swallows a click anywhere outside; Escape closes it and focus goes back
+// to the trigger. The trigger's z-30 keeps it above the shield so a second
+// tap on it still toggles the menu closed.
+function closeMenu(): void {
+  menuOpen.value = false;
+}
+
+function onMenuEscape(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || !menuOpen.value) return;
+  closeMenu();
+  menuTrigger.value?.focus();
+}
+
 onMounted(() => {
   window.addEventListener('scroll', updateScrollSpy, { passive: true });
+  document.addEventListener('keydown', onMenuEscape);
   updateScrollSpy();
 });
-onUnmounted(() => window.removeEventListener('scroll', updateScrollSpy));
+onUnmounted(() => {
+  window.removeEventListener('scroll', updateScrollSpy);
+  document.removeEventListener('keydown', onMenuEscape);
+});
 
 // A selected row shows its source quote; selection is single — picking
 // another row collapses the first, re-picking collapses it too.
@@ -251,7 +270,7 @@ watch(
 );
 
 function reanalyze(): void {
-  menuOpen.value = false;
+  closeMenu();
   emit('reanalyze');
 }
 </script>
@@ -295,28 +314,46 @@ function reanalyze(): void {
         </div>
         <div v-if="isComplete" class="relative shrink-0">
           <button
+            ref="menuTrigger"
             type="button"
             aria-label="More actions"
-            class="rounded-kt-sm px-kt-2 py-kt-1 text-kt-lg leading-none text-kt-text-muted hover:bg-kt-fill"
+            aria-haspopup="menu"
+            :aria-expanded="menuOpen"
+            class="relative z-30 rounded-kt-sm px-kt-2 py-kt-1 text-kt-lg leading-none text-kt-text-muted hover:bg-kt-fill"
             @click="menuOpen = !menuOpen"
           >
             ⋯
           </button>
+          <button
+            v-if="menuOpen"
+            type="button"
+            class="menu-shield fixed inset-0 z-20 cursor-default"
+            aria-hidden="true"
+            tabindex="-1"
+            @click="closeMenu"
+          ></button>
           <div
             v-if="menuOpen"
-            class="absolute right-0 z-10 mt-kt-1 min-w-48 rounded-kt-md bg-kt-surface py-kt-1 shadow-kt-popover"
+            role="menu"
+            aria-label="More actions"
+            class="absolute right-0 z-30 mt-kt-1 min-w-48 rounded-kt-md bg-kt-surface py-kt-1 shadow-kt-popover"
           >
-            <p class="whitespace-nowrap px-kt-4 pb-kt-1 pt-kt-2 text-kt-xs text-kt-text-faint">
+            <p
+              role="presentation"
+              class="whitespace-nowrap px-kt-4 pb-kt-1 pt-kt-2 text-kt-xs text-kt-text-faint"
+            >
               Analyzed with {{ extraction.model }}
             </p>
             <p
               v-if="extraction.schemaVersion === 1"
+              role="presentation"
               class="max-w-56 px-kt-4 pb-kt-1 text-kt-xs text-kt-text-faint"
             >
               Earlier analysis format — re-analyze for dates
             </p>
             <button
               type="button"
+              role="menuitem"
               class="block w-full px-kt-4 py-kt-2 text-left text-kt-sm hover:bg-kt-fill disabled:opacity-50"
               :disabled="jobInFlight"
               @click="reanalyze"

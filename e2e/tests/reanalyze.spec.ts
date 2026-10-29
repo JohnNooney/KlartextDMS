@@ -31,7 +31,7 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
   });
 
   await panel.getByRole('button', { name: 'More actions' }).click();
-  await panel.getByRole('button', { name: 'Re-analyze document' }).click();
+  await panel.getByRole('menuitem', { name: 'Re-analyze document' }).click();
 
   await expect(panel.getByText(/Re-analy(sis queued|zing)…/)).toBeVisible();
   await expect(panel.getByText(fixture.plainEnglishSummary)).toBeVisible();
@@ -42,6 +42,6 @@ test('re-analyze runs a fresh Extraction while the stored one stays readable', a
   await expect(panel.locator('[data-timing-chip]')).toHaveText('Due 31 Jan 2026');
   await panel.getByRole('button', { name: 'More actions' }).click();
   await expect(panel.getByText('Earlier analysis format')).toBeHidden();
-  await expect(panel.getByRole('button', { name: 'Re-analyze document' })).toBeEnabled();
+  await expect(panel.getByRole('menuitem', { name: 'Re-analyze document' })).toBeEnabled();
   await page().unroute(bytes);
 });
