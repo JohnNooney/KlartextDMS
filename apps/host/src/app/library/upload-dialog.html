@@ -5,7 +5,7 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="upload-title"
-  (closeRequested)="closed.emit()"
+  (closeRequested)="onCloseRequested()"
 >
   <header class="dialog-head">
     <h2 id="upload-title">Upload documents</h2>
@@ -42,3 +42,10 @@
     />
   </div>
 </div>
+
+@if (confirmingDiscard()) {
+  <app-discard-changes-alert
+    (kept)="confirmingDiscard.set(false)"
+    (discarded)="closed.emit()"
+  />
+}

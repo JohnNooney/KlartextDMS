@@ -5,7 +5,7 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="reminder-title"
-  (closeRequested)="closed.emit()"
+  (closeRequested)="onCloseRequested()"
   (submit)="$event.preventDefault()"
 >
   <header class="dialog-head">
@@ -69,7 +69,7 @@
   </label>
 
   <footer class="dialog-foot">
-    <button type="button" class="btn btn-secondary" (click)="surface.requestClose()">Cancel</button>
+    <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
     @if (googleUrl(); as url) {
       <a class="btn btn-secondary" [href]="url" target="_blank" rel="noopener" data-testid="reminder-google">Google Calendar</a>
     }
@@ -82,3 +82,10 @@
     >Download .ics</button>
   </footer>
 </form>
+
+@if (confirmingDiscard()) {
+  <app-discard-changes-alert
+    (kept)="confirmingDiscard.set(false)"
+    (discarded)="closed.emit()"
+  />
+}

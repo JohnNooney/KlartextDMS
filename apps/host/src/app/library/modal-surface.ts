@@ -122,7 +122,11 @@ export class ModalSurface {
     backdrop.className = 'backdrop';
     backdrop.setAttribute('aria-label', 'Close');
     // A scrim is a click target, not a control — the trap keeps focus inside.
+    // It must not take pointer focus either: a dirty surface's "Discard
+    // changes?" alert restores focus to whatever held it when the alert
+    // opened, and the scrim lives outside the surface (issue #151).
     backdrop.tabIndex = -1;
+    backdrop.addEventListener('mousedown', (event) => event.preventDefault());
     backdrop.addEventListener('click', this.onBackdropClick);
     this.el.before(backdrop);
     this.backdrop = backdrop;

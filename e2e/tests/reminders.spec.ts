@@ -112,6 +112,48 @@ test('an attention row’s Add reminder opens the dialog with a past-date warnin
   await expect(dialog).toBeHidden();
 });
 
+// Journey (issue #151): a dirty Reminder dialog doesn't throw unsaved
+// input away on an implicit close — tapping the backdrop raises
+// "Discard changes?". Keep Editing returns with input intact; Discard
+// closes the dialog.
+test('a dirty Reminder dialog asks "Discard changes?" before an implicit close', async () => {
+  await page().goto('/folder/wohnung/doc/doc-mietvertrag');
+  const panel = guestPanel(page());
+  await expect(panel.getByRole('heading', { name: 'Tenancy agreement' })).toBeVisible();
+
+  const row = panel.locator('li', { hasText: "three months' notice" });
+  await row.getByRole('button', { name: 'Add reminder' }).click();
+
+  const dialog = page().getByRole('dialog', { name: 'Add reminder' });
+  await expect(dialog).toBeVisible();
+
+  // Editing makes it dirty — the anchor drives the derived deadline.
+  await dialog.getByTestId('reminder-anchor').fill('2026-10-31');
+  await expect(dialog.getByTestId('reminder-deadline')).toHaveValue('2026-07-31');
+
+  const alert = page().getByRole('alertdialog', { name: 'Discard changes?' });
+
+  // A backdrop tap is an implicit close: the alert asks; the dialog stays.
+  await page().locator('.backdrop').click({ position: { x: 8, y: 8 } });
+  await expect(alert).toBeVisible();
+  await expect(dialog).toBeVisible();
+
+  // Keep Editing returns to the dialog with the typed value intact and
+  // focus restored inside it — even though the backdrop raised the alert.
+  await alert.getByRole('button', { name: 'Keep Editing', exact: true }).click();
+  await expect(alert).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('reminder-anchor')).toHaveValue('2026-10-31');
+  await expect(dialog.getByTestId('reminder-anchor')).toBeFocused();
+
+  // The next implicit close asks again — Discard closes the dialog.
+  await page().locator('.backdrop').click({ position: { x: 8, y: 8 } });
+  await expect(alert).toBeVisible();
+  await alert.getByRole('button', { name: 'Discard' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(alert).toBeHidden();
+});
+
 // Journey: the deep link the .ics carries — the Folder-independent
 // `/doc/<id>` form resolves the Document's Folder, rewrites to the
 // canonical URL with ?page&item intact, and lands the cited page.

@@ -1,4 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { DiscardChangesAlert } from './discard-changes-alert';
 import { ModalSurface } from './modal-surface';
 
 export interface FolderNameResult {
@@ -11,13 +12,14 @@ export interface FolderNameResult {
  * New-folder / Rename-folder dialog (issue #33). The name is required and
  * must be unique among siblings (`taken` decides, case-insensitively);
  * description and keywords are optional and only offered on create — they're
- * persisted with no v1 consumer.
+ * persisted with no v1 consumer. A dirty draft asks "Discard changes?"
+ * before an implicit close (issue #151).
  */
 @Component({
   selector: 'app-folder-name-dialog',
   templateUrl: './folder-name-dialog.html',
   styleUrl: './dialogs.scss',
-  imports: [ModalSurface],
+  imports: [DiscardChangesAlert, ModalSurface],
 })
 export class FolderNameDialog {
   readonly heading = input('New folder');
@@ -39,6 +41,21 @@ export class FolderNameDialog {
     return trimmed.length > 0 && this.taken()(trimmed);
   });
   protected readonly canSave = computed(() => this.name().trim().length > 0 && !this.duplicate());
+
+  /** Unsaved input — any field differs from what the dialog opened with. */
+  readonly dirty = computed(
+    () =>
+      this.name() !== this.initialName() ||
+      this.description() !== '' ||
+      this.keywords() !== '',
+  );
+  protected readonly confirmingDiscard = signal(false);
+
+  /** An implicit close of a dirty dialog asks first; a clean one closes. */
+  protected onCloseRequested(): void {
+    if (this.dirty()) this.confirmingDiscard.set(true);
+    else this.closed.emit();
+  }
 
   protected onName(event: Event): void {
     this.nameDraft.set((event.target as HTMLInputElement).value);

@@ -1,5 +1,6 @@
 import { Component, computed, input, OnInit, output, signal } from '@angular/core';
 import { nextOccurrence, type ActionTiming } from '@klartext/bus-contract';
+import { DiscardChangesAlert } from '../library/discard-changes-alert';
 import { ModalSurface } from '../library/modal-surface';
 import {
   buildIcs,
@@ -19,6 +20,9 @@ import type { ReminderDraft } from './reminders';
 
 const NOTICE_UNITS = { DAYS: 'day', WEEKS: 'week', MONTHS: 'month', YEARS: 'year' } as const;
 
+/** The VALARM offset the picker opens on (issue #104). */
+const DEFAULT_ALARM_DAYS = 7;
+
 /** The VALARM offsets the picker offers (issue #104) — `null` is "none". */
 const ALARM_OPTIONS: { days: number | null; label: string }[] = [
   { days: null, label: 'No reminder' },
@@ -34,13 +38,14 @@ const ALARM_OPTIONS: { days: number | null; label: string }[] = [
  * the fields: FIXED_DATE pins the deadline and picks the alarm offset;
  * RECURRING confirms a first date (RRULE for clean cadences, cadence text
  * in the body otherwise); NOTICE_PERIOD asks the anchor and edits the
- * computed "must be received by"; NONE is a free date picker.
+ * computed "must be received by"; NONE is a free date picker. A dirty
+ * draft asks "Discard changes?" before an implicit close (issue #151).
  */
 @Component({
   selector: 'app-reminder-dialog',
   templateUrl: './reminder-dialog.html',
   styleUrl: '../library/dialogs.scss',
-  imports: [ModalSurface],
+  imports: [DiscardChangesAlert, ModalSurface],
 })
 export class ReminderDialog implements OnInit {
   readonly draft = input.required<ReminderDraft>();
@@ -54,8 +59,27 @@ export class ReminderDialog implements OnInit {
   protected readonly anchor = signal('');
   /** The user's own "must be received by" — `null` follows the anchor math. */
   private readonly deadlineOverride = signal<string | null>(null);
-  /** The chosen VALARM offset in days; `null` = no alarm. Prefilled at 7. */
-  protected readonly alarmDays = signal<number | null>(7);
+  /** The chosen VALARM offset in days; `null` = no alarm. */
+  protected readonly alarmDays = signal<number | null>(DEFAULT_ALARM_DAYS);
+
+  /** The date the dialog opened with — prefill isn't unsaved input (issue #151). */
+  private initialDate = '';
+  protected readonly confirmingDiscard = signal(false);
+
+  /** Unsaved input — any field differs from what the dialog opened with. */
+  readonly dirty = computed(
+    () =>
+      this.date() !== this.initialDate ||
+      this.anchor() !== '' ||
+      this.deadline() !== '' ||
+      this.alarmDays() !== DEFAULT_ALARM_DAYS,
+  );
+
+  /** An implicit close of a dirty dialog asks first; a clean one closes. */
+  protected onCloseRequested(): void {
+    if (this.dirty()) this.confirmingDiscard.set(true);
+    else this.closed.emit();
+  }
 
   private readonly timing = computed<ActionTiming>(() => this.draft().item.timing);
   protected readonly kind = computed(() => this.timing().kind);
@@ -147,6 +171,7 @@ export class ReminderDialog implements OnInit {
     else if (isCleanCadence(timing) && timing.kind === 'RECURRING' && timing.dayOfMonth !== undefined) {
       this.date.set(nextOccurrence(timing.dayOfMonth, todayIso()));
     }
+    this.initialDate = this.date();
   }
 
   protected onDate(event: Event): void {

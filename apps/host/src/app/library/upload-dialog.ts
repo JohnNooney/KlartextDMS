@@ -1,5 +1,6 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import type { FolderTree } from '../data/folder-tree';
+import { DiscardChangesAlert } from './discard-changes-alert';
 import { ModalSurface } from './modal-surface';
 import { FolderPicker } from './folder-picker';
 
@@ -7,11 +8,13 @@ import { FolderPicker } from './folder-picker';
  * The upload dialog (issues #16, #28): browse + drag-and-drop with a
  * destination tree picker (#33). It closes
  * the moment files are selected — progress lives on the tiles, not here.
+ * Picking files is the submit; a changed destination is unsaved input
+ * that asks "Discard changes?" before an implicit close (issue #151).
  */
 @Component({
   selector: 'app-upload-dialog',
   templateUrl: './upload-dialog.html',
-  imports: [FolderPicker, ModalSurface],
+  imports: [DiscardChangesAlert, FolderPicker, ModalSurface],
   styleUrl: './dialogs.scss',
 })
 export class UploadDialog {
@@ -28,6 +31,16 @@ export class UploadDialog {
     const chosen = this.destination();
     return chosen === undefined ? this.initialFolderId() : chosen;
   };
+
+  /** Unsaved input — the destination differs from where the dialog opened. */
+  readonly dirty = computed(() => this.folderId() !== this.initialFolderId());
+  protected readonly confirmingDiscard = signal(false);
+
+  /** An implicit close of a dirty dialog asks first; a clean one closes. */
+  protected onCloseRequested(): void {
+    if (this.dirty()) this.confirmingDiscard.set(true);
+    else this.closed.emit();
+  }
 
   protected choose(folderId: string | null): void {
     this.destination.set(folderId);
