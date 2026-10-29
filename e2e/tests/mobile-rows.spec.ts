@@ -226,6 +226,40 @@ test('the attention card and its See All sheet fit a phone with long unbroken na
   await expect(sheet).toBeHidden();
 });
 
+// Issue #149 (ADR 0014): a tile ⋯ menu is an anchored popover that opens
+// upwards when opening below would run it off the visual viewport.
+test('the ⋯ menu on a last-row Document tile opens upwards, fully inside the viewport', async () => {
+  await browseRoot(page());
+
+  // Enough rows that the last one rides the bottom edge of the scrolled
+  // grid, where a below-trigger menu could only leave the viewport.
+  const files = Array.from({ length: 14 }, (_, i) => ({
+    name: `${unique(`Beleg ${i}`)}.pdf`,
+    buffer: seededPdf('mietvertrag-2024.pdf'),
+  }));
+  await uploadViaDialog(page(), files);
+  await expect(page().locator('.tile-meta-progress')).toHaveCount(0);
+
+  const last = page().locator('app-document-tile').last();
+  await last.evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  const more = last.locator('.tile-more');
+  await more.tap();
+
+  const menu = page().getByRole('menu');
+  await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
+
+  const [box, moreBox] = await Promise.all([menu.boundingBox(), more.boundingBox()]);
+  const viewport = page().viewportSize()!;
+  expect(box).not.toBeNull();
+  expect(moreBox).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+  // The flip: the menu ends above the ⋯ instead of starting below it.
+  expect(box!.y + box!.height).toBeLessThanOrEqual(moreBox!.y);
+});
+
 test.afterEach(async () => {
   releaseBytes();
   await page().unroute(byteFetches);

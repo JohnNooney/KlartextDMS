@@ -73,4 +73,22 @@
   /* Mobile sheet's peek detent: grab-handle strip plus the top of the
      Guest frame — its section jump bar (issue #79). */
   --kt-sheet-peek-height: calc(var(--kt-touch-target) * 2);
+
+  /* Overlay surfaces (issue #149, ADR 0014): the named stacking scale every
+     surface picks a rung from, plus the shared sheet chrome — corner radius,
+     the modal scrim, and the 36×5 grabber pill. */
+  --kt-sheet-radius: var(--kt-radius-lg);
+  --kt-backdrop: rgba(0, 0, 0, 0.25);
+  --kt-grabber-width: 36px;
+  --kt-grabber-height: 5px;
+  --kt-grabber-radius: 999px;
+  --kt-grabber-color: var(--kt-fill-strong);
+  --kt-z-chrome: 15;
+  --kt-z-sheet: 20;
+  --kt-z-menu-shield: 39;
+  --kt-z-menu: 40;
+  --kt-z-backdrop: 80;
+  --kt-z-modal: 81;
+  --kt-z-modal-alert: 82;
+  --kt-z-toast: 90;
 }

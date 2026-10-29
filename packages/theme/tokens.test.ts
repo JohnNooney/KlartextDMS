@@ -23,6 +23,12 @@ const TOKENS = [
   '--kt-sidebar-width', '--kt-list-width', '--kt-insights-width',
   '--kt-toolbar-height', '--kt-control-height', '--kt-touch-target',
   '--kt-sheet-peek-height',
+  // Overlay surfaces (issue #149, ADR 0014): the named stacking scale plus
+  // the shared sheet/grabber/backdrop chrome.
+  '--kt-z-chrome', '--kt-z-sheet', '--kt-z-menu-shield', '--kt-z-menu',
+  '--kt-z-backdrop', '--kt-z-modal', '--kt-z-modal-alert', '--kt-z-toast',
+  '--kt-sheet-radius', '--kt-backdrop',
+  '--kt-grabber-width', '--kt-grabber-height', '--kt-grabber-radius', '--kt-grabber-color',
 ];
 
 const SPEC_VALUES: Record<string, string> = {
@@ -36,6 +42,23 @@ const SPEC_VALUES: Record<string, string> = {
   '--kt-space-1': '4px',
   '--kt-control-height': '36px',
   '--kt-touch-target': '44px',
+  // The stacking scale keeps today's order (issue #149); the alert rung is
+  // new — one level above a modal for "Discard changes?" over a dialog.
+  '--kt-z-chrome': '15',
+  '--kt-z-sheet': '20',
+  '--kt-z-menu-shield': '39',
+  '--kt-z-menu': '40',
+  '--kt-z-backdrop': '80',
+  '--kt-z-modal': '81',
+  '--kt-z-modal-alert': '82',
+  '--kt-z-toast': '90',
+  // The grabber pill: 36×5, fully rounded, fill-strong like the Guest
+  // frame's handle.
+  '--kt-grabber-width': '36px',
+  '--kt-grabber-height': '5px',
+  '--kt-grabber-radius': '999px',
+  '--kt-grabber-color': 'var(--kt-fill-strong)',
+  '--kt-backdrop': 'rgba(0, 0, 0, 0.25)',
 };
 
 const TEXT_TOKENS = [

@@ -59,3 +59,19 @@ $kt-toolbar-height: var(--kt-toolbar-height);
 $kt-control-height: var(--kt-control-height);
 $kt-touch-target: var(--kt-touch-target);
 $kt-sheet-peek-height: var(--kt-sheet-peek-height);
+
+// Overlay surfaces (issue #149, ADR 0014).
+$kt-sheet-radius: var(--kt-sheet-radius);
+$kt-backdrop: var(--kt-backdrop);
+$kt-grabber-width: var(--kt-grabber-width);
+$kt-grabber-height: var(--kt-grabber-height);
+$kt-grabber-radius: var(--kt-grabber-radius);
+$kt-grabber-color: var(--kt-grabber-color);
+$kt-z-chrome: var(--kt-z-chrome);
+$kt-z-sheet: var(--kt-z-sheet);
+$kt-z-menu-shield: var(--kt-z-menu-shield);
+$kt-z-menu: var(--kt-z-menu);
+$kt-z-backdrop: var(--kt-z-backdrop);
+$kt-z-modal: var(--kt-z-modal);
+$kt-z-modal-alert: var(--kt-z-modal-alert);
+$kt-z-toast: var(--kt-z-toast);

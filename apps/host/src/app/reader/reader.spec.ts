@@ -15,6 +15,7 @@ import {
   type PdfTextLayerRef,
 } from './pdf-engine';
 import { Reader } from './reader';
+import { menuOverflowingViewport } from '../menu-viewport.spec-support';
 
 function record(id: string, title: string, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
   return {
@@ -161,6 +162,19 @@ describe('Reader (issue #29)', () => {
     expect(current).toBeTruthy();
     expect(current!.getAttribute('title')).toBe(longTitle);
     expect(current!.classList.contains('title-doc')).toBe(true);
+  });
+
+  it('flips the path menu up when it would run off the visual viewport (issue #149)', async () => {
+    const rectSpy = menuOverflowingViewport();
+    try {
+      const { el, fixture } = await setup(record('d1', 'Mietvertrag 2024'));
+      (el.querySelector<HTMLButtonElement>('.path-title-btn'))!.click();
+      fixture.detectChanges();
+      const menu = el.querySelector('.path-menu') as HTMLElement;
+      expect(menu.classList.contains('is-up')).toBe(true);
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 
   it('walks sibling Documents with the ‹ n of m › stepper', async () => {

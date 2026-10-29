@@ -287,13 +287,13 @@
 // ---------- Mobile (≤768px): clear the peeking insights sheet (issue #50) ----------
 @media (max-width: 768px) {
   // The chrome floats as a pill above the peeking sheet — the reader toolbar
-  // is the only bar on top. The raised sheet (z-index 20) covers it.
+  // is the only bar on top. The raised sheet (the --kt-z-sheet layer) covers it.
   .pdf-chrome {
     position: fixed;
     left: 50%;
     bottom: calc(#{kt.$kt-sheet-peek-height} + env(safe-area-inset-bottom, 0px) + #{kt.$kt-space-3});
     transform: translateX(-50%);
-    z-index: 15;
+    z-index: kt.$kt-z-chrome;
     min-height: 0;
     padding: 0 kt.$kt-space-1;
     border-bottom: 0;

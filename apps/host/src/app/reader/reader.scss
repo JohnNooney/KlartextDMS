@@ -81,8 +81,10 @@
 // The path menu shows the full Document title; clamp it so a very long name
 // doesn't push the menu off-screen or make a single item unwieldy.
 .path-menu {
-  // Match the width of the parent .path-title anchor (the title button).
+  // Match the width of the parent .path-title anchor (the title button);
+  // the 220px floor rides over the shared recipe's 200px.
   width: 100%;
+  min-width: 220px;
   max-width: 330px;
 
   .menu-item {
@@ -105,76 +107,16 @@
   }
 }
 
-.menu-shield {
-  position: fixed;
-  inset: 0;
-  z-index: 39;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: default;
-}
-
+// The path menu's anchor — the shared recipe lives in styles.scss (issue
+// #149). MenuViewport's .is-up opens it above the title when it would run
+// off the visual viewport's bottom.
 .menu {
-  position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 220px;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(24px) saturate(180%);
-  border-radius: kt.$kt-radius-md;
-  box-shadow: kt.$kt-shadow-popover;
-  z-index: 40;
-  text-align: left;
-  animation: kt-menu-pop 0.12s ease;
-}
 
-@keyframes kt-menu-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  font-size: kt.$kt-text-sm;
-  font-weight: 400;
-  white-space: nowrap;
-  text-align: left;
-  color: kt.$kt-text;
-
-  svg {
-    opacity: 0.75;
-    flex-shrink: 0;
-  }
-
-  &.is-current {
-    font-weight: 500;
-    cursor: default;
-  }
-}
-
-button.menu-item {
-  cursor: pointer;
-
-  &:hover {
-    background: kt.$kt-accent;
-    color: #fff;
-
-    svg {
-      opacity: 1;
-    }
+  &.is-up {
+    top: auto;
+    bottom: calc(100% + 4px);
   }
 }
 

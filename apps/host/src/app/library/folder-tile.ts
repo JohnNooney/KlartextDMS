@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import type { FolderRecord } from '../data/folder';
+import { MenuViewport } from '../menu-viewport';
 import { describeContents } from './folder-contents';
 import { isItemDrag, readDragItem, setDragItem, type DragItem } from './folder-drag';
 
@@ -23,6 +24,7 @@ interface MenuItem {
   selector: 'app-folder-tile',
   templateUrl: './folder-tile.html',
   styleUrl: './document-tile.scss',
+  imports: [MenuViewport],
   host: {
     class: 'tile',
     '[class.has-menu]': 'menuOpen()',

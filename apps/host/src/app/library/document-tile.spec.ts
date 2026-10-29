@@ -3,6 +3,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
 import { DocumentTile, type TileAction } from './document-tile';
+import { menuOverflowingViewport } from '../menu-viewport.spec-support';
 
 function record(status: DocumentStatus, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
   return {
@@ -151,6 +152,18 @@ describe('DocumentTile — per-state contract (issue #16)', () => {
     fixture.detectChanges();
     expect(actions).toEqual(['rename']);
     expect(el.querySelector('.menu')).toBeNull();
+  });
+
+  it('flips the ⋮ menu up when it would run off the visual viewport (issue #149)', async () => {
+    const rectSpy = menuOverflowingViewport();
+    try {
+      const fixture = await setup(record('ready'));
+      openMenu(fixture);
+      const menu = fixture.nativeElement.querySelector('.menu') as HTMLElement;
+      expect(menu.classList.contains('is-up')).toBe(true);
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 });
 

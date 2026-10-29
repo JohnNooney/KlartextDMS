@@ -156,84 +156,17 @@
   }
 }
 
-.menu-shield {
-  position: fixed;
-  inset: 0;
-  z-index: 39;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: default;
-}
-
+// The ⋮ menu's anchor — the shared recipe lives in styles.scss (issue
+// #149). Below the ⋮ (top:6, 30px tall); MenuViewport's .is-up flips it
+// above the button when it would run off the visual viewport's bottom.
 .menu {
-  position: absolute;
   top: 36px;
   right: 6px;
-  min-width: 200px;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(24px) saturate(180%);
-  border-radius: kt.$kt-radius-md;
-  box-shadow: kt.$kt-shadow-popover;
-  z-index: 40;
-  text-align: left;
-  animation: pop 0.12s ease;
-}
 
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
+  &.is-up {
+    top: auto;
+    bottom: calc(100% - 6px);
   }
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  font-size: kt.$kt-text-sm;
-  font-weight: 400;
-  white-space: nowrap;
-  text-align: left;
-  cursor: pointer;
-  color: kt.$kt-text;
-
-  svg {
-    opacity: 0.75;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: kt.$kt-accent;
-    color: #fff;
-
-    svg {
-      opacity: 1;
-    }
-  }
-
-  &.is-destructive {
-    color: kt.$kt-danger;
-
-    &:hover {
-      background: kt.$kt-danger;
-      color: #fff;
-    }
-  }
-}
-
-.menu-sep {
-  height: 1px;
-  background: kt.$kt-border;
-  margin: 4px 8px;
 }
 
 // ---------- Mobile (≤768px): tiles become list rows (issue #29) ----------

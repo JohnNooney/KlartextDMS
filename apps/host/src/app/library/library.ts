@@ -11,6 +11,7 @@ import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
+import { MenuViewport } from '../menu-viewport';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
 import { Reader } from '../reader/reader';
@@ -74,6 +75,7 @@ type DialogState =
     FolderDeleteDialog,
     ReminderDialog,
     SearchResults,
+    MenuViewport,
   ],
   host: {
     '(document:keydown.escape)': 'closeAddMenu()',

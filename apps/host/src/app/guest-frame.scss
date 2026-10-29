@@ -14,7 +14,7 @@
   border-radius: kt.$kt-radius-lg;
   box-shadow: kt.$kt-shadow-panel;
   overflow: hidden;
-  z-index: 20;
+  z-index: kt.$kt-z-sheet;
 
   &[hidden] {
     display: none;
@@ -52,7 +52,7 @@
     bottom: 0;
     width: auto;
     border-top: 1px solid kt.$kt-border;
-    border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
+    border-radius: kt.$kt-sheet-radius kt.$kt-sheet-radius 0 0;
     transition: height 0.2s ease;
 
     // While dragging, the inline height tracks the finger — no transition.
@@ -99,10 +99,10 @@
     touch-action: none;
 
     .handle-pill {
-      width: 36px;
-      height: 5px;
-      border-radius: 999px;
-      background: kt.$kt-fill-strong;
+      width: kt.$kt-grabber-width;
+      height: kt.$kt-grabber-height;
+      border-radius: kt.$kt-grabber-radius;
+      background: kt.$kt-grabber-color;
     }
   }
 
