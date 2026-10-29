@@ -167,14 +167,14 @@ button {
 .sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
-  background: rgba(0, 0, 0, 0.25);
+  z-index: kt.$kt-z-backdrop;
+  background: kt.$kt-backdrop;
   cursor: default;
 }
 
 .sheet {
   position: fixed;
-  z-index: 81;
+  z-index: kt.$kt-z-modal;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
@@ -184,7 +184,7 @@ button {
   display: flex;
   flex-direction: column;
   background: kt.$kt-canvas;
-  border-radius: kt.$kt-radius-lg kt.$kt-radius-lg 0 0;
+  border-radius: kt.$kt-sheet-radius kt.$kt-sheet-radius 0 0;
   box-shadow: kt.$kt-shadow-popover;
 
   @media (min-width: 769px) {
@@ -197,11 +197,11 @@ button {
 }
 
 .sheet-grabber {
-  width: 36px;
-  height: 5px;
+  width: kt.$kt-grabber-width;
+  height: kt.$kt-grabber-height;
   margin: 6px auto 0;
-  border-radius: 3px;
-  background: kt.$kt-border-strong;
+  border-radius: kt.$kt-grabber-radius;
+  background: kt.$kt-grabber-color;
 
   @media (min-width: 769px) {
     display: none;

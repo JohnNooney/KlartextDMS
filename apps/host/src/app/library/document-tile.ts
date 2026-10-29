@@ -1,6 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import type { DocumentRecord } from '../data/document';
+import { MenuViewport } from '../menu-viewport';
 import { setDragItem } from './folder-drag';
 
 /** The ⋮ menu verbs a tile can emit; the library maps them to store calls. */
@@ -37,7 +38,7 @@ interface MenuItem {
   selector: 'app-document-tile',
   templateUrl: './document-tile.html',
   styleUrl: './document-tile.scss',
-  imports: [DatePipe],
+  imports: [DatePipe, MenuViewport],
   host: {
     class: 'tile',
     '[class.has-menu]': 'menuOpen()',

@@ -3,6 +3,7 @@ import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
 import { LibraryStore } from '../library/library.store';
+import { MenuViewport } from '../menu-viewport';
 import { OpenDocument } from '../open-document';
 import { PageFocus } from '../page-focus';
 import { PdfViewer } from './pdf-viewer';
@@ -19,7 +20,7 @@ import { siblingsOf, stepperFor } from './siblings';
   selector: 'app-reader',
   templateUrl: './reader.html',
   styleUrl: './reader.scss',
-  imports: [PdfViewer],
+  imports: [PdfViewer, MenuViewport],
 })
 export class Reader {
   readonly doc = input.required<DocumentRecord>();

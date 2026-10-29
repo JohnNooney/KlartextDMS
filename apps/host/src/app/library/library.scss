@@ -208,68 +208,16 @@
   place-items: center;
 }
 
-// The + affordance's add menu (issue #59) — same frosted recipe as the tiles'
-// ⋮ menus (document-tile.scss), anchored under the +.
-.menu-shield {
-  position: fixed;
-  inset: 0;
-  z-index: 39;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: default;
-}
-
+// The + affordance's add menu (issue #59) — the shared recipe in
+// styles.scss (issue #149), anchored under the +; MenuViewport's .is-up
+// flips it above when it would run off the visual viewport's bottom.
 .menu {
-  position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 200px;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(24px) saturate(180%);
-  border-radius: kt.$kt-radius-md;
-  box-shadow: kt.$kt-shadow-popover;
-  z-index: 40;
-  animation: pop 0.12s ease;
-}
 
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  font-size: kt.$kt-text-sm;
-  white-space: nowrap;
-  text-align: left;
-  cursor: pointer;
-  color: kt.$kt-text;
-
-  svg {
-    opacity: 0.75;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background: kt.$kt-accent;
-    color: #fff;
-
-    svg {
-      opacity: 1;
-    }
+  &.is-up {
+    top: auto;
+    bottom: calc(100% + 6px);
   }
 }
 

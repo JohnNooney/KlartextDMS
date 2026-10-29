@@ -12,6 +12,7 @@ import { PDF_ENGINE } from '../reader/pdf-engine';
 import { Reminders } from '../reminders/reminders';
 import { Library } from './library';
 import { LibraryStore } from './library.store';
+import { menuOverflowingViewport } from '../menu-viewport.spec-support';
 
 function record(status: DocumentStatus, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
   return {
@@ -504,6 +505,19 @@ describe('Library', () => {
     (el.querySelector('.menu-shield') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.library-toolbar [role="menu"]')).toBeNull();
+  });
+
+  it('flips the add menu up when it would run off the visual viewport (issue #149)', async () => {
+    const rectSpy = menuOverflowingViewport();
+    try {
+      const { fixture, el } = await setup();
+      (el.querySelector('.btn-add') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const menu = el.querySelector('.library-toolbar [role="menu"]') as HTMLElement;
+      expect(menu.classList.contains('is-up')).toBe(true);
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 
   // Issue #120: the Folder attention overview above the tile grid.

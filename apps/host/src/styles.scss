@@ -124,3 +124,94 @@ button {
     transform: rotate(360deg);
   }
 }
+
+// ---------- Anchored popover menus (issue #149, ADR 0014) ----------
+// One recipe for every Host menu — the tiles' ⋮, the library's + add menu,
+// the reader's path menu. Each site keeps only its anchor offsets and the
+// .is-up re-anchor; MenuViewport tags .is-up when opening below would run
+// the menu past the visual viewport's bottom edge.
+.menu-shield {
+  position: fixed;
+  inset: 0;
+  z-index: kt.$kt-z-menu-shield;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.menu {
+  position: absolute;
+  min-width: 200px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-radius: kt.$kt-radius-md;
+  box-shadow: kt.$kt-shadow-popover;
+  z-index: kt.$kt-z-menu;
+  text-align: left;
+  animation: kt-menu-pop 0.12s ease;
+}
+
+@keyframes kt-menu-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: kt.$kt-text-sm;
+  font-weight: 400;
+  white-space: nowrap;
+  text-align: left;
+  color: kt.$kt-text;
+
+  svg {
+    opacity: 0.75;
+    flex-shrink: 0;
+  }
+
+  &.is-current {
+    font-weight: 500;
+    cursor: default;
+  }
+
+  &.is-destructive {
+    color: kt.$kt-danger;
+  }
+}
+
+button.menu-item {
+  cursor: pointer;
+
+  &:hover {
+    background: kt.$kt-accent;
+    color: #fff;
+
+    svg {
+      opacity: 1;
+    }
+  }
+
+  &.is-destructive:hover {
+    background: kt.$kt-danger;
+    color: #fff;
+  }
+}
+
+.menu-sep {
+  height: 1px;
+  background: kt.$kt-border;
+  margin: 4px 8px;
+}

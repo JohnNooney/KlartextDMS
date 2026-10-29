@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FolderRecord } from '../data/folder';
 import { DRAG_MIME, type DragItem } from './folder-drag';
 import { FolderTile, type FolderTileAction } from './folder-tile';
+import { menuOverflowingViewport } from '../menu-viewport.spec-support';
 
 const ts = { seconds: 1_700_000_000, nanoseconds: 0 };
 
@@ -92,6 +93,18 @@ describe('FolderTile (issue #33)', () => {
 
     el.click();
     expect(opened).toHaveBeenCalledOnce();
+  });
+
+  it('flips the ⋮ menu up when it would run off the visual viewport (issue #149)', async () => {
+    const rectSpy = menuOverflowingViewport();
+    try {
+      const fixture = await setup(folder());
+      openMenu(fixture);
+      const menu = fixture.nativeElement.querySelector('.menu') as HTMLElement;
+      expect(menu.classList.contains('is-up')).toBe(true);
+    } finally {
+      rectSpy.mockRestore();
+    }
   });
 
   it('shows the name and a deep document count; clicking opens the Folder', async () => {
