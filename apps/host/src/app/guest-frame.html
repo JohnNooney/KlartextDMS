@@ -2,28 +2,19 @@
      Extraction Jobs (issues #16, #25); displays while a Document is open —
      right-hand lane on desktop, a bottom sheet on mobile (#29) with three
      snap detents — peek, half, full — resting at peek so the PDF stays
-     primary (issue #50). At peek the iframe's top sliver is the Guest's
-     jump bar — there is no Host-side header (issue #79). -->
+     primary (issue #50). The detent mechanics are the shared Sheet
+     primitive (issue #152); its handle strip sits ahead of the iframe so
+     at peek the iframe's top sliver is the Guest's jump bar — there is no
+     Host-side header (issue #79). -->
 <div
   class="guest-frame-host"
-  #host
+  appSheet
+  [detents]="detents"
+  [(detent)]="sheetState"
   [hidden]="docOpen() === null"
   [class.lane-hidden]="laneHidden()"
-  [attr.data-sheet]="sheetState()"
 >
-  <button
-    type="button"
-    class="sheet-handle"
-    (click)="cycleSheet()"
-    (pointerdown)="onHandlePointerDown($event)"
-    (pointermove)="onHandlePointerMove($event)"
-    (pointerup)="onHandlePointerUp($event)"
-    (pointercancel)="onHandlePointerUp($event)"
-    [attr.aria-expanded]="sheetState() !== 'peek'"
-    [attr.aria-label]="sheetLabel()"
-  >
-    <span class="handle-pill" aria-hidden="true"></span>
-  </button>
+  <button appSheetHandle [label]="sheetLabel()"></button>
   <iframe
     #frame
     class="guest-frame"

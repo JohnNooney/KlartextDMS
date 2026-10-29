@@ -1,0 +1,47 @@
+@use 'tokens' as kt;
+
+// The sheet primitive's shared chrome (issue #152, ADR 0014): the one
+// settle transition every detent sheet owns, and the grab-handle strip
+// carrying the 36×5 grabber pill. Sheets are a phone presentation — above
+// the 768px breakpoint every surface presents another way and the handle
+// stays out of the page. A surface includes this file next to its own
+// styles when it mounts the Sheet primitive.
+.sheet-handle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  [data-sheet] {
+    transition: height 0.2s ease;
+
+    // While dragging, the inline height tracks the finger — no transition.
+    &.is-dragging {
+      transition: none;
+    }
+  }
+
+  // Grab-handle strip in the sheet chrome (issue #49): a full-width touch
+  // target, its own row in the sheet — never overlaid on sheet content.
+  .sheet-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 100%;
+    height: kt.$kt-touch-target;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: kt.$kt-text-muted;
+    // The sheet resizes on vertical drags — the browser must not take the
+    // gesture over for scrolling, or the pointer stream is cancelled.
+    touch-action: none;
+
+    .handle-pill {
+      width: kt.$kt-grabber-width;
+      height: kt.$kt-grabber-height;
+      border-radius: kt.$kt-grabber-radius;
+      background: kt.$kt-grabber-color;
+    }
+  }
+}

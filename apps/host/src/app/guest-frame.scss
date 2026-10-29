@@ -36,12 +36,9 @@
   border: 0;
 }
 
-// The sheet handle is a mobile-only affordance.
-.sheet-handle {
-  display: none;
-}
-
 // ---------- Mobile (≤768px): bottom sheet with peek/half/full detents (#50) ----------
+// The settle transition and the grab-handle strip are the Sheet primitive's
+// shared chrome — sheet.scss, included beside this file (issue #152).
 @media (max-width: 768px) {
   .guest-frame-host {
     display: flex;
@@ -53,12 +50,7 @@
     width: auto;
     border-top: 1px solid kt.$kt-border;
     border-radius: kt.$kt-sheet-radius kt.$kt-sheet-radius 0 0;
-    transition: height 0.2s ease;
 
-    // While dragging, the inline height tracks the finger — no transition.
-    &.is-dragging {
-      transition: none;
-    }
     // viewport-fit=cover: the sheet extends under the home indicator, so its
     // bottom inset is padding rather than content (issue #59).
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -77,32 +69,6 @@
     &[data-sheet='full'] {
       height: 100%;
       border-radius: 0;
-    }
-  }
-
-  // Grab-handle strip in the sheet chrome (issue #49): its own row above the
-  // iframe — never overlaid on Guest content — and a full-width touch target.
-  // The pill is the drag affordance (#62).
-  .sheet-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 100%;
-    height: kt.$kt-touch-target;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    color: kt.$kt-text-muted;
-    // The sheet resizes on vertical drags — the browser must not take the
-    // gesture over for scrolling, or the pointer stream is cancelled.
-    touch-action: none;
-
-    .handle-pill {
-      width: kt.$kt-grabber-width;
-      height: kt.$kt-grabber-height;
-      border-radius: kt.$kt-grabber-radius;
-      background: kt.$kt-grabber-color;
     }
   }
 
