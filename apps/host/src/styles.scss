@@ -92,6 +92,25 @@ button {
   }
 }
 
+// ---------- Modal surface chrome (issue #150) ----------
+// The scrim ModalSurface inserts behind every modal surface.
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: kt.$kt-z-backdrop;
+  border: 0;
+  padding: 0;
+  background: kt.$kt-backdrop;
+  animation: fade 0.15s ease;
+  cursor: default;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
 .close-btn {
   width: 30px;
   height: 30px;

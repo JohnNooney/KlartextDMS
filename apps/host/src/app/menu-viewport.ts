@@ -1,7 +1,7 @@
 import { afterNextRender, Directive, ElementRef, inject } from '@angular/core';
 
 /**
- * The menu half of DialogViewport's job (issue #149, ADR 0014): a `.menu`
+ * The menu half of ModalSurface's tracking job (issue #149, ADR 0014): a `.menu`
  * opens below its trigger unless that would push it past the bottom of the
  * *visual* viewport — then `.is-up` opens it above instead, so a tile menu
  * on the last grid row never runs off-screen. One measurement per element

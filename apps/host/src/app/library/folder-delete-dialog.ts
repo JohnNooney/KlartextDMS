@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { describeContents } from './folder-contents';
-import { DialogViewport } from './dialog-viewport';
+import { ModalSurface } from './modal-surface';
 
 /**
  * Recursive Folder delete confirmation (issue #33): spells out the deep
@@ -10,10 +10,7 @@ import { DialogViewport } from './dialog-viewport';
   selector: 'app-folder-delete-dialog',
   templateUrl: './folder-delete-dialog.html',
   styleUrl: './dialogs.scss',
-  imports: [DialogViewport],
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
+  imports: [ModalSurface],
 })
 export class FolderDeleteDialog {
   readonly name = input.required<string>();

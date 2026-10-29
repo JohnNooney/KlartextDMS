@@ -1,6 +1,6 @@
 import { Component, input, output, signal } from '@angular/core';
 import type { FolderTree } from '../data/folder-tree';
-import { DialogViewport } from './dialog-viewport';
+import { ModalSurface } from './modal-surface';
 import { FolderPicker } from './folder-picker';
 
 /**
@@ -12,10 +12,7 @@ import { FolderPicker } from './folder-picker';
   selector: 'app-move-dialog',
   templateUrl: './move-dialog.html',
   styleUrl: './dialogs.scss',
-  imports: [FolderPicker, DialogViewport],
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
+  imports: [FolderPicker, ModalSurface],
 })
 export class MoveDialog {
   /** The moved item's display name. */

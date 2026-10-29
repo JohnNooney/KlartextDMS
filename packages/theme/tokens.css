@@ -79,6 +79,9 @@
      the modal scrim, and the 36×5 grabber pill. */
   --kt-sheet-radius: var(--kt-radius-lg);
   --kt-backdrop: rgba(0, 0, 0, 0.25);
+  /* Clearance a centred modal surface keeps from the visual viewport's
+     edge — read by both the .dialog cap and ModalSurface's tracking (issue #150). */
+  --kt-modal-margin: 48px;
   --kt-grabber-width: 36px;
   --kt-grabber-height: 5px;
   --kt-grabber-radius: 999px;

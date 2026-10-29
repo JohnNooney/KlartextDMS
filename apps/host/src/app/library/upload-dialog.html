@@ -1,8 +1,15 @@
-<button type="button" class="backdrop" (click)="closed.emit()" aria-label="Close"></button>
-<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+<div
+  class="dialog"
+  appModalSurface
+  #surface="appModalSurface"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="upload-title"
+  (closeRequested)="closed.emit()"
+>
   <header class="dialog-head">
     <h2 id="upload-title">Upload documents</h2>
-    <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
+    <button type="button" class="close-btn" (click)="surface.requestClose()" aria-label="Close">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
     </button>
   </header>

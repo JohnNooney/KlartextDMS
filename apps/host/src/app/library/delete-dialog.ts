@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import type { DocumentRecord } from '../data/document';
-import { DialogViewport } from './dialog-viewport';
+import { ModalSurface } from './modal-surface';
 
 /**
  * Delete confirmation (issue #16): "Delete {title}? This permanently removes
@@ -10,10 +10,7 @@ import { DialogViewport } from './dialog-viewport';
   selector: 'app-delete-dialog',
   templateUrl: './delete-dialog.html',
   styleUrl: './dialogs.scss',
-  imports: [DialogViewport],
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
+  imports: [ModalSurface],
 })
 export class DeleteDialog {
   readonly doc = input.required<DocumentRecord>();

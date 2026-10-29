@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import type { AttentionGroup, AttentionGroupKey, AttentionItem } from './attention-overview';
+import { ModalSurface } from './modal-surface';
 
 /** How many of the most urgent Action Items the card shows; See All lists the rest. */
 const CARD_ITEMS = 3;
@@ -23,9 +24,7 @@ interface CardItem {
   selector: 'app-attention-panel',
   templateUrl: './attention-panel.html',
   styleUrl: './attention-panel.scss',
-  host: {
-    '(document:keydown.escape)': 'sheetOpen.set(false)',
-  },
+  imports: [ModalSurface],
 })
 export class AttentionPanel {
   readonly groups = input.required<AttentionGroup[]>();

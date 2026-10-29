@@ -163,15 +163,8 @@ button {
 }
 
 // See All: a bottom sheet on phones, a centred modal on desktop, styled
-// like the Guest's attention lists (TakeawaySection / KeyTakeawayRow).
-.sheet-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: kt.$kt-z-backdrop;
-  background: kt.$kt-backdrop;
-  cursor: default;
-}
-
+// like the Guest's attention lists (TakeawaySection / KeyTakeawayRow). The
+// scrim is ModalSurface's shared .backdrop (styles.scss, issue #150).
 .sheet {
   position: fixed;
   z-index: kt.$kt-z-modal;
@@ -220,12 +213,6 @@ button {
     font-size: kt.$kt-text-lg;
     font-weight: 600;
   }
-}
-
-.sheet-done {
-  min-height: kt.$kt-touch-target;
-  color: kt.$kt-accent;
-  font-size: kt.$kt-text-sm;
 }
 
 .sheet-body {

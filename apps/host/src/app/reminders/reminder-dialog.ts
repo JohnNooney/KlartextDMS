@@ -1,6 +1,6 @@
 import { Component, computed, input, OnInit, output, signal } from '@angular/core';
 import { nextOccurrence, type ActionTiming } from '@klartext/bus-contract';
-import { DialogViewport } from '../library/dialog-viewport';
+import { ModalSurface } from '../library/modal-surface';
 import {
   buildIcs,
   cleanRrule,
@@ -40,10 +40,7 @@ const ALARM_OPTIONS: { days: number | null; label: string }[] = [
   selector: 'app-reminder-dialog',
   templateUrl: './reminder-dialog.html',
   styleUrl: '../library/dialogs.scss',
-  imports: [DialogViewport],
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
+  imports: [ModalSurface],
 })
 export class ReminderDialog implements OnInit {
   readonly draft = input.required<ReminderDraft>();

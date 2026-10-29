@@ -595,6 +595,16 @@ describe('Library', () => {
       expect(deep.querySelector('.sheet-page')!.textContent).toBe('p. 3');
     });
 
+    it('/ stays out of the search field while the sheet is open (issue #150)', async () => {
+      const { fixture, el } = await withAttention();
+      seeAll(el)!.click();
+      fixture.detectChanges();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }));
+      fixture.detectChanges();
+      expect(document.activeElement).not.toBe(el.querySelector('.search-input'));
+    });
+
     it('collapses and expands from the header', async () => {
       const { fixture, el } = await withAttention();
       const head = panel(el)!.querySelector<HTMLButtonElement>('.attention-toggle')!;
