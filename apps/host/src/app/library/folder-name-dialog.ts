@@ -1,5 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import { DialogViewport } from './dialog-viewport';
+import { ModalSurface } from './modal-surface';
 
 export interface FolderNameResult {
   name: string;
@@ -17,10 +17,7 @@ export interface FolderNameResult {
   selector: 'app-folder-name-dialog',
   templateUrl: './folder-name-dialog.html',
   styleUrl: './dialogs.scss',
-  imports: [DialogViewport],
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
+  imports: [ModalSurface],
 })
 export class FolderNameDialog {
   readonly heading = input('New folder');

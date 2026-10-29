@@ -1,6 +1,6 @@
 import { Component, input, output, signal } from '@angular/core';
 import type { FolderTree } from '../data/folder-tree';
-import { DialogViewport } from './dialog-viewport';
+import { ModalSurface } from './modal-surface';
 import { FolderPicker } from './folder-picker';
 
 /**
@@ -11,11 +11,8 @@ import { FolderPicker } from './folder-picker';
 @Component({
   selector: 'app-upload-dialog',
   templateUrl: './upload-dialog.html',
-  imports: [FolderPicker, DialogViewport],
+  imports: [FolderPicker, ModalSurface],
   styleUrl: './dialogs.scss',
-  host: {
-    '(document:keydown.escape)': 'closed.emit()',
-  },
 })
 export class UploadDialog {
   readonly tree = input.required<FolderTree>();

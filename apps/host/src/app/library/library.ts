@@ -27,6 +27,7 @@ import { isItemDrag, type DragItem } from './folder-drag';
 import { FolderNameDialog, type FolderNameResult } from './folder-name-dialog';
 import { FolderTile, type FolderTileAction } from './folder-tile';
 import { FolderTreeView } from './folder-tree';
+import { modalSurfaceOpen } from './modal-surface';
 import { MoveDialog } from './move-dialog';
 import { RenameDialog } from './rename-dialog';
 import { SearchResults } from './search-results';
@@ -239,7 +240,15 @@ export class Library {
     const shortcut =
       (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) ||
       (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey));
-    if (!shortcut || event.defaultPrevented || this.dialog() !== null || this.reminders.draft() !== null) return;
+    if (
+      !shortcut ||
+      event.defaultPrevented ||
+      this.dialog() !== null ||
+      this.reminders.draft() !== null ||
+      modalSurfaceOpen()
+    ) {
+      return;
+    }
     const target = event.target;
     if (
       target instanceof HTMLElement &&

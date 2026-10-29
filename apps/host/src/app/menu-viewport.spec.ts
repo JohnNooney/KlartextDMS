@@ -2,20 +2,15 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MenuViewport } from './menu-viewport';
+import {
+  FakeVisualViewport,
+  restoreVisualViewport,
+  useVisualViewport,
+} from './visual-viewport.spec-support';
 
 @Component({ template: '<div class="menu"></div>', imports: [MenuViewport] })
 class HostWithMenu {}
 
-class FakeVisualViewport extends EventTarget {
-  constructor(
-    public height: number,
-    public offsetTop = 0,
-  ) {
-    super();
-  }
-}
-
-let originalViewport: PropertyDescriptor | undefined;
 let rectSpy: ReturnType<typeof vi.spyOn>;
 
 /** Reports `bottom` for the .menu element, zeroed rects for everything else. */
@@ -38,8 +33,7 @@ function stubMenuBottom(bottom: number) {
 }
 
 async function setup(viewport: FakeVisualViewport | null, menuBottom: number) {
-  originalViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
-  Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+  useVisualViewport(viewport);
   stubMenuBottom(menuBottom);
   await TestBed.configureTestingModule({ imports: [HostWithMenu] }).compileComponents();
   const fixture = TestBed.createComponent(HostWithMenu);
@@ -49,8 +43,7 @@ async function setup(viewport: FakeVisualViewport | null, menuBottom: number) {
 
 afterEach(() => {
   rectSpy.mockRestore();
-  if (originalViewport) Object.defineProperty(window, 'visualViewport', originalViewport);
-  else delete (window as { visualViewport?: unknown }).visualViewport;
+  restoreVisualViewport();
 });
 
 describe('MenuViewport (issue #149)', () => {

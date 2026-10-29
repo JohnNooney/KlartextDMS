@@ -222,7 +222,7 @@ test('the attention card and its See All sheet fit a phone with long unbroken na
   await expectInsideViewport(page(), row.locator('.sheet-doc'));
   await expectInsideViewport(page(), row.locator('.sheet-page'));
   await expectNoHorizontalOverflow(page());
-  await sheet.getByRole('button', { name: 'Done' }).click();
+  await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toBeHidden();
 });
 

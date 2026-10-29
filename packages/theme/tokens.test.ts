@@ -27,7 +27,7 @@ const TOKENS = [
   // the shared sheet/grabber/backdrop chrome.
   '--kt-z-chrome', '--kt-z-sheet', '--kt-z-menu-shield', '--kt-z-menu',
   '--kt-z-backdrop', '--kt-z-modal', '--kt-z-modal-alert', '--kt-z-toast',
-  '--kt-sheet-radius', '--kt-backdrop',
+  '--kt-sheet-radius', '--kt-backdrop', '--kt-modal-margin',
   '--kt-grabber-width', '--kt-grabber-height', '--kt-grabber-radius', '--kt-grabber-color',
 ];
 

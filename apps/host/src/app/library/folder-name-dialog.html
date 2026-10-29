@@ -1,8 +1,16 @@
-<button type="button" class="backdrop" (click)="closed.emit()" aria-label="Close"></button>
-<form class="dialog" role="dialog" aria-modal="true" aria-labelledby="folder-name-title" (submit)="submit($event)">
+<form
+  class="dialog"
+  appModalSurface
+  #surface="appModalSurface"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="folder-name-title"
+  (closeRequested)="closed.emit()"
+  (submit)="submit($event)"
+>
   <header class="dialog-head">
     <h2 id="folder-name-title">{{ heading() }}</h2>
-    <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
+    <button type="button" class="close-btn" (click)="surface.requestClose()" aria-label="Close">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
     </button>
   </header>
@@ -35,7 +43,7 @@
   }
 
   <footer class="dialog-foot">
-    <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
+    <button type="button" class="btn btn-secondary" (click)="surface.requestClose()">Cancel</button>
     <button type="submit" class="btn btn-primary" [disabled]="!canSave()">Save</button>
   </footer>
 </form>
