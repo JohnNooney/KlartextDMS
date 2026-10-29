@@ -60,6 +60,11 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
   ).toBeVisible();
   await expect(frame).toBeAttached();
   await expectNoOverlap(page());
+  // The 36x5 grabber pill (--kt-grabber-* tokens) is the drag affordance.
+  const pill = await page().locator('.sheet-handle .handle-pill').boundingBox();
+  expect(pill).not.toBeNull();
+  expect(Math.round(pill!.width)).toBe(36);
+  expect(Math.round(pill!.height)).toBe(5);
   // 88px: the 44px handle strip plus the 44px jump bar (the emulator has no
   // safe-area inset).
   await expectSheetHeight(84, 96);

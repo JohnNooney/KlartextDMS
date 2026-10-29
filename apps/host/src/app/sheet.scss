@@ -1,0 +1,17 @@
+// The sheet primitive's shared chrome (issue #152, ADR 0014): the one
+// settle transition every detent sheet owns. Sheets are a phone
+// presentation — above the 768px breakpoint every surface presents another
+// way. A surface includes this file next to its own styles when it mounts
+// the Sheet primitive; the grab-handle strip styles itself through the
+// SheetHandle component's own stylesheet (view encapsulation scopes a
+// consumer's styles to its own template — the pill isn't in it).
+@media (max-width: 768px) {
+  [data-sheet] {
+    transition: height 0.2s ease;
+
+    // While dragging, the inline height tracks the finger — no transition.
+    &.is-dragging {
+      transition: none;
+    }
+  }
+}
