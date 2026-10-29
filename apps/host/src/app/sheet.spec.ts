@@ -3,6 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { Sheet, type SheetDetent } from './sheet';
 import { SheetHandle } from './sheet-handle';
+import {
+  sheetDetent,
+  sheetHandle as handle,
+  sheetPointer as pointer,
+  sheetTap as tap,
+} from './sheet.spec-support';
 
 // The attention sheet's future detent set (issue #152, ADR 0014): two
 // heights, no peek — the smallest is half the viewport.
@@ -50,27 +56,8 @@ function sheet(el: HTMLElement): HTMLElement {
   return el.querySelector<HTMLElement>('.test-sheet')!;
 }
 
-function handle(el: HTMLElement): HTMLButtonElement {
-  return el.querySelector<HTMLButtonElement>('.sheet-handle')!;
-}
-
 function detent(el: HTMLElement): string | null {
-  return sheet(el).getAttribute('data-sheet');
-}
-
-function tap(fixture: { detectChanges(): void }, el: HTMLElement): void {
-  handle(el).click();
-  fixture.detectChanges();
-}
-
-/** jsdom has no PointerEvent — a MouseEvent carries clientY and the handlers
- *  only read pointer-agnostic fields. An explicit timeStamp fakes velocity. */
-function pointer(el: HTMLElement, type: string, clientY: number, timeStamp?: number): void {
-  const event = new MouseEvent(type, { clientY, bubbles: true });
-  if (timeStamp !== undefined) {
-    Object.defineProperty(event, 'timeStamp', { value: timeStamp });
-  }
-  handle(el).dispatchEvent(event);
+  return sheetDetent(sheet(el));
 }
 
 describe('Sheet primitive (issue #152)', () => {

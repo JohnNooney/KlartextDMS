@@ -8,6 +8,12 @@ import { HOST_CONFIG } from './host-config';
 import { OpenDocument } from './open-document';
 import { PageFocus } from './page-focus';
 import { SheetExpand } from './sheet-expand';
+import {
+  sheetDetent,
+  sheetHandle as handle,
+  sheetPointer as pointer,
+  sheetTap as tap,
+} from './sheet.spec-support';
 
 class FakeOpenDocument {
   readonly docId = signal<string | null>('doc-1');
@@ -51,27 +57,8 @@ function host(el: HTMLElement): HTMLElement {
   return el.querySelector<HTMLElement>('.guest-frame-host')!;
 }
 
-function handle(el: HTMLElement): HTMLButtonElement {
-  return el.querySelector<HTMLButtonElement>('.sheet-handle')!;
-}
-
 function detent(el: HTMLElement): string | null {
-  return host(el).getAttribute('data-sheet');
-}
-
-function tap(fixture: { detectChanges(): void }, el: HTMLElement): void {
-  handle(el).click();
-  fixture.detectChanges();
-}
-
-/** jsdom has no PointerEvent — a MouseEvent carries clientY and the handlers
- *  only read pointer-agnostic fields. An explicit timeStamp fakes velocity. */
-function pointer(el: HTMLElement, type: string, clientY: number, timeStamp?: number): void {
-  const event = new MouseEvent(type, { clientY, bubbles: true });
-  if (timeStamp !== undefined) {
-    Object.defineProperty(event, 'timeStamp', { value: timeStamp });
-  }
-  handle(el).dispatchEvent(event);
+  return sheetDetent(host(el));
 }
 
 describe('GuestFrame mobile sheet detents (issue #50)', () => {

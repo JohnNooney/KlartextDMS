@@ -83,7 +83,7 @@ export class Sheet {
   readonly next = computed<SheetDetent>(() => {
     const detents = this.detents();
     const index = detents.findIndex((d) => d.name === this.detent());
-    return detents[(index + 1) % detents.length] ?? detents[0]!;
+    return detents[(index + 1) % detents.length]!;
   });
   /** Whether the sheet sits above its smallest detent — the handle's aria-expanded. */
   readonly expanded = computed(() => this.detent() !== this.detents()[0]?.name);
@@ -173,21 +173,21 @@ export class Sheet {
     );
     if (Math.abs(velocity) > FLICK_VELOCITY_PX_MS) index += velocity < 0 ? 1 : -1;
 
-    // Dropping the inline height animates from the finger position to the
-    // detent — write `data-sheet` first so the settle never returns to the
-    // old one (the signal's binding lands on the same value next change
-    // detection anyway).
-    el.style.height = '';
-    el.classList.remove('is-dragging');
-    if (
-      this.dismissible() &&
-      (index < 0 || (index === 0 && height < heights[0]!))
-    ) {
+    // Below the smallest detent a dismissible sheet asks to close — a
+    // request, not an action: the detent stands until the consumer decides.
+    if (this.dismissible() && (index < 0 || (index === 0 && height < heights[0]!))) {
+      el.style.height = '';
+      el.classList.remove('is-dragging');
       this.dismissRequested.emit();
       return;
     }
     index = Math.min(Math.max(index, 0), detents.length - 1);
     this.detent.set(detents[index]!.name);
+    // Write the detent synchronously — the signal's binding lands on the same
+    // value next change detection — so dropping the inline height animates
+    // from the finger position to the detent, never back to the old one.
     el.dataset['sheet'] = detents[index]!.name;
+    el.style.height = '';
+    el.classList.remove('is-dragging');
   }
 }
