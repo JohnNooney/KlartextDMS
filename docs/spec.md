@@ -49,7 +49,7 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 
 # v2
 
-Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**, **Done**.
+Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion, overlay surfaces). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**, **Done**.
 
 ## v2 architecture deltas
 
@@ -58,12 +58,13 @@ Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/i
 - [Translations run as on-demand Bus jobs and persist page by page](./adr/0009-translation-persisted-per-page.md) — ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105), research [#100](https://github.com/JohnNooney/KlartextDMS/issues/100))
 - [Action Item Urgency rules live in the shared Bus contract](./adr/0012-shared-action-item-urgency-rules.md) — one bucketing + labelling function in `bus-contract`; colour means Urgency, never category, in both apps. ([#132](https://github.com/JohnNooney/KlartextDMS/issues/132))
 - [Action Item Done state lives on the DocumentRecord, keyed by content-hash ids](./adr/0013-action-item-done-state-on-document-record.md) — one reversible **Done** state for every timing kind; monthly recurrences are Done per occurrence (`doneThrough`); shared `isDone` in `bus-contract`; Guest marks via `GUEST_SET_ACTION_ITEM_DONE`, Host pushes `ACTION_ITEM_STATES`. Host overview hides Done (Undo toast; "Done (n)" group in See All); Guest moves Done items to a collapsed group. ([#134](https://github.com/JohnNooney/KlartextDMS/issues/134))
+- [Overlay surface policy: one style per kind of surface, all modals Host-owned](./adr/0014-overlay-surface-policy.md) — on phones the Reminder is full-screen, other dialogs stay centred, the attention "See All" sheet is a modal medium/large sheet with a close (X) button (never "Done"), and menus stay anchored popovers that open upwards near the bottom edge. Every modal traps and restores focus, and unsaved input asks "Discard changes?". The Guest's ⋯ menu is its only overlay (ADR 0006). ([#141](https://github.com/JohnNooney/KlartextDMS/issues/141))
 
 Feature decisions without ADRs: [Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/102) (prototype `prototype/folder-attention-overview`, behavioral reference only — no code ports), [library search](https://github.com/JohnNooney/KlartextDMS/issues/103), [calendar reminders](https://github.com/JohnNooney/KlartextDMS/issues/104).
 
 ## v2 build order
 
-Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel.
+Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel; Phase C (overlay surfaces) runs alongside them, with only C5 and C6 waiting on A8.
 
 | # | Issue | Blocked by | Decisions it implements |
 |---|---|---|---|
@@ -78,6 +79,14 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 | B1 | [Translation Bus contract and Guest translation client](https://github.com/JohnNooney/KlartextDMS/issues/123) | — | #105, ADR 0009 |
 | B2 | [Host Translation orchestration, persistence, and rules](https://github.com/JohnNooney/KlartextDMS/issues/124) | #123 | #105, ADR 0009 |
 | B3 | [Reader Translated view](https://github.com/JohnNooney/KlartextDMS/issues/125) | #124 | #105 |
+| C1 | [Guest ⋯ menu closes on outside click and Escape](https://github.com/JohnNooney/KlartextDMS/issues/148) | — | #141, ADR 0014 |
+| C2 | [Shared Host menu styles, z-index scale, and overlay tokens](https://github.com/JohnNooney/KlartextDMS/issues/149) | — | #141, ADR 0014 |
+| C3 | [Host modal surfaces trap focus and share dismissal and viewport tracking](https://github.com/JohnNooney/KlartextDMS/issues/150) | — | #141, ADR 0014 |
+| C4 | [Confirm before discarding unsaved dialog input](https://github.com/JohnNooney/KlartextDMS/issues/151) | #150 | #141, ADR 0014 |
+| C5 | [Extract the Host sheet primitive from the Guest frame](https://github.com/JohnNooney/KlartextDMS/issues/152) | #144 | #141, ADR 0014 |
+| C6 | [Attention See All sheet on the shared sheet primitive](https://github.com/JohnNooney/KlartextDMS/issues/153) | #144, #149, #150, #152 | #141, ADR 0014 |
+
+Phase C implements [#141](https://github.com/JohnNooney/KlartextDMS/issues/141). C1–C3 can start now. C5 and C6 wait for A8 because they rework the same attention sheet.
 
 ## Explicitly not in v2
 
@@ -85,3 +94,4 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 - Split original/translated view, search over Translations, Translations as Extraction input ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105)).
 - Search backend, fuzzy matching, EN↔DE query translation ([#103](https://github.com/JohnNooney/KlartextDMS/issues/103)); libraries beyond ~2,000 Documents ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101)).
 - Per-occurrence tracking of recurring Action Items, and missed cycles reading Overdue ([#143](https://github.com/JohnNooney/KlartextDMS/issues/143), deferred from [#134](https://github.com/JohnNooney/KlartextDMS/issues/134)).
+- Bottom action sheets for menus, sheets for every dialog on phones, and a Done/Cancel sheet header ([#141](https://github.com/JohnNooney/KlartextDMS/issues/141), ADR 0014).
