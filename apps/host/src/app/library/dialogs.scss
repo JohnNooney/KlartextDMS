@@ -27,6 +27,12 @@
   }
 }
 
+// The "Discard changes?" alert stacks on the modal-alert rung, above the
+// dialog that raised it (issue #151).
+.dialog-alert {
+  z-index: kt.$kt-z-modal-alert;
+}
+
 .dialog-head {
   display: flex;
   align-items: center;

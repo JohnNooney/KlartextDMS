@@ -105,6 +105,13 @@ button {
   cursor: default;
 }
 
+// The "Discard changes?" alert's scrim rises with it — ModalSurface
+// inserts it as the alert's previous sibling — so it covers the dialog it
+// sits above instead of letting pointer events through (issue #151).
+.backdrop:has(+ .dialog-alert) {
+  z-index: kt.$kt-z-modal-alert;
+}
+
 @keyframes fade {
   from {
     opacity: 0;

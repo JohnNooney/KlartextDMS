@@ -5,7 +5,7 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="rename-title"
-  (closeRequested)="closed.emit()"
+  (closeRequested)="onCloseRequested()"
   (submit)="submit($event)"
 >
   <header class="dialog-head">
@@ -29,7 +29,14 @@
   </label>
 
   <footer class="dialog-foot">
-    <button type="button" class="btn btn-secondary" (click)="surface.requestClose()">Cancel</button>
+    <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cancel</button>
     <button type="submit" class="btn btn-primary" [disabled]="!canSave()">Save</button>
   </footer>
 </form>
+
+@if (confirmingDiscard()) {
+  <app-discard-changes-alert
+    (kept)="confirmingDiscard.set(false)"
+    (discarded)="closed.emit()"
+  />
+}
