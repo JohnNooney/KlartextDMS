@@ -49,7 +49,7 @@ Issues 4/5 and 9 parallelize across the two apps; 8, 11, 12 parallelize once the
 
 # v2
 
-Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion, overlay surfaces). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**, **Done**.
+Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/issues/98). Five tracks; decisions are recorded here as each ticket resolves, including follow-ons surfaced during implementation (urgency consistency, Action Item completion, overlay surfaces, batch re-analysis). Vocabulary additions in `CONTEXT.md`: **Action Item** (replaces Critical Warning), **Reminder**, **Translation**, **Urgency**, **Done**, **Outdated Extraction**, **Batch re-analysis**.
 
 ## v2 architecture deltas
 
@@ -59,12 +59,13 @@ Wayfinder map: [Klartext v2 backlog](https://github.com/JohnNooney/KlartextDMS/i
 - [Action Item Urgency rules live in the shared Bus contract](./adr/0012-shared-action-item-urgency-rules.md) — one bucketing + labelling function in `bus-contract`; colour means Urgency, never category, in both apps. ([#132](https://github.com/JohnNooney/KlartextDMS/issues/132))
 - [Action Item Done state lives on the DocumentRecord, keyed by content-hash ids](./adr/0013-action-item-done-state-on-document-record.md) — one reversible **Done** state for every timing kind; monthly recurrences are Done per occurrence (`doneThrough`); shared `isDone` in `bus-contract`; Guest marks via `GUEST_SET_ACTION_ITEM_DONE`, Host pushes `ACTION_ITEM_STATES`. Host overview hides Done (Undo toast; "Done (n)" group in See All); Guest moves Done items to a collapsed group. ([#134](https://github.com/JohnNooney/KlartextDMS/issues/134))
 - [Overlay surface policy: one style per kind of surface, all modals Host-owned](./adr/0014-overlay-surface-policy.md) — on phones the Reminder is full-screen, other dialogs stay centred, the attention "See All" sheet is a modal medium/large sheet with a close (X) button (never "Done"), and menus stay anchored popovers that open upwards near the bottom edge. Every modal traps and restores focus, and unsaved input asks "Discard changes?". The Guest's ⋯ menu is its only overlay (ADR 0006). ([#141](https://github.com/JohnNooney/KlartextDMS/issues/141))
+- [Batch re-analysis is user-initiated and never automatic](./adr/0015-batch-reanalysis-user-initiated.md) — refines ADR 0010's rejection of *silent* bulk migration. Criteria Outdated format (`schemaVersion < CURRENT_EXTRACTION_SCHEMA_VERSION`; `promptVersion` ignored) / Couldn't analyze / All documents over the current Folder and nested Folders (whole library at root); never-analyzed and in-flight Documents excluded. Entry from a library-toolbar ⋯ item plus a nudge when the scope has Outdated Extractions (no Folder-tile entry); centred confirm dialog with live counts, a collapsed title list, a Done/Reminder warning only when relevant, a quota line above 50, no hard cap. Batch members ride the serial queue behind upload/retry/Translation work, one batch at a time, nothing persisted (a reload ends it; re-running picks up the rest). Progress strip "Re-analyzing 3 of 14 · Cancel" in library and reader; Cancel drops unstarted members. No per-Document toasts — one summary with "Try again" for failures; stop after 3 consecutive failures. Done marks and Reminder `UID`s may reset on upgrade (ADR 0013 kept). ([#156](https://github.com/JohnNooney/KlartextDMS/issues/156))
 
 Feature decisions without ADRs: [Folder attention overview](https://github.com/JohnNooney/KlartextDMS/issues/102) (prototype `prototype/folder-attention-overview`, behavioral reference only — no code ports), [library search](https://github.com/JohnNooney/KlartextDMS/issues/103), [calendar reminders](https://github.com/JohnNooney/KlartextDMS/issues/104).
 
 ## v2 build order
 
-Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel; Phase C (overlay surfaces) runs alongside them, with only C5 and C6 waiting on A8.
+Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel; Phase C (overlay surfaces) runs alongside them, with only C5 and C6 waiting on A8. Phase D (batch re-analysis) starts now with D0 and D1 in parallel; D2 waits on both plus A8, C2 and C3.
 
 | # | Issue | Blocked by | Decisions it implements |
 |---|---|---|---|
@@ -88,6 +89,14 @@ Same rules as v1. Each slice carries its own unit, contract, integration and Pla
 
 Phase C implements [#141](https://github.com/JohnNooney/KlartextDMS/issues/141). C1–C3 can start now. C5 and C6 wait for A8 because they rework the same attention sheet.
 
+| # | Issue | Blocked by | Decisions it implements |
+|---|---|---|---|
+| D0 | [Batch re-analysis UX prototype](https://github.com/JohnNooney/KlartextDMS/issues/157) | — | #156 |
+| D1 | [Batch re-analysis engine: outdated detection, queue priority, BatchReanalysis service](https://github.com/JohnNooney/KlartextDMS/issues/158) | — | #156, ADR 0015 |
+| D2 | [Batch re-analysis UI: toolbar entry, nudge, dialog, progress strip](https://github.com/JohnNooney/KlartextDMS/issues/159) | #157, #158, #144, #149, #150 | #156, ADR 0015, ADR 0014 |
+
+Phase D implements [#156](https://github.com/JohnNooney/KlartextDMS/issues/156). D0 is a `wayfinder:prototype` on `prototype/batch-reanalysis` (behavioral reference only — no code ports) that settles nudge and progress-strip placement, dialog layout, and toast copy. D1 and B2 ([#124](https://github.com/JohnNooney/KlartextDMS/issues/124)) both need priority in the shared serial queue; whichever lands second adopts the other's mechanism.
+
 ## Explicitly not in v2
 
 - Direct Google Calendar API event creation via OAuth ([#104](https://github.com/JohnNooney/KlartextDMS/issues/104)).
@@ -95,3 +104,5 @@ Phase C implements [#141](https://github.com/JohnNooney/KlartextDMS/issues/141).
 - Search backend, fuzzy matching, EN↔DE query translation ([#103](https://github.com/JohnNooney/KlartextDMS/issues/103)); libraries beyond ~2,000 Documents ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101)).
 - Per-occurrence tracking of recurring Action Items, and missed cycles reading Overdue ([#143](https://github.com/JohnNooney/KlartextDMS/issues/143), deferred from [#134](https://github.com/JohnNooney/KlartextDMS/issues/134)).
 - Bottom action sheets for menus, sheets for every dialog on phones, and a Done/Cancel sheet header ([#141](https://github.com/JohnNooney/KlartextDMS/issues/141), ADR 0014).
+- Automatic re-analysis on a schema bump, persisted batches, and hand-picked multi-select in the library grid ([#160](https://github.com/JohnNooney/KlartextDMS/issues/160), ADR 0015).
+- Carrying Done marks across an Extraction schema upgrade ([#161](https://github.com/JohnNooney/KlartextDMS/issues/161), ADR 0013 kept).

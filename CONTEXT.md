@@ -28,6 +28,10 @@ _Avoid_: directory, category, collection, tag
 The AI-produced plain-English reading of one Document: its document type, translated summary, Action Items, and Key Takeaways. One Extraction per Document, persisted and reused.
 _Avoid_: analysis, summary, result, TL;DR
 
+**Outdated Extraction**:
+An Extraction stored in an earlier format than the one Klartext now produces. It is still readable, but lacks what the current format adds (such as Action Item dates) until the user re-analyzes its Document.
+_Avoid_: legacy, old, v1, stale extraction
+
 **Action Item**:
 Something in a Document the user must do, comply with when acting, or track on a calendar to avoid losing money or rights (deadlines, recurring payment or filing obligations, notice periods, strict form rules such as paper-only cancellation), directly supported by a quotation from the Document and carrying structured timing when the Document states a deadline, cadence, or notice period. Its timing's distance from today gives the item its Urgency.
 _Avoid_: risk, alert, red flag, critical warning
@@ -55,6 +59,10 @@ _Avoid_: summary, transcript, translated summary
 **Extraction Job**:
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
 _Avoid_: analysis, task, background job
+
+**Batch re-analysis**:
+The user's explicit request to re-analyze every Document in a Folder (and its nested Folders) that matches one criterion — Outdated Extraction, couldn't be analyzed, or all of them — run as ordinary Extraction Jobs. Klartext never starts one on its own.
+_Avoid_: migration, bulk update, reprocess
 
 ### Cross-frame communication
 
