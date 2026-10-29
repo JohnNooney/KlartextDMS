@@ -112,7 +112,9 @@ button {
 }
 
 .attention-remind,
-.sheet-remind {
+.sheet-remind,
+.attention-done-check,
+.sheet-done-check {
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -127,8 +129,38 @@ button {
   }
 }
 
-.attention-remind {
+.attention-remind,
+.attention-done-check {
   margin-right: kt.$kt-space-2;
+}
+
+.sheet-done-check {
+  margin-top: kt.$kt-space-3;
+  margin-left: kt.$kt-space-3;
+  margin-right: kt.$kt-space-1;
+}
+
+.sheet-done-toggle {
+  min-height: kt.$kt-touch-target;
+  cursor: pointer;
+}
+
+.sheet-done {
+  .sheet-group-title {
+    color: kt.$kt-text-faint;
+  }
+}
+
+.sheet-done-list {
+  .sheet-text,
+  .sheet-doc,
+  .sheet-page {
+    color: kt.$kt-text-faint;
+  }
+
+  .sheet-done-row {
+    padding-left: 0;
+  }
 }
 
 .attention-text {

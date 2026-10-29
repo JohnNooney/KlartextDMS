@@ -76,7 +76,18 @@ describe('buildAttentionOverview', () => {
       scoped: readyDocumentsInScope(documents, folders, scopeFolderId),
       extractions: new Map(extractions.map((e) => [e.documentId, e])),
       today: TODAY,
-    });
+    }).groups;
+
+  const buildDone = (
+    documents: DocumentRecord[],
+    extractions: ExtractionRecord[],
+    scopeFolderId: string | null = null,
+  ) =>
+    buildAttentionOverview({
+      scoped: readyDocumentsInScope(documents, folders, scopeFolderId),
+      extractions: new Map(extractions.map((e) => [e.documentId, e])),
+      today: TODAY,
+    }).done;
 
   it('groups Action Items Overdue / This week / Later / No date, in that order, omitting empty groups', () => {
     const groups = build(
@@ -246,5 +257,51 @@ describe('buildAttentionOverview', () => {
 
   it('returns no groups when nothing needs attention', () => {
     expect(build([doc('d1', null)], [extraction('d1', [])])).toEqual([]);
+  });
+
+  // Issue #144: Done items leave the Urgency groups — hidden from the card
+  // and its count — and collect in the flat `done` list the See All sheet
+  // renders as its collapsed group.
+  it('moves Done items out of the groups into the done list', () => {
+    const states = {
+      'd1-0': { doneAt: '2026-10-21T08:00:00.000Z' },
+      'd1-2': { doneAt: '2026-10-21T09:00:00.000Z' },
+    };
+    const documents = [doc('d1', null, { actionItemStates: states })];
+    const extractions = [
+      extraction('d1', [
+        { text: 'handled', timing: { kind: 'NONE' } },
+        { text: 'open', timing: fixed('2026-10-19') },
+        { text: 'also handled', timing: { kind: 'NONE' } },
+      ]),
+    ];
+
+    expect(build(documents, extractions).map((g) => [g.key, g.items.map((i) => i.text)])).toEqual([
+      ['overdue', ['open']],
+    ]);
+    expect(buildDone(documents, extractions).map((i) => i.text)).toEqual([
+      'handled',
+      'also handled',
+    ]);
+  });
+
+  it('a computable recurrence is Done only while its occurrence is covered — a past doneThrough returns it', () => {
+    const rent = {
+      kind: 'RECURRING',
+      cadence: 'MONTHLY',
+      dayOfMonth: 25,
+      scheduleLabel: 'Monthly by the 25th',
+    } as const;
+    const extractions = [extraction('d1', [{ text: 'rent', timing: rent }])];
+
+    // Marked against the 25 Sep occurrence — returned on 22 Oct.
+    const returned = [doc('d1', null, { actionItemStates: { 'd1-0': { doneAt: 'x', doneThrough: '2026-09-25' } } })];
+    expect(build(returned, extractions).flatMap((g) => g.items.map((i) => i.text))).toEqual(['rent']);
+    expect(buildDone(returned, extractions)).toEqual([]);
+
+    // Marked against the 25 Oct occurrence — still Done today.
+    const covered = [doc('d1', null, { actionItemStates: { 'd1-0': { doneAt: 'x', doneThrough: '2026-10-25' } } })];
+    expect(build(covered, extractions)).toEqual([]);
+    expect(buildDone(covered, extractions).map((i) => i.text)).toEqual(['rent']);
   });
 });

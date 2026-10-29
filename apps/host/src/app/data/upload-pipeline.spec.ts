@@ -80,6 +80,8 @@ class FakeDocumentRepository implements DocumentRepository {
     });
   }
 
+  async setActionItemStates(): Promise<void> {}
+
   async rename(documentId: string, title: string): Promise<void> {
     const record = this.records.get(documentId);
     if (!record) throw notFound();

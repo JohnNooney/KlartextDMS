@@ -2,11 +2,13 @@
 import { computed } from 'vue';
 import ExtractionPanel from './ExtractionPanel.vue';
 import {
+  actionItemStates,
   createReminder,
   currentSession,
   expandPanel,
   presentationMode,
   requestRetry,
+  setActionItemDone,
   showPage,
 } from './session-store';
 
@@ -32,10 +34,12 @@ function reanalyze(): void {
       :extraction="extraction"
       :extraction-state="extractionState"
       :presentation="presentationMode"
+      :action-item-states="actionItemStates"
       @reanalyze="reanalyze"
       @show-page="showPage"
       @expand-panel="expandPanel"
       @create-reminder="createReminder"
+      @done-toggled="setActionItemDone"
     />
     <div v-else class="flex h-screen items-center justify-center">
       <div class="rounded-kt-lg bg-kt-surface p-kt-8 text-center shadow-kt-panel">

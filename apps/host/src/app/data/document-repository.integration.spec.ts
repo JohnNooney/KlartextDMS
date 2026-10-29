@@ -155,6 +155,33 @@ describe('FirestoreDocumentRepository (emulator)', () => {
     ).toBeNull();
   });
 
+  it('writes and replaces the Document’s Done map (issue #144)', async () => {
+    const record = await create({
+      title: 'Versicherung',
+      originalFilename: 'versicherung.pdf',
+      sizeBytes: 4,
+      folderId: null,
+    });
+    expect(record.actionItemStates).toBeUndefined();
+
+    await repo.setActionItemStates(record.id, {
+      ai_1: { doneAt: '2026-10-21T08:00:00.000Z' },
+      ai_2: { doneAt: '2026-10-21T09:00:00.000Z', doneThrough: '2026-11-03' },
+    });
+    expect((await repo.list()).find((d) => d.id === record.id)?.actionItemStates).toEqual({
+      ai_1: { doneAt: '2026-10-21T08:00:00.000Z' },
+      ai_2: { doneAt: '2026-10-21T09:00:00.000Z', doneThrough: '2026-11-03' },
+    });
+
+    // Un-mark / prune is a whole-map write — the key is gone.
+    await repo.setActionItemStates(record.id, {
+      ai_2: { doneAt: '2026-10-21T09:00:00.000Z', doneThrough: '2026-11-03' },
+    });
+    expect(
+      (await repo.list()).find((d) => d.id === record.id)?.actionItemStates,
+    ).toEqual({ ai_2: { doneAt: '2026-10-21T09:00:00.000Z', doneThrough: '2026-11-03' } });
+  });
+
   it('watch emits the live library on every metadata change until unsubscribed', async () => {
     const emissions: DocumentRecord[][] = [];
     const unwatch = repo.watch((documents) => emissions.push(documents));

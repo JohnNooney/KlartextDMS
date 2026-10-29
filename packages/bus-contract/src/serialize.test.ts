@@ -13,6 +13,7 @@ describe('golden fixtures', () => {
   it('has exactly one fixture per message type', () => {
     const types = Object.keys(goldenFixtures).sort();
     expect(types).toEqual([
+      'ACTION_ITEM_STATES',
       'AI_PROCESSING_ERROR',
       'AI_PROCESSING_STARTED',
       'AI_PROCESSING_SUCCESS',
@@ -20,13 +21,14 @@ describe('golden fixtures', () => {
       'GUEST_CREATE_REMINDER',
       'GUEST_EXPAND_PANEL',
       'GUEST_READY',
+      'GUEST_SET_ACTION_ITEM_DONE',
       'GUEST_SHOW_PAGE',
       'INIT_SESSION',
       'PANEL_PRESENTATION',
       'RETRY_EXTRACTION',
       'SESSION_ACK',
     ]);
-    expect(new Set(types).size).toBe(12);
+    expect(new Set(types).size).toBe(14);
   });
 
   it.each(Object.entries(goldenFixtures))('%s round-trips through the reference serializer', (type, json) => {

@@ -38,6 +38,7 @@ function setup() {
     pageRequested: vi.fn(),
     panelExpandRequested: vi.fn(),
     reminderRequested: vi.fn(),
+    actionItemDoneRequested: vi.fn(),
   };
   const adapter = createHostBusAdapter({ source, sink, peerOrigin: PEER_ORIGIN, probe });
   return { source, sink, probe, adapter };
@@ -516,5 +517,101 @@ describe('HostBus adapter — GUEST_CREATE_REMINDER (issue #122)', () => {
     });
 
     expect(probe.reminderRequested).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #144: GUEST_SET_ACTION_ITEM_DONE is Session-bound like the other
+// panel write-backs — the adapter binds the Session's Document and drops a
+// malformed request; pushActionItemStates answers under the same Session.
+describe('HostBus adapter — Done marks (issue #144)', () => {
+  const session = {
+    ...goldenFixtureMessages.INIT_SESSION.payload,
+    sessionId: 'sess-open',
+    documentId: 'doc-1',
+  };
+
+  const setDone = (sessionId: string, payload: unknown) => ({
+    v: 1,
+    type: 'GUEST_SET_ACTION_ITEM_DONE',
+    sessionId,
+    payload,
+  });
+
+  const statesSent = (sink: BusSink) =>
+    (sink.postMessage as ReturnType<typeof vi.fn>).mock.calls
+      .map(([data]) => data)
+      .filter((d): d is { type: 'ACTION_ITEM_STATES'; sessionId: string; payload: unknown } =>
+        (d as { type?: string }).type === 'ACTION_ITEM_STATES',
+      );
+
+  it('reports a valid request with the Session’s documentId bound in', () => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: setDone('sess-open', { actionItemId: 'ai_3f9c2e7b1d4a58', done: true, extra: 1 }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.actionItemDoneRequested).toHaveBeenCalledWith({
+      documentId: 'doc-1',
+      actionItemId: 'ai_3f9c2e7b1d4a58',
+      done: true,
+    });
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the message for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: setDone(sessionId, { actionItemId: 'ai_9f', done: true }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.actionItemDoneRequested).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a missing id', { done: true }],
+    ['an empty id', { actionItemId: '', done: true }],
+    ['a missing done', { actionItemId: 'ai_9f' }],
+    ['a non-boolean done', { actionItemId: 'ai_9f', done: 'yes' }],
+    ['a non-object payload', 'ai_9f'],
+    ['a null payload', null],
+  ])('ignores %s', (_label, payload) => {
+    const { source, sink, probe, adapter } = setup();
+    adapter.openSession(session);
+
+    source.emit({
+      data: setDone('sess-open', payload),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.actionItemDoneRequested).not.toHaveBeenCalled();
+  });
+
+  it('pushActionItemStates sends the map under the current Session', () => {
+    const { sink, adapter } = setup();
+    adapter.openSession(session);
+
+    const states = { ai_9f: { doneAt: '2026-10-21T08:00:00.000Z' } };
+    adapter.pushActionItemStates(states);
+
+    expect(statesSent(sink)).toEqual([
+      { v: 1, type: 'ACTION_ITEM_STATES', sessionId: 'sess-open', payload: { states } },
+    ]);
+  });
+
+  it('pushActionItemStates is silent without a Session', () => {
+    const { sink, adapter } = setup();
+    adapter.pushActionItemStates({ ai_9f: { doneAt: 'x' } });
+    expect(statesSent(sink)).toEqual([]);
   });
 });

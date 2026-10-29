@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import type {
+  ActionItemDoneRequest,
   ExtractionCandidate,
   ExtractionError,
   GuestShowPagePayload,
@@ -77,5 +78,9 @@ export class HostBusEvents implements HostBusProbe {
 
   reminderRequested(request: ReminderRequest): void {
     this.delegate?.reminderRequested(request);
+  }
+
+  actionItemDoneRequested(request: ActionItemDoneRequest): void {
+    this.delegate?.actionItemDoneRequested(request);
   }
 }

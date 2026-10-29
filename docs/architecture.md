@@ -408,7 +408,7 @@ interface Envelope<TType extends string = string, TPayload = unknown> {
 | `type` | Direction | `sessionId` | Payload Shape | Behavior |
 |---|---|---|---|---|
 | `GUEST_READY` | Guest → Host | `""` | `{}` | Sent after Guest anonymous auth resolves. Flushes buffered `INIT_SESSION` / `PANEL_PRESENTATION` and starts `pumpQueue()`. On Guest reload, mints a fresh `sessionId` and re-dispatches any in-flight job. |
-| `INIT_SESSION` | Host → Guest | `sess_<n>` | `Session` (`{ sessionId, documentId, documentTitle, user, authToken, extraction, extractionState }`) | Pushes open Document context and stored Extraction (`ExtractionRecord \| null`). Starts `SESSION_ACK_TIMEOUT_MS`. |
+| `INIT_SESSION` | Host → Guest | `sess_<n>` | `Session` (`{ sessionId, documentId, documentTitle, user, authToken, extraction, extractionState, actionItemStates? }`) | Pushes open Document context and stored Extraction (`ExtractionRecord \| null`). Starts `SESSION_ACK_TIMEOUT_MS`. |
 | `SESSION_ACK` | Guest → Host | Echoes `INIT_SESSION` | `{}` | Acknowledges `INIT_SESSION` and cancels `SESSION_ACK_TIMEOUT_MS` if `sessionId` matches current session. |
 | `PANEL_PRESENTATION` | Host → Guest | `""` | `{ mode: 'lane' \| 'sheet' }` | Driven by Host `matchMedia('(max-width: 768px)')`. Switches Guest between desktop section-outline rail (`lane`) and mobile jump bar (`sheet`). |
 | `EXTRACT_DOCUMENT` | Host → Guest | `""` | `{ jobId, document: { documentId, documentTitle, contentType }, bytes: ArrayBuffer }` | Dispatches one background Extraction Job (`bytes` transferred via `postMessage` transfer list). Starts `JOB_START_TIMEOUT_MS`. |
@@ -419,6 +419,8 @@ interface Envelope<TType extends string = string, TPayload = unknown> {
 | `GUEST_SHOW_PAGE` | Guest → Host | Active `sessionId` | `{ page: number; quote?: string; critical?: boolean }` | Jumps Host PDF viewer to `page` (`1 <= page <= pageCount`), highlights `quote` in the text layer, and snaps mobile sheet to `half`. |
 | `GUEST_EXPAND_PANEL` | Guest → Host | Active `sessionId` | `{}` | Raises mobile bottom sheet from `peek` to `half` when the user taps a jump-bar section inside the Guest. |
 | `GUEST_CREATE_REMINDER` | Guest → Host | Active `sessionId` | `{ actionItemId: string }` | An Action Item's "Add reminder" — the Host resolves the item from the Extraction index, opens the Reminder dialog, and exports `.ics` / Google Calendar links. Fire-and-forget; Klartext never tracks a Reminder. |
+| `GUEST_SET_ACTION_ITEM_DONE` | Guest → Host | Active `sessionId` | `{ actionItemId: string; done: boolean }` | An Action Item's "Mark done" check (ADR 0013) — the Host validates the item against the Extraction index, persists the mark (with `doneThrough` for a computable recurrence) on the DocumentRecord's `actionItemStates`, and answers with `ACTION_ITEM_STATES`. Fire-and-forget; the Guest already applied the mark optimistically. |
+| `ACTION_ITEM_STATES` | Host → Guest | Active `sessionId` | `{ states: Record<actionItemId, { doneAt: string; doneThrough?: string }> }` | The authoritative Done map for the open Document (ADR 0013): pushed after every write — including a failed one, which rolls back the Guest's optimistic state — and on Host-side changes while the Document is open. Replaces the Guest's local map wholesale. |
 
 ### Protocol Timeouts & Queue Limits
 
@@ -465,6 +467,12 @@ interface DocumentRecord {
     retryable: boolean;
     failedAt: Timestamp;                               // Firestore serverTimestamp()
   } | null;
+  actionItemStates?: {                                 // Done marks (ADR 0013): absent until the first mark
+    [actionItemId: string]: {
+      doneAt: string;                                  // ISO timestamp — provenance only
+      doneThrough?: string;                            // Computable recurrence only: the covered occurrence's YYYY-MM-DD
+    };
+  };
   folderId: string | null;                             // Parent Folder ID, or null for root ("Documents")
   createdAt: Timestamp;                                // Firestore serverTimestamp()
   updatedAt: Timestamp;                                // Firestore serverTimestamp()

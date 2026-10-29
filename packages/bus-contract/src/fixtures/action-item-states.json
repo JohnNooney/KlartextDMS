@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "type": "ACTION_ITEM_STATES",
+  "sessionId": "sess_7f3a9c2e",
+  "payload": {
+    "states": {
+      "ai_3f9c2e7b1d4a58": {
+        "doneAt": "2026-10-21T08:00:00.000Z",
+        "doneThrough": "2026-11-03"
+      },
+      "ai_9d1e4c7b2a60f3": {
+        "doneAt": "2026-10-18T17:32:11.000Z"
+      }
+    }
+  }
+}

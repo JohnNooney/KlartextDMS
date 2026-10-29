@@ -8,9 +8,11 @@ import {
   isExtractionCandidate,
   normalizeExtractionRecord,
   sanitizeCreateReminder,
+  sanitizeSetActionItemDone,
   sanitizeShowPage,
 } from '@klartext/bus-contract';
 import type {
+  ActionItemStates,
   BusMessageEvent,
   ExtractionCandidate,
   ExtractionError,
@@ -287,6 +289,20 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         }
         break;
       }
+      case 'GUEST_SET_ACTION_ITEM_DONE': {
+        // Only the current Session may mark an Action Item (issue #144); the
+        // Session's Document is bound in and a malformed request is dropped.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeSetActionItemDone(msg.payload);
+          if (request) {
+            ctx.probe.actionItemDoneRequested({
+              documentId: currentSession.documentId,
+              ...request,
+            });
+          }
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -322,6 +338,23 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
       if (mode === presentation) return;
       presentation = mode;
       if (guestReady) sendPresentation();
+    },
+    pushActionItemStates(states: ActionItemStates): void {
+      // Session-bound (issue #144): with no Session there is no Guest state
+      // to correct — the next INIT_SESSION carries the map anyway.
+      if (!currentSession) return;
+      // The freshest map a Guest reload resends — otherwise INIT_SESSION
+      // would carry the stale copy from when the Session was minted.
+      currentSession = { ...currentSession, actionItemStates: states };
+      ctx.sink.postMessage(
+        {
+          v: 1,
+          type: 'ACTION_ITEM_STATES',
+          sessionId: currentSession.sessionId,
+          payload: { states },
+        },
+        ctx.peerOrigin,
+      );
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

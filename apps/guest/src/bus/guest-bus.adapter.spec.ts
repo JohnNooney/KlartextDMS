@@ -26,7 +26,11 @@ class FakeSource implements BusSource {
 function setup() {
   const source = new FakeSource();
   const sink: BusSink = { postMessage: vi.fn() };
-  const probe: GuestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
+  const probe: GuestProbe = {
+    sessionApplied: vi.fn(),
+    presentationApplied: vi.fn(),
+    actionItemStatesApplied: vi.fn(),
+  };
   const runJob = vi.fn(() => Promise.reject(new Error('not used')));
   const adapter = createGuestBusAdapter({
     source,
@@ -213,5 +217,87 @@ describe('GuestBus adapter — GUEST_CREATE_REMINDER (issue #122)', () => {
     const { sink, adapter } = setup();
     adapter.createReminder('ai_3f9c2e7b1d4a58');
     expect(sink.postMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('GuestBus adapter — Done marks (issue #144)', () => {
+  const statesPush = (sessionId: string, payload: unknown) => ({
+    v: 1,
+    type: 'ACTION_ITEM_STATES',
+    sessionId,
+    payload,
+  });
+
+  it('sends the mark under the applied Session’s id', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: INIT_SESSION, origin: PEER_ORIGIN, source: sink });
+
+    adapter.setActionItemDone('ai_3f9c2e7b1d4a58', true);
+
+    expect(sink.postMessage).toHaveBeenCalledWith(
+      {
+        v: 1,
+        type: 'GUEST_SET_ACTION_ITEM_DONE',
+        sessionId: 'sess_1',
+        payload: { actionItemId: 'ai_3f9c2e7b1d4a58', done: true },
+      },
+      PEER_ORIGIN,
+    );
+  });
+
+  it('sends nothing before a Session exists', () => {
+    const { sink, adapter } = setup();
+    adapter.setActionItemDone('ai_3f9c2e7b1d4a58', true);
+    expect(sink.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('applies a well-formed ACTION_ITEM_STATES push for the current Session', () => {
+    const { source, sink, probe, adapter } = setup();
+    void adapter;
+    source.emit({ data: INIT_SESSION, origin: PEER_ORIGIN, source: sink });
+
+    const states = { ai_1: { doneAt: '2026-10-21T08:00:00.000Z', doneThrough: '2026-11-03' } };
+    source.emit({
+      data: statesPush('sess_1', { states }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.actionItemStatesApplied).toHaveBeenCalledWith(states);
+  });
+
+  it.each([
+    ['a stale sessionId', 'sess-stale'],
+    ['an empty sessionId', ''],
+  ])('ignores the push for %s', (_label, sessionId) => {
+    const { source, sink, probe, adapter } = setup();
+    void adapter;
+    source.emit({ data: INIT_SESSION, origin: PEER_ORIGIN, source: sink });
+
+    source.emit({
+      data: statesPush(sessionId, { states: { ai_1: { doneAt: 'x' } } }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.actionItemStatesApplied).not.toHaveBeenCalled();
+  });
+
+  it('ignores a malformed push and strips malformed entries', () => {
+    const { source, sink, probe, adapter } = setup();
+    void adapter;
+    source.emit({ data: INIT_SESSION, origin: PEER_ORIGIN, source: sink });
+
+    for (const payload of [{}, { states: 'done' }, { states: [] }, null, 'x']) {
+      source.emit({ data: statesPush('sess_1', payload), origin: PEER_ORIGIN, source: sink });
+    }
+    expect(probe.actionItemStatesApplied).not.toHaveBeenCalled();
+
+    source.emit({
+      data: statesPush('sess_1', { states: { good: { doneAt: 'x' }, bad: { doneThrough: 'y' } } }),
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+    expect(probe.actionItemStatesApplied).toHaveBeenCalledWith({ good: { doneAt: 'x' } });
   });
 });

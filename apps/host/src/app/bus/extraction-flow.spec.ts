@@ -5,6 +5,7 @@ import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import type { SessionUser } from '@klartext/bus-contract';
 import type {
+  ActionItemStates,
   ExtractionCandidate,
   ExtractionRecord,
   JobDocument,
@@ -125,6 +126,14 @@ class FakeDocumentRepository implements DocumentRepository {
     this.emit();
   }
 
+  async setActionItemStates(documentId: string, states: ActionItemStates): Promise<void> {
+    this.calls.push(`action-item-states:${documentId}`);
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, { ...record, actionItemStates: states });
+    this.emit();
+  }
+
   async rename(): Promise<void> {}
   async setFolder(): Promise<void> {}
   async delete(): Promise<void> {}
@@ -198,6 +207,7 @@ function setup(repository = new FakeDocumentRepository()) {
     openSession: vi.fn(),
     requestExtraction: vi.fn(),
     cancelJobsFor: vi.fn(),
+    pushActionItemStates: vi.fn(),
   };
   const auth = {
     user: signal<SessionUser | null | undefined>(USER),
@@ -747,10 +757,232 @@ describe('ExtractionFlow — reminder requests (issue #122)', () => {
 
   it('an unknown Action Item toasts instead of opening an empty dialog', async () => {
     const { events, reminders, toasts } = setup();
-
     events.reminderRequested({ documentId: 'doc-ghost', actionItemId: 'ai_ghost' });
 
     expect(reminders.draft()).toBeNull();
     expect(toasts.toasts().map((t) => t.title)).toContain("Couldn't create the reminder");
+  });
+});
+
+// Issue #144 / ADR 0013: a Done mark persists on the DocumentRecord —
+// requested by the Guest over the Bus or toggled from the Host panel —
+// the Host validates the item against the Extraction index, computes
+// `doneThrough` for a computable recurrence, answers every write (and
+// failure) with the authoritative map, and prunes orphaned keys when a
+// new Extraction is saved.
+describe('ExtractionFlow — Action Item Done marks (issue #144)', () => {
+  const recurringRecord = (documentId: string): ExtractionRecord => ({
+    ...storedRecord(documentId),
+    actionItems: [
+      {
+        id: 'ai_rent',
+        text: 'Pay the rent by the 3rd of the month',
+        sourceQuote: 'Miete',
+        page: 1,
+        timing: {
+          kind: 'RECURRING',
+          cadence: 'MONTHLY',
+          dayOfMonth: 25,
+          scheduleLabel: 'Monthly by the 25th',
+        },
+      },
+      { id: 'ai_none', text: 'Read the annex', sourceQuote: 'Anlage', timing: { kind: 'NONE' } },
+    ],
+  });
+
+  it('a Guest mark-done request persists the mark on the DocumentRecord', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const record = storedRecord(doc.id);
+    const { extractions, events, tick } = setup(repository);
+    extractions.records.set(doc.id, record);
+    tick();
+    await flush();
+
+    const item = record.actionItems[0]!;
+    events.actionItemDoneRequested({ documentId: doc.id, actionItemId: item.id, done: true });
+    await flush();
+    tick();
+    await flush();
+
+    const states = repository.records.get(doc.id)!.actionItemStates!;
+    expect(states[item.id]!.doneAt).toEqual(expect.any(String));
+    expect(repository.calls).toContain(`action-item-states:${doc.id}`);
+  });
+
+  it('a computable recurrence is stored with doneThrough = the displayed occurrence', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const { extractions, events, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+
+    events.actionItemDoneRequested({ documentId: doc.id, actionItemId: 'ai_rent', done: true });
+    await flush();
+    tick();
+    await flush();
+
+    const state = repository.records.get(doc.id)!.actionItemStates!['ai_rent']!;
+    // doneThrough is the next occurrence after the write — a dayOfMonth date.
+    expect(state.doneThrough).toMatch(/^\d{4}-\d{2}-25$/);
+  });
+
+  it('un-marking removes the entry', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({
+      status: 'ready',
+      actionItemStates: { ai_none: { doneAt: '2026-10-20T08:00:00.000Z' } },
+    });
+    const { extractions, events, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+
+    events.actionItemDoneRequested({ documentId: doc.id, actionItemId: 'ai_none', done: false });
+    await flush();
+    tick();
+    await flush();
+
+    expect(repository.records.get(doc.id)!.actionItemStates).toEqual({});
+  });
+
+  it('refuses an item the Extraction no longer carries — the stored map is pushed back', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({
+      status: 'ready',
+      actionItemStates: { ai_none: { doneAt: '2026-10-20T08:00:00.000Z' } },
+    });
+    const { extractions, bus, events, open, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+    bus.pushActionItemStates.mockClear();
+
+    events.actionItemDoneRequested({ documentId: doc.id, actionItemId: 'ai_ghost', done: true });
+    await flush();
+    tick();
+    await flush();
+
+    expect(repository.calls).not.toContain(`action-item-states:${doc.id}`);
+    expect(bus.pushActionItemStates).toHaveBeenCalledWith(doc.actionItemStates);
+  });
+
+  it('a failed write toasts and pushes the stored map so the Guest rolls back', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const { extractions, bus, events, open, toasts, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+    bus.pushActionItemStates.mockClear();
+    vi.spyOn(repository, 'setActionItemStates').mockRejectedValue(new Error('offline'));
+
+    events.actionItemDoneRequested({ documentId: doc.id, actionItemId: 'ai_none', done: true });
+    await flush();
+    tick();
+    await flush();
+
+    expect(toasts.toasts().map((t) => t.title)).toContain("Couldn't update the item");
+    expect(bus.pushActionItemStates).toHaveBeenCalledWith({});
+  });
+
+  it('the Host panel mark shows an Undo toast that reverts the mark', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const { extractions, flow, toasts, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+
+    await flow.setActionItemDone(doc.id, 'ai_none', true);
+    tick();
+    await flush();
+
+    const toast = toasts.toasts().find((t) => t.title === 'Marked done');
+    expect(toast?.action?.label).toBe('Undo');
+    expect(repository.records.get(doc.id)!.actionItemStates?.['ai_none']).toBeDefined();
+
+    toast!.action!.run();
+    await flush();
+    tick();
+    await flush();
+    expect(repository.records.get(doc.id)!.actionItemStates).toEqual({});
+  });
+
+  it('a Host-side write while the Document is open pushes the authoritative map', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({ status: 'ready' });
+    const { extractions, bus, flow, open, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+    bus.pushActionItemStates.mockClear();
+
+    await flow.setActionItemDone(doc.id, 'ai_none', true);
+    tick();
+    await flush();
+
+    const states = repository.records.get(doc.id)!.actionItemStates!;
+    expect(bus.pushActionItemStates).toHaveBeenCalledWith(states);
+  });
+
+  it('INIT_SESSION carries the Document’s actionItemStates', async () => {
+    const repository = new FakeDocumentRepository();
+    const states = { ai_none: { doneAt: '2026-10-20T08:00:00.000Z' } };
+    const doc = await repository.seed({ status: 'ready', actionItemStates: states });
+    const { extractions, bus, open, tick } = setup(repository);
+    extractions.records.set(doc.id, recurringRecord(doc.id));
+    tick();
+    await flush();
+
+    open.open({ id: doc.id, folderId: null });
+    tick();
+    await flush();
+
+    expect(sessions(bus)[0]!.actionItemStates).toEqual(states);
+  });
+
+  it('saving a new Extraction prunes Done keys the record no longer carries', async () => {
+    const repository = new FakeDocumentRepository();
+    const doc = await repository.seed({
+      status: 'ready',
+      actionItemStates: {
+        ai_orphan: { doneAt: '2026-10-20T08:00:00.000Z' },
+        ai_none: { doneAt: '2026-10-20T09:00:00.000Z' },
+      },
+    });
+    const { flow, tick } = setup(repository);
+    tick();
+    await flush();
+
+    flow.jobSucceeded('job-1', {
+      ...candidate(doc.id),
+      actionItems: [
+        {
+          text: 'Read the annex',
+          sourceQuote: 'Anlage',
+          timing: { kind: 'NONE' },
+        },
+      ],
+    });
+    await flush();
+    tick();
+    await flush();
+
+    const states = repository.records.get(doc.id)!.actionItemStates!;
+    // ai_orphan is gone; the surviving key stays only if the new record
+    // carries an item with that id — it doesn't (ids are content hashes),
+    // so the whole map is pruned.
+    expect(states['ai_orphan']).toBeUndefined();
   });
 });

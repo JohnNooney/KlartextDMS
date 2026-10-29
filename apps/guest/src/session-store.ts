@@ -1,7 +1,10 @@
 import { shallowRef } from 'vue';
 import {
+  doneMark,
   goldenFixtureMessages,
+  type ActionItemStates,
   type GuestShowPagePayload,
+  type IdentifiedActionItem,
   type PanelPresentation,
   type Session,
 } from '@klartext/bus-contract';
@@ -22,13 +25,25 @@ export const currentSession = shallowRef<Session | null>(null);
  */
 export const presentationMode = shallowRef<PanelPresentation | null>(null);
 
+/**
+ * The open Document's Done marks (issue #144, ADR 0013): seeded by the
+ * Session, optimistically updated by the mark-done check, and replaced
+ * wholesale by the Host's ACTION_ITEM_STATES push — the authoritative map,
+ * which confirms or rolls back an optimistic mark.
+ */
+export const actionItemStates = shallowRef<ActionItemStates>({});
+
 /** The Bus adapter's probe: an applied Session replaces the panel's content. */
 export const sessionProbe: GuestProbe = {
   sessionApplied(session: Session): void {
     currentSession.value = session;
+    actionItemStates.value = session.actionItemStates ?? {};
   },
   presentationApplied(mode: PanelPresentation): void {
     presentationMode.value = mode;
+  },
+  actionItemStatesApplied(states: ActionItemStates): void {
+    actionItemStates.value = states;
   },
 };
 
@@ -86,4 +101,21 @@ export const reminderSender = shallowRef<((actionItemId: string) => void) | null
 
 export function createReminder(actionItemId: string): void {
   reminderSender.value?.(actionItemId);
+}
+
+/**
+ * The Bus adapter's mark-done sender (issue #144), wired by main.ts once
+ * the adapter exists. The check updates the local map optimistically —
+ * `doneMark` gives a computable recurrence its `doneThrough` like the
+ * Host's write does — then asks the Host; its ACTION_ITEM_STATES push
+ * confirms or rolls back. Standalone dev still flips the mark locally.
+ */
+export const doneSender = shallowRef<((actionItemId: string, done: boolean) => void) | null>(null);
+
+export function setActionItemDone(item: IdentifiedActionItem, done: boolean): void {
+  const states = { ...actionItemStates.value };
+  if (done) states[item.id] = doneMark(item, new Date());
+  else delete states[item.id];
+  actionItemStates.value = states;
+  doneSender.value?.(item.id, done);
 }

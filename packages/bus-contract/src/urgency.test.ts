@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActionTiming } from './extraction.js';
-import { actionUrgency, nextOccurrence } from './urgency.js';
+import { actionUrgency, doneMark, isDone, nextOccurrence, type ActionItemDoneState } from './urgency.js';
 
 const TODAY = new Date(2026, 9, 22); // Thu 22 Oct 2026, local
 
@@ -135,5 +135,95 @@ describe('actionUrgency — NOTICE_PERIOD and NONE', () => {
 
   it('gives an undated item No date and no label', () => {
     expect(actionUrgency({ kind: 'NONE' }, TODAY)).toEqual({ urgency: 'noDate', label: null, dueDate: null });
+  });
+});
+
+
+const mark = (doneThrough?: string): ActionItemDoneState => ({
+  doneAt: '2026-10-21T08:00:00.000Z',
+  ...(doneThrough === undefined ? {} : { doneThrough }),
+});
+
+const monthly = (dayOfMonth?: number): ActionTiming => ({
+  kind: 'RECURRING',
+  cadence: 'MONTHLY',
+  dayOfMonth,
+  scheduleLabel: 'Monthly rent',
+});
+
+describe('isDone — non-recurring items stay Done while a state exists', () => {
+  it.each([
+    ['FIXED_DATE', { kind: 'FIXED_DATE', dueDate: '2026-10-30' } as ActionTiming],
+    ['NOTICE_PERIOD', { kind: 'NOTICE_PERIOD', duration: 3, unit: 'MONTHS', anchor: 'moving out' } as ActionTiming],
+    ['NONE', { kind: 'NONE' } as ActionTiming],
+  ])('%s is Done once marked, whatever the date', (_label, timing) => {
+    expect(isDone({ timing }, undefined, TODAY)).toBe(false);
+    expect(isDone({ timing }, mark(), TODAY)).toBe(true);
+  });
+
+  it('is not Done when the state belongs to another day entirely', () => {
+    expect(isDone({ timing: { kind: 'NONE' } }, mark(), new Date(2030, 0, 1))).toBe(true);
+  });
+});
+
+describe('isDone — computable recurrence (MONTHLY + dayOfMonth)', () => {
+  it('is Done while today’s occurrence is covered by doneThrough', () => {
+    // Marked against the 25 Oct occurrence; on 22 Oct the next occurrence is 25 Oct.
+    expect(isDone({ timing: monthly(25) }, mark('2026-10-25'), TODAY)).toBe(true);
+    // A doneThrough further out than needed still covers this occurrence.
+    expect(isDone({ timing: monthly(25) }, mark('2026-11-25'), TODAY)).toBe(true);
+  });
+
+  it('returns once the next occurrence passes doneThrough', () => {
+    // Marked against the 22 Oct occurrence; on 23 Oct the next is 22 Nov.
+    expect(isDone({ timing: monthly(22) }, mark('2026-10-22'), TODAY)).toBe(true);
+    expect(isDone({ timing: monthly(22) }, mark('2026-10-22'), new Date(2026, 9, 23))).toBe(false);
+  });
+
+  it('rolls over month-end correctly', () => {
+    // Marked on 10 Feb against the March 31st occurrence (February has no 31st).
+    expect(isDone({ timing: monthly(31) }, mark('2026-03-31'), new Date(2026, 2, 31))).toBe(true);
+    // April has no 31st either — the item returns on 1 April, not 30 April.
+    expect(isDone({ timing: monthly(31) }, mark('2026-03-31'), new Date(2026, 3, 1))).toBe(false);
+  });
+
+  it('is not Done when a computable recurrence’s mark carries no doneThrough', () => {
+    expect(isDone({ timing: monthly(25) }, mark(), TODAY)).toBe(false);
+  });
+});
+
+describe('isDone — loosely specified recurrence', () => {
+  it('is Done while a state exists, like any undated item', () => {
+    expect(isDone({ timing: monthly() }, mark(), TODAY)).toBe(true);
+    expect(
+      isDone(
+        { timing: { kind: 'RECURRING', cadence: 'WEEKLY', dayOfMonth: 25, scheduleLabel: 'x' } },
+        mark(),
+        TODAY,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('doneMark', () => {
+  it('records only doneAt for non-recurring items', () => {
+    expect(doneMark({ timing: { kind: 'NONE' } }, TODAY)).toEqual({
+      doneAt: TODAY.toISOString(),
+    });
+  });
+
+  it('records the occurrence’s dueDate as doneThrough for a computable recurrence', () => {
+    expect(doneMark({ timing: monthly(25) }, TODAY)).toEqual({
+      doneAt: TODAY.toISOString(),
+      doneThrough: '2026-10-25',
+    });
+    expect(doneMark({ timing: monthly(3) }, TODAY)).toEqual({
+      doneAt: TODAY.toISOString(),
+      doneThrough: '2026-11-03',
+    });
+  });
+
+  it('records only doneAt for a loosely specified recurrence', () => {
+    expect(doneMark({ timing: monthly() }, TODAY)).toEqual({ doneAt: TODAY.toISOString() });
   });
 });

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { goldenFixtureMessages, normalizeExtractionRecord } from '@klartext/bus-contract';
-import type { ExtractionRecord } from '@klartext/bus-contract';
+import type { ActionItemStates, ExtractionRecord } from '@klartext/bus-contract';
 import { HostBus } from '../bus/host-bus';
 import type {
   DocumentRecord,
@@ -114,6 +114,13 @@ class FakeDocumentRepository implements DocumentRepository {
       extractionFailure:
         failure === null ? null : { ...failure, failedAt: { seconds: 1, nanoseconds: 0 } },
     });
+    this.emit();
+  }
+
+  async setActionItemStates(documentId: string, states: ActionItemStates): Promise<void> {
+    const record = this.records.get(documentId);
+    if (!record) throw notFound();
+    this.records.set(documentId, { ...record, actionItemStates: states });
     this.emit();
   }
 

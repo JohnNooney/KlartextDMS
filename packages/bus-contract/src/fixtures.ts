@@ -10,6 +10,8 @@ import panelPresentation from './fixtures/panel-presentation.json';
 import guestShowPage from './fixtures/guest-show-page.json';
 import guestExpandPanel from './fixtures/guest-expand-panel.json';
 import guestCreateReminder from './fixtures/guest-create-reminder.json';
+import guestSetActionItemDone from './fixtures/guest-set-action-item-done.json';
+import actionItemStates from './fixtures/action-item-states.json';
 import extractionsJson from './fixtures/extractions.json';
 import extractionsV1Json from './fixtures/extractions-v1.json';
 import type { BusMessage, MessageType } from './messages.js';
@@ -34,6 +36,8 @@ export const goldenFixtures = {
   GUEST_SHOW_PAGE: guestShowPage,
   GUEST_EXPAND_PANEL: guestExpandPanel,
   GUEST_CREATE_REMINDER: guestCreateReminder,
+  GUEST_SET_ACTION_ITEM_DONE: guestSetActionItemDone,
+  ACTION_ITEM_STATES: actionItemStates,
 } as const satisfies Record<MessageType, unknown>;
 
 /**

@@ -155,10 +155,12 @@
       <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
       @if (store.deepDocumentCount() > 0) {
         <app-attention-panel
-          [groups]="attention()"
+          [groups]="attention().groups"
+          [done]="attention().done"
           [reading]="reading()"
           (itemOpened)="openAttentionItem($event)"
           (reminderRequested)="reminders.open($event.documentId, $event.id)"
+          (doneToggled)="toggleDone($event.item, $event.done)"
         />
       }
       <div class="grid">

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import type { JobDocument, Session } from '@klartext/bus-contract';
+import type { ActionItemStates, JobDocument, Session } from '@klartext/bus-contract';
 import type { HostAdapter } from '@klartext/bus-contract/conformance';
 
 /**
@@ -7,7 +7,8 @@ import type { HostAdapter } from '@klartext/bus-contract/conformance';
  * frame attaches the adapter once mounted; the rest of the app talks to it
  * through this service without owning Bus wiring — Sessions on open
  * (`openSession`), Extraction Jobs (`requestExtraction`), and job
- * cancellation on delete (`cancelJobsFor`, issue #16). Every call is a no-op
+ * cancellation on delete (`cancelJobsFor`, issue #16), and Done-map pushes
+ * (`pushActionItemStates`, issue #144). Every call is a no-op
  * before the frame attaches: a deleted-before-ready Document has nothing to
  * cancel, and a Session requested pre-`GUEST_READY` is buffered by the
  * adapter anyway.
@@ -37,5 +38,10 @@ export class HostBus {
   /** Drops queued jobs for `documentId` and discards a running job's result. */
   cancelJobsFor(documentId: string): void {
     this.adapter?.cancelJobs(documentId);
+  }
+
+  /** Pushes the open Document's authoritative Done map to the Guest (#144). */
+  pushActionItemStates(states: ActionItemStates): void {
+    this.adapter?.pushActionItemStates(states);
   }
 }

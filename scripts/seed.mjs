@@ -91,6 +91,22 @@ const DOCUMENTS = [
     originalFilename: 'mietvertrag-2024.pdf',
     folderId: 'wohnung',
     hasExtraction: true,
+    // Issue #144: the recurring rent item carries a Done mark whose
+    // doneThrough is the *previous* occurrence — seeded already returned,
+    // so e2e sees the recurrence roll back into "Needs your attention".
+    actionItemStates: () => {
+      const item = extractionFixtures['doc-mietvertrag'].actionItems.find(
+        (i) => i.timing.kind === 'RECURRING',
+      );
+      // Previous occurrence: this month's day if already past, else last
+      // month's. Correct for the seeded day (3 ≤ 28); the contract's
+      // nextOccurrence handles short months differently.
+      const previous = new Date();
+      previous.setDate(item.timing.dayOfMonth);
+      if (previous > new Date()) previous.setMonth(previous.getMonth() - 1);
+      const iso = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-${String(previous.getDate()).padStart(2, '0')}`;
+      return { [actionItemId(item)]: { doneAt: new Date().toISOString(), doneThrough: iso } };
+    },
   },
   {
     id: 'doc-versicherungsschein',
@@ -107,6 +123,24 @@ const DOCUMENTS = [
     hasExtraction: false,
   },
 ];
+
+// The Action Item id is a content hash computed in @klartext/bus-contract
+// (`actionItemId`) — this mirrors it so the seeded Done mark keys match the
+// ids both apps compute at read time.
+function hashHex(input) {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
+}
+
+const actionItemId = (item) => `ai_${hashHex(`${item.sourceQuote}\u0000${item.timing.kind}`)}`;
 
 const app = initializeApp({ projectId: PROJECT_ID, storageBucket: STORAGE_BUCKET });
 const auth = getAuth(app);
@@ -150,6 +184,7 @@ for (const doc of DOCUMENTS) {
     storagePath,
     status: 'ready',
     folderId: doc.folderId,
+    ...(doc.actionItemStates ? { actionItemStates: doc.actionItemStates() } : {}),
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });

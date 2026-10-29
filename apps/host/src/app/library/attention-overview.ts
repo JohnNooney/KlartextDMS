@@ -1,5 +1,6 @@
 import {
   actionUrgency,
+  isDone,
   URGENCY_LABELS,
   type ExtractionRecord,
   type Urgency,
@@ -30,6 +31,16 @@ export interface AttentionGroup {
   items: AttentionItem[];
 }
 
+/**
+ * The overview read model (issue #144): the Urgency groups hold pending
+ * items only — Done items (ADR 0013) are hidden from the card and its
+ * count, and collect in `done` for the See All sheet's collapsed group.
+ */
+export interface AttentionOverview {
+  groups: AttentionGroup[];
+  done: AttentionItem[];
+}
+
 export interface AttentionOverviewInput {
   /** The ready Documents under the browsed Folder, from `readyDocumentsInScope`. */
   scoped: readonly ScopedDocument[];
@@ -50,31 +61,35 @@ const GROUPS: readonly Urgency[] = ['overdue', 'thisWeek', 'later', 'noDate'];
  * of the ready Documents under the browsed Folder at any depth (ADR 0005),
  * grouped by Urgency with each item's folder path relative to that Folder.
  */
-export function buildAttentionOverview(input: AttentionOverviewInput): AttentionGroup[] {
+export function buildAttentionOverview(input: AttentionOverviewInput): AttentionOverview {
   const { scoped, extractions, today } = input;
   const entries: { key: Urgency; item: AttentionItem; due: string | null }[] = [];
+  const done: AttentionItem[] = [];
   for (const { doc, path } of scoped) {
     const extraction = extractions.get(doc.id);
     if (!extraction) continue;
     for (const action of extraction.actionItems) {
       const { urgency, label: timingLabel, dueDate } = actionUrgency(action.timing, today);
-      entries.push({
-        key: urgency,
-        due: dueDate,
-        item: {
-          id: action.id,
-          text: action.text,
-          documentId: doc.id,
-          documentTitle: doc.title,
-          path,
-          page: action.page,
-          sourceQuote: action.sourceQuote,
-          timingLabel,
-        },
-      });
+      const item: AttentionItem = {
+        id: action.id,
+        text: action.text,
+        documentId: doc.id,
+        documentTitle: doc.title,
+        path,
+        page: action.page,
+        sourceQuote: action.sourceQuote,
+        timingLabel,
+      };
+      // The Done mark rides on the DocumentRecord (ADR 0013) — isDone is
+      // the single definition, shared with the Guest's list.
+      if (isDone(action, doc.actionItemStates?.[action.id], today)) {
+        done.push(item);
+      } else {
+        entries.push({ key: urgency, due: dueDate, item });
+      }
     }
   }
-  return GROUPS.map((key) => ({
+  const groups = GROUPS.map((key) => ({
     key,
     label: URGENCY_LABELS[key],
     items: entries
@@ -82,6 +97,7 @@ export function buildAttentionOverview(input: AttentionOverviewInput): Attention
       .sort(compareByDue)
       .map((e) => e.item),
   })).filter((group) => group.items.length > 0);
+  return { groups, done };
 }
 
 /**

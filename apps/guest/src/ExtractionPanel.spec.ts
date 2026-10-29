@@ -800,3 +800,117 @@ describe('ExtractionPanel timing chips and v1 note (issue #118)', () => {
     expect(wrapper.text()).not.toContain('Earlier analysis format');
   });
 });
+
+// Issue #144: the "Mark done" check emits doneToggled — the App applies it
+// optimistically and the Host's push confirms; Done items leave the list
+// for the collapsed "Done (n)" group: muted, no chip, no Reminder.
+describe('ExtractionPanel Done marks (issue #144)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 22, 9));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const items = [
+    actionItem({ text: 'call the landlord', timing: { kind: 'NONE' } }),
+    actionItem({ text: 'pay rent', timing: { kind: 'NONE' } }),
+  ];
+  const mountPanel = (actionItemStates: Record<string, { doneAt: string; doneThrough?: string }>) =>
+    mount(ExtractionPanel, {
+      props: {
+        extraction: record({ extractionStatus: 'COMPLETE', actionItems: items, keyTakeaways: [] }),
+        actionItemStates,
+      },
+    });
+
+  const doneId = () => items[0]!.id;
+
+  it('emits doneToggled when a row’s check is tapped', async () => {
+    const wrapper = mountPanel({});
+    const check = wrapper
+      .find('[data-section="attention"] button[aria-label="Mark done"]');
+    expect(check.exists()).toBe(true);
+    await check.trigger('click');
+    const emitted = wrapper.emitted('doneToggled');
+    expect(emitted).toHaveLength(1);
+    const [item, done] = emitted![0] as [unknown, boolean];
+    expect((item as { text: string }).text).toBe('call the landlord');
+    expect(done).toBe(true);
+  });
+
+  it('moves a Done item to the collapsed group — muted, no chip, no Reminder', async () => {
+    const wrapper = mountPanel({ [doneId()]: { doneAt: '2026-10-21T08:00:00.000Z' } });
+    const section = wrapper.find('[data-section="attention"]');
+
+    // The pending list shows only the open item; the Done group is collapsed.
+    const pending = section.find('ul').findAll('li');
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.text()).toContain('pay rent');
+    const toggle = section.findAll('button').find((b) => b.text().includes('Done (1)'));
+    expect(toggle).toBeDefined();
+    expect(toggle!.attributes('aria-expanded')).toBe('false');
+
+    await toggle!.trigger('click');
+    await wrapper.vm.$nextTick();
+    const doneRow = section.find('button[aria-label="Mark not done"]');
+    expect(doneRow.exists()).toBe(true);
+    // Muted: no timing chip, no reminder button on the Done row.
+    const lists = section.findAll('ul');
+    const doneList = lists[lists.length - 1]!;
+    expect(doneList.find('[data-timing-chip]').exists()).toBe(false);
+    expect(doneList.find('button[aria-label="Add reminder"]').exists()).toBe(false);
+  });
+
+  it('unticking a Done row emits doneToggled with done: false', async () => {
+    const wrapper = mountPanel({ [doneId()]: { doneAt: '2026-10-21T08:00:00.000Z' } });
+    const toggle = wrapper
+      .find('[data-section="attention"]')
+      .findAll('button')
+      .find((b) => b.text().includes('Done (1)'));
+    await toggle!.trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.find('button[aria-label="Mark not done"]').trigger('click');
+    const emitted = wrapper.emitted('doneToggled');
+    expect(emitted![emitted!.length - 1]).toEqual([items[0], false]);
+  });
+
+  it('shows "Nothing needs your attention" above the group when every item is Done', () => {
+    const allDone = Object.fromEntries(
+      items.map((i) => [i.id, { doneAt: '2026-10-21T08:00:00.000Z' }]),
+    );
+    const wrapper = mountPanel(allDone);
+    const section = wrapper.find('[data-section="attention"]');
+    expect(section.text()).toContain('Nothing needs your attention');
+    expect(section.text()).toContain('Done (2)');
+  });
+
+  it('a computable recurrence sits pending again once doneThrough is past', () => {
+    const recurring = [
+      actionItem({
+        text: 'rent',
+        timing: {
+          kind: 'RECURRING',
+          cadence: 'MONTHLY',
+          dayOfMonth: 25,
+          scheduleLabel: 'Monthly by the 25th',
+        },
+      }),
+    ];
+    const wrapper = mount(ExtractionPanel, {
+      props: {
+        extraction: record({
+          extractionStatus: 'COMPLETE',
+          actionItems: recurring,
+          keyTakeaways: [],
+        }),
+        actionItemStates: {
+          [recurring[0]!.id]: { doneAt: 'x', doneThrough: '2026-09-25' },
+        },
+      },
+    });
+    const section = wrapper.find('[data-section="attention"]');
+    // Past doneThrough → the item returned: pending, not in a Done group.
+    expect(section.text()).toContain('rent');
+    expect(section.text()).not.toContain('Done (');
+  });
+});

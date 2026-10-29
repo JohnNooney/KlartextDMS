@@ -1,12 +1,14 @@
 import type { ExtractionCandidate, ExtractionRecord } from './extraction.js';
 import { BUS_PROTOCOL_VERSION, type Envelope } from './envelope.js';
+import type { ActionItemDoneState, ActionItemStates } from './urgency.js';
 
 /**
  * Bus messages (issue #7, amended by #12). `sessionId` is Host-generated per
  * `INIT_SESSION` and echoed by the Guest; messages outside a Session —
  * `GUEST_READY`, `PANEL_PRESENTATION` (issue #77), and every Extraction Job
  * message — carry `""` (`NO_SESSION`). `GUEST_SHOW_PAGE` (issue #78),
- * `GUEST_EXPAND_PANEL` (issue #79), and `GUEST_CREATE_REMINDER` (issue #122)
+ * `GUEST_EXPAND_PANEL` (issue #79), `GUEST_CREATE_REMINDER` (issue #122),
+ * `GUEST_SET_ACTION_ITEM_DONE`, and `ACTION_ITEM_STATES` (issue #144)
  * travel inside the Session: the Host drops them for any other `sessionId`.
  *
  * Forward-compat rule: both apps ignore envelopes with an unknown `type`
@@ -39,6 +41,8 @@ export interface Session {
   authToken: string;
   extraction: ExtractionRecord | null;
   extractionState: ExtractionState;
+  /** The Document's Done marks (ADR 0013) — the authoritative map the Guest renders. */
+  actionItemStates?: ActionItemStates;
 }
 
 /** The Document descriptor an Extraction Job carries (bytes travel beside it). */
@@ -117,11 +121,44 @@ export interface ReminderRequest extends GuestCreateReminderPayload {
   documentId: string;
 }
 
+/**
+ * The Guest asks the Host to mark an Action Item Done or undo the mark
+ * (issue #144, ADR 0013): the item's stable id and the wanted state — the
+ * Session already binds the Document. The Host owns the write and answers
+ * with an `ACTION_ITEM_STATES` push carrying the authoritative map — also
+ * on a failed write, to roll back the Guest's optimistic state.
+ */
+export interface GuestSetActionItemDonePayload {
+  /** The Action Item's Host-computed stable id (`actionItemId`). */
+  actionItemId: string;
+  done: boolean;
+}
+
+/**
+ * A vetted mark-done request as the Host sees it: the Session's Document
+ * (the envelope carried no `documentId`) plus the Action Item's id within
+ * its Extraction and the wanted state.
+ */
+export interface ActionItemDoneRequest extends GuestSetActionItemDonePayload {
+  documentId: string;
+}
+
+/**
+ * The Host pushes the Document's authoritative Done map (issue #144, ADR
+ * 0013): after every write — including failed ones, to roll back the
+ * Guest's optimistic state — and on Host-side changes while the Document
+ * is open. Session-bound like the requests it answers.
+ */
+export interface ActionItemStatesPayload {
+  states: ActionItemStates;
+}
+
 export type BusMessage =
   // Host → Guest
   | Envelope<'INIT_SESSION', Session>
   | Envelope<'EXTRACT_DOCUMENT', ExtractDocumentPayload>
   | Envelope<'PANEL_PRESENTATION', { mode: PanelPresentation }>
+  | Envelope<'ACTION_ITEM_STATES', ActionItemStatesPayload>
   // Guest → Host
   | Envelope<'GUEST_READY', EmptyPayload>
   | Envelope<'SESSION_ACK', EmptyPayload>
@@ -131,11 +168,12 @@ export type BusMessage =
   | Envelope<'RETRY_EXTRACTION', { documentId: string }>
   | Envelope<'GUEST_SHOW_PAGE', GuestShowPagePayload>
   | Envelope<'GUEST_EXPAND_PANEL', EmptyPayload>
-  | Envelope<'GUEST_CREATE_REMINDER', GuestCreateReminderPayload>;
+  | Envelope<'GUEST_CREATE_REMINDER', GuestCreateReminderPayload>
+  | Envelope<'GUEST_SET_ACTION_ITEM_DONE', GuestSetActionItemDonePayload>;
 
 export type HostToGuestMessage = Extract<
   BusMessage,
-  { type: 'INIT_SESSION' | 'EXTRACT_DOCUMENT' | 'PANEL_PRESENTATION' }
+  { type: 'INIT_SESSION' | 'EXTRACT_DOCUMENT' | 'PANEL_PRESENTATION' | 'ACTION_ITEM_STATES' }
 >;
 export type GuestToHostMessage = Exclude<BusMessage, HostToGuestMessage>;
 
@@ -159,6 +197,8 @@ export const MESSAGE_TYPES = [
   'GUEST_SHOW_PAGE',
   'GUEST_EXPAND_PANEL',
   'GUEST_CREATE_REMINDER',
+  'GUEST_SET_ACTION_ITEM_DONE',
+  'ACTION_ITEM_STATES',
 ] as const satisfies readonly MessageType[];
 
 /**
@@ -192,6 +232,49 @@ export function sanitizeCreateReminder(payload: unknown): GuestCreateReminderPay
   const actionItemId = (payload as Record<string, unknown>)['actionItemId'];
   if (typeof actionItemId !== 'string' || actionItemId.length === 0) return null;
   return { actionItemId };
+}
+
+/**
+ * Wire-level check for `GUEST_SET_ACTION_ITEM_DONE` (issue #144): a
+ * non-empty string `actionItemId` and a boolean `done` — the Host resolves
+ * the item from `extractionsByDocId`, so anything else can't be honoured
+ * and drops the message. Extras are stripped, like `sanitizeCreateReminder`.
+ */
+export function sanitizeSetActionItemDone(payload: unknown): GuestSetActionItemDonePayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const actionItemId = (payload as Record<string, unknown>)['actionItemId'];
+  const done = (payload as Record<string, unknown>)['done'];
+  if (typeof actionItemId !== 'string' || actionItemId.length === 0) return null;
+  if (typeof done !== 'boolean') return null;
+  return { actionItemId, done };
+}
+
+/**
+ * Wire-level check for `ACTION_ITEM_STATES` (issue #144): `states` a plain
+ * object whose entries carry a string `doneAt` and, when present, a string
+ * `doneThrough`. Malformed entries are stripped rather than killing the
+ * push — the Guest re-renders whatever survives; a non-object `states`
+ * drops the message.
+ */
+export function sanitizeActionItemStates(payload: unknown): ActionItemStates | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const states = (payload as Record<string, unknown>)['states'];
+  if (typeof states !== 'object' || states === null || Array.isArray(states)) return null;
+  const out: ActionItemStates = {};
+  let entries = 0;
+  for (const [id, value] of Object.entries(states)) {
+    entries += 1;
+    if (typeof value !== 'object' || value === null) continue;
+    const doneAt = (value as Record<string, unknown>)['doneAt'];
+    const doneThrough = (value as Record<string, unknown>)['doneThrough'];
+    if (typeof doneAt !== 'string') continue;
+    const state: ActionItemDoneState = { doneAt };
+    if (typeof doneThrough === 'string') state.doneThrough = doneThrough;
+    out[id] = state;
+  }
+  // A map whose every entry was malformed isn't an empty map — dropping it
+  // keeps a garbled push from wiping the Guest's state.
+  return entries === 0 || Object.keys(out).length > 0 ? out : null;
 }
 
 /** Spine check only — accepts unknown `type`s so forward compat holds. */
