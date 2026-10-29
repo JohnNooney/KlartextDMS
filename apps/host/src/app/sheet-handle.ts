@@ -12,6 +12,7 @@ import { Sheet } from './sheet';
 @Component({
   selector: 'button[appSheetHandle]',
   template: '<span class="handle-pill" aria-hidden="true"></span>',
+  styleUrl: './sheet-handle.scss',
   host: {
     type: 'button',
     class: 'sheet-handle',

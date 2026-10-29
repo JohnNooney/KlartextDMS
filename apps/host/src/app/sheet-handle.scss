@@ -1,0 +1,37 @@
+@use 'tokens' as kt;
+
+// The grab-handle strip's chrome (issue #152, ADR 0014). Sheets are a
+// phone presentation — above the 768px breakpoint every surface presents
+// another way and the handle stays out of the page. Styled through :host
+// so the rules land wherever a consumer mounts the component; the shared
+// sheet.scss only carries the sheet element's settle transition.
+:host {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  // Grab-handle strip in the sheet chrome (issue #49): a full-width touch
+  // target, its own row in the sheet — never overlaid on sheet content.
+  :host {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 100%;
+    height: kt.$kt-touch-target;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: kt.$kt-text-muted;
+    // The sheet resizes on vertical drags — the browser must not take the
+    // gesture over for scrolling, or the pointer stream is cancelled.
+    touch-action: none;
+  }
+
+  .handle-pill {
+    width: kt.$kt-grabber-width;
+    height: kt.$kt-grabber-height;
+    border-radius: kt.$kt-grabber-radius;
+    background: kt.$kt-grabber-color;
+  }
+}
