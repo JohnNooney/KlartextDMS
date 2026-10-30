@@ -603,6 +603,7 @@ const CRITERIA: { key: Criterion; label: string; hint: string; short: string }[]
   styleUrls: ['./dialogs.scss'],
   styles: `
     .batch { width: min(520px, calc(100vw - 32px)); }
+    .batch > * { flex-shrink: 0; }
     .radios { display: flex; flex-direction: column; border: 1px solid var(--kt-border); border-radius: var(--kt-radius-lg); overflow: hidden; }
     .radio { display: flex; align-items: center; gap: var(--kt-space-3); padding: var(--kt-space-3) var(--kt-space-4); cursor: pointer; min-height: var(--kt-touch-target); }
     .radio + .radio { border-top: 1px solid var(--kt-border); }
@@ -631,7 +632,13 @@ const CRITERIA: { key: Criterion; label: string; hint: string; short: string }[]
     .warn { display: flex; gap: var(--kt-space-2); margin: 0; padding: var(--kt-space-3); border-radius: var(--kt-radius-md); background: var(--kt-warning-tint); color: var(--kt-warning-text); font-size: var(--kt-text-sm); line-height: 1.4; }
     .warn svg { flex-shrink: 0; margin-top: 1px; }
     .quota { margin: 0; font-size: var(--kt-text-xs); color: var(--kt-text-muted); line-height: 1.4; }
-    @media (max-width: 768px) { .dialog-foot { flex-direction: column-reverse; } .dialog-foot .btn { width: 100%; justify-content: center; } }
+    @media (max-width: 768px) {
+      .dialog-foot { flex-direction: column-reverse; }
+      .dialog-foot .btn { width: 100%; justify-content: center; }
+      .batch { padding: var(--kt-space-5) var(--kt-space-4); }
+      .radio { padding: 10px var(--kt-space-3); }
+      .radio:not(.is-on) .radio-hint { display: none; }
+    }
   `,
 })
 export class BatchProtoDialog {
