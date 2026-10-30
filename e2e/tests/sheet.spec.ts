@@ -1,5 +1,5 @@
 import { devices, expect, test, type Page } from '@playwright/test';
-import { guestPanel, seededExtraction, signedInPage } from './support';
+import { animationsSettled, guestPanel, seededExtraction, signedInPage } from './support';
 
 // Journey (issue #50): on a phone-sized viewport the insights sheet rests at
 // peek — the grab-handle strip plus the top of the Guest frame (its section
@@ -98,6 +98,9 @@ test('the sheet rests at peek and the handle cycles it through the detents', asy
 test('dragging the handle snaps the sheet to the nearest detent', async () => {
   await page().goto('/folder/wohnung/doc/doc-mietvertrag');
   await expect(sheet()).toHaveAttribute('data-sheet', 'peek');
+  // The primitive's entrance (issue #153) still animates when the
+  // attribute lands — the handle box must be measured at rest.
+  await animationsSettled(page(), '.guest-frame-host');
 
   const vh = page().viewportSize()!.height;
 

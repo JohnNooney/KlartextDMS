@@ -68,7 +68,10 @@
 
     &[data-sheet='full'] {
       height: 100%;
-      border-radius: 0;
+      // At full the rounded corners reveal the page behind — grey it like
+      // a modal scrim: a scrim-coloured spread shadow paints under the
+      // sheet and never takes a hit (issue #153).
+      box-shadow: 0 0 0 100vmax kt.$kt-backdrop;
     }
   }
 

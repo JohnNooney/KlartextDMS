@@ -1,9 +1,21 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal, viewChild } from '@angular/core';
 import type { AttentionGroup, AttentionGroupKey, AttentionItem } from './attention-overview';
 import { ModalSurface } from './modal-surface';
+import { Sheet, type SheetDetent } from '../sheet';
+import { SheetHandle } from '../sheet-handle';
 
 /** How many of the most urgent Action Items the card shows; See All lists the rest. */
 const CARD_ITEMS = 3;
+
+/**
+ * The See All sheet's detents (issue #153, ADR 0014): medium — about half
+ * the viewport — and large, the full height. No peek; the sheet is
+ * dismissible below medium.
+ */
+const ATTENTION_DETENTS: readonly SheetDetent[] = [
+  { name: 'medium', height: ({ viewportHeight }) => viewportHeight * 0.5 },
+  { name: 'large', height: ({ viewportHeight }) => viewportHeight },
+];
 
 interface CardItem {
   item: AttentionItem;
@@ -23,10 +35,11 @@ interface CardItem {
 @Component({
   selector: 'app-attention-panel',
   templateUrl: './attention-panel.html',
-  styleUrl: './attention-panel.scss',
-  imports: [ModalSurface],
+  styleUrls: ['./attention-panel.scss', '../sheet.scss'],
+  imports: [ModalSurface, Sheet, SheetHandle],
 })
 export class AttentionPanel {
+  private readonly sheet = viewChild(Sheet);
   readonly groups = input.required<AttentionGroup[]>();
   /** Done items (issue #144) — hidden from the card, collapsed group in the sheet. */
   readonly done = input<AttentionItem[]>([]);
@@ -40,8 +53,16 @@ export class AttentionPanel {
 
   protected readonly expanded = signal(true);
   protected readonly sheetOpen = signal(false);
+  /** The See All sheet's resting detent — reset to medium on every open. */
+  protected readonly sheetDetent = signal('medium');
+  protected readonly detents = ATTENTION_DETENTS;
   protected readonly doneOpen = signal(false);
   protected readonly toggle = (open: boolean): boolean => !open;
+
+  /** The tap's result — the detent a tap moves to — for the grabber's label. */
+  protected readonly handleLabel = computed(() =>
+    this.sheet()?.next().name === 'large' ? 'Expand' : 'Collapse',
+  );
 
   protected readonly count = computed(() =>
     this.groups().reduce((sum, group) => sum + group.items.length, 0),
@@ -52,6 +73,12 @@ export class AttentionPanel {
       .flatMap((group) => group.items.map((item) => ({ item, key: group.key, when: cardTiming(group.key, item) })))
       .slice(0, CARD_ITEMS),
   );
+
+  /** See All opens the sheet at medium — every open rests there (issue #153). */
+  protected showSheet(): void {
+    this.sheetDetent.set('medium');
+    this.sheetOpen.set(true);
+  }
 
   protected open(item: AttentionItem): void {
     this.sheetOpen.set(false);

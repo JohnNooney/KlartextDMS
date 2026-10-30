@@ -194,9 +194,12 @@ button {
   color: kt.$kt-text-faint;
 }
 
-// See All: a bottom sheet on phones, a centred modal on desktop, styled
-// like the Guest's attention lists (TakeawaySection / KeyTakeawayRow). The
-// scrim is ModalSurface's shared .backdrop (styles.scss, issue #150).
+// See All (issue #153, ADR 0014): a modal detent sheet on phones — the
+// shared Sheet primitive's medium/large detents, grabber strip, and
+// entrance/settle chrome (sheet.scss) — and a centred card on desktop,
+// styled like the Guest's attention lists (TakeawaySection /
+// KeyTakeawayRow). The scrim is ModalSurface's shared .backdrop
+// (styles.scss, issue #150).
 .sheet {
   position: fixed;
   z-index: kt.$kt-z-modal;
@@ -204,13 +207,23 @@ button {
   bottom: 0;
   transform: translateX(-50%);
   width: min(560px, 100%);
-  max-height: 88vh;
-  max-height: 88dvh;
   display: flex;
   flex-direction: column;
   background: kt.$kt-canvas;
   border-radius: kt.$kt-sheet-radius kt.$kt-sheet-radius 0 0;
   box-shadow: kt.$kt-shadow-popover;
+
+  // The detents own the phone height: medium is about half the viewport,
+  // large fills it; ModalSurface's viewport cap stays the only ceiling.
+  @media (max-width: 768px) {
+    &[data-sheet='medium'] {
+      height: 50%;
+    }
+
+    &[data-sheet='large'] {
+      height: 100%;
+    }
+  }
 
   @media (min-width: 769px) {
     top: 50%;
@@ -218,18 +231,16 @@ button {
     transform: translate(-50%, -50%);
     max-height: 80vh;
     border-radius: kt.$kt-radius-lg;
+    animation: card-in 0.18s ease;
   }
 }
 
-.sheet-grabber {
-  width: kt.$kt-grabber-width;
-  height: kt.$kt-grabber-height;
-  margin: 6px auto 0;
-  border-radius: kt.$kt-grabber-radius;
-  background: kt.$kt-grabber-color;
-
-  @media (min-width: 769px) {
-    display: none;
+// The centred card's entrance — same rise-and-settle as .dialog's
+// dialog-in (dialogs.scss).
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
   }
 }
 
