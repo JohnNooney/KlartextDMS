@@ -117,7 +117,10 @@ export class GuestFrame {
     const events = inject(HostBusEvents);
     const bus = inject(HostBus);
     const createAdapter = inject(HOST_BUS_ADAPTER_FACTORY);
-    this.guestUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(config.guestOrigin);
+    this.guestUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(
+      // PROTOTYPE (#157): forwards the reader-nudge variant to the Guest.
+      `${config.guestOrigin}/?readerNudge=${new URLSearchParams(location.search).get('readerNudge') ?? 'meta'}`,
+    );
 
     afterNextRender(() => {
       const contentWindow = this.frame().nativeElement.contentWindow;

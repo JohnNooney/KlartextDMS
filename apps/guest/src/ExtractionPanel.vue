@@ -289,6 +289,14 @@ const jobInFlight = computed(
   () => props.extractionState === 'queued' || props.extractionState === 'running',
 );
 
+// PROTOTYPE (#157): reader nudge for an Outdated Extraction — `meta` (a link
+// on the meta line, mirroring the library) vs `notice` (an inline notice in
+// the job-status slot). The Host passes `?readerNudge=` on the iframe URL.
+const protoReaderNudge = new URLSearchParams(location.search).get('readerNudge') ?? 'meta';
+const protoOutdated = computed(
+  () => props.extraction.schemaVersion === 1 && !jobInFlight.value && props.extractionState !== 'failed',
+);
+
 // The failed re-analysis banner is dismissible (#32); a new failure after
 // another retry re-shows it.
 const bannerDismissed = ref(false);
@@ -340,6 +348,15 @@ function reanalyze(): void {
           <h1 class="text-kt-lg font-semibold">{{ typeLabel }}</h1>
           <p class="mt-kt-1 text-kt-xs text-kt-text-muted">
             Translated from {{ sourceLanguage }} · Analyzed {{ analyzedAt }}
+          </p>
+          <p
+            v-if="protoReaderNudge === 'meta' && protoOutdated"
+            class="mt-kt-1 text-kt-xs text-kt-text-muted"
+          >
+            Earlier analysis format ·
+            <button type="button" class="text-kt-accent hover:underline" @click="reanalyze">
+              Re-analyze for dates
+            </button>
           </p>
         </div>
         <div v-if="isComplete" class="relative shrink-0">
@@ -394,8 +411,24 @@ function reanalyze(): void {
         </div>
       </header>
 
+      <div
+        v-if="protoReaderNudge === 'notice' && protoOutdated"
+        class="mt-kt-4 flex items-center justify-between gap-kt-3 rounded-kt-md bg-kt-fill p-kt-3 text-kt-sm"
+        role="note"
+      >
+        <p class="text-kt-text-muted">
+          Analyzed in an earlier format, so Action Items have no dates.
+        </p>
+        <button
+          type="button"
+          class="shrink-0 rounded-kt-sm bg-kt-accent-tint px-kt-3 py-kt-1 font-medium text-kt-accent"
+          @click="reanalyze"
+        >
+          Re-analyze
+        </button>
+      </div>
       <p
-        v-if="extractionState === 'queued'"
+        v-else-if="extractionState === 'queued'"
         class="mt-kt-4 rounded-kt-md bg-kt-fill p-kt-3 text-kt-sm text-kt-text-muted"
       >
         Re-analysis queued…

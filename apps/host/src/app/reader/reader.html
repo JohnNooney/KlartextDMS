@@ -44,7 +44,7 @@
     </div>
 
     <div class="toolbar-actions">
-      <app-batch-proto-slot slot="toolbar" />
+      <app-batch-proto-slot slot="toolbar" where="reader" />
       @if (stepper(); as stepper) {
         @if (stepper.total > 1) {
           <div class="stepper">
@@ -86,7 +86,7 @@
       </button>
     </div>
   </header>
-  <app-batch-proto-slot slot="top" />
+  <app-batch-proto-slot slot="top" where="reader" />
 
   <div class="split">
     <div class="pdf-pane">

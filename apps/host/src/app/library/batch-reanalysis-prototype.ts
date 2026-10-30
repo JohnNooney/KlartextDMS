@@ -6,7 +6,11 @@
  *
  * Independent pickers in the floating switcher (also as URL params):
  *   ?nudge=meta|banner         meta-line link vs dismissible inline banner
- *   ?strip=top|bottom|pill     below the toolbar vs docked bottom vs toolbar pill
+ *   ?metaMobile=wrap|short|trailing   round 2: phone layout of the meta-line link
+ *   ?readerStrip=none|pill     round 2: library keeps the strip below its toolbar;
+ *                              the reader shows nothing, or a toolbar pill
+ *   ?readerNudge=meta|notice   round 2: Guest nudge for an Outdated Extraction
+ *                              (switching reloads — the Guest reads it at boot)
  *   ?criteria=radio|segmented  dialog criteria control
  *   ?scope=root|wohnung|nebenkosten   mock scope (the real grid is unrelated)
  *   ?outcome=ok|some|stop      how the simulated batch ends
@@ -80,12 +84,16 @@ const seed = (): MockDoc[] => {
 // ---------------------------------------------------------------- options
 
 const NUDGES = ['meta', 'banner'] as const;
-const STRIPS = ['top', 'bottom', 'pill'] as const;
+const META_MOBILE = ['wrap', 'short', 'trailing'] as const;
+const READER_STRIPS = ['none', 'pill'] as const;
+const READER_NUDGES = ['meta', 'notice'] as const;
 const CRITERIA_UI = ['radio', 'segmented'] as const;
 const SCOPES = ['root', 'wohnung', 'nebenkosten'] as const;
 const OUTCOMES = ['ok', 'some', 'stop'] as const;
 type Nudge = (typeof NUDGES)[number];
-type Strip = (typeof STRIPS)[number];
+type MetaMobile = (typeof META_MOBILE)[number];
+type ReaderStrip = (typeof READER_STRIPS)[number];
+type ReaderNudge = (typeof READER_NUDGES)[number];
 type CriteriaUi = (typeof CRITERIA_UI)[number];
 type Scope = (typeof SCOPES)[number];
 type Outcome = (typeof OUTCOMES)[number];
@@ -94,9 +102,12 @@ export type Criterion = 'outdated' | 'failed' | 'all';
 const NAMES: Record<string, string> = {
   meta: 'Meta-line link',
   banner: 'Inline banner',
-  top: 'Below toolbar',
-  bottom: 'Docked bottom',
+  wrap: 'Wrap (round 1)',
+  short: 'Short link',
+  trailing: 'Trailing button',
+  none: 'Nothing in reader',
   pill: 'Toolbar pill',
+  notice: 'Inline notice',
   radio: 'Radio list',
   segmented: 'Segmented',
   root: 'Documents (root)',
@@ -142,7 +153,9 @@ export class BatchProto {
   private readonly toasts = inject(ToastService);
 
   readonly nudge = signal<Nudge>(fromUrl('nudge', NUDGES, 'meta'));
-  readonly strip = signal<Strip>(fromUrl('strip', STRIPS, 'top'));
+  readonly metaMobile = signal<MetaMobile>(fromUrl('metaMobile', META_MOBILE, 'short'));
+  readonly readerStrip = signal<ReaderStrip>(fromUrl('readerStrip', READER_STRIPS, 'none'));
+  readonly readerNudge = signal<ReaderNudge>(fromUrl('readerNudge', READER_NUDGES, 'meta'));
   readonly criteriaUi = signal<CriteriaUi>(fromUrl('criteria', CRITERIA_UI, 'radio'));
   readonly scope = signal<Scope>(fromUrl('scope', SCOPES, 'wohnung'));
   readonly outcome = signal<Outcome>(fromUrl('outcome', OUTCOMES, 'ok'));
@@ -180,7 +193,9 @@ export class BatchProto {
     effect(() => {
       const url = new URL(location.href);
       url.searchParams.set('nudge', this.nudge());
-      url.searchParams.set('strip', this.strip());
+      url.searchParams.set('metaMobile', this.metaMobile());
+      url.searchParams.set('readerStrip', this.readerStrip());
+      url.searchParams.set('readerNudge', this.readerNudge());
       url.searchParams.set('criteria', this.criteriaUi());
       url.searchParams.set('scope', this.scope());
       url.searchParams.set('outcome', this.outcome());
@@ -333,12 +348,12 @@ export class BatchProtoStrip {
   template: `
     @switch (slot()) {
       @case ('top') {
-        @if (proto.strip() === 'top' && proto.running()) {
+        @if (where() === 'library' && proto.running()) {
           <app-batch-proto-strip [compact]="true" />
         }
       }
       @case ('toolbar') {
-        @if (proto.strip() === 'pill' && proto.progress(); as p) {
+        @if (where() === 'reader' && proto.readerStrip() === 'pill' && proto.progress(); as p) {
           <span class="pill-wrap">
             <button type="button" class="pill" (click)="open.set(!open())" aria-haspopup="dialog" [attr.aria-expanded]="open()" [attr.aria-label]="'Re-analyzing ' + p.current + ' of ' + p.total">
               <svg width="18" height="18" viewBox="0 0 36 36" aria-hidden="true">
@@ -369,6 +384,7 @@ export class BatchProtoStrip {
 export class BatchProtoSlot {
   protected readonly proto = inject(BatchProto);
   readonly slot = input.required<'top' | 'toolbar'>();
+  readonly where = input.required<'library' | 'reader'>();
   protected readonly open = signal(false);
   constructor() {
     effect(() => {
@@ -391,12 +407,12 @@ export class BatchProtoSlot {
           @if (proto.running()) {
             <div class="menu-item is-current" aria-disabled="true">
               <span class="spinner" aria-hidden="true"></span>
-              <span class="muted">Re-analyzing documents…</span>
+              <span class="muted">Re-analyzing documents</span>
             </div>
           } @else {
             <button type="button" class="menu-item" role="menuitem" (click)="open.set(false); proto.openDialog()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></svg>
-              <span>Re-analyze documents…</span>
+              <span>Re-analyze documents</span>
             </button>
           }
         </div>
@@ -422,11 +438,20 @@ export class BatchProtoMenu {
   selector: 'app-batch-proto-nudge',
   template: `
     @if (slot() === 'meta') {
-      <p class="meta-line">
-        {{ docCount() }}
+      <p class="meta-line" [attr.data-mobile]="proto.metaMobile()">
+        <span>{{ docCount() }}</span>
         @if (proto.nudge() === 'meta' && proto.showNudge()) {
-          · {{ outdatedPhrase() }} —
-          <button type="button" class="link" (click)="proto.openDialog()">Re-analyze</button>
+          <span class="desk">
+            · {{ outdatedPhrase() }} —
+            <button type="button" class="link" (click)="proto.openDialog()">Re-analyze</button>
+          </span>
+          <span class="m-short">
+            · <button type="button" class="link" (click)="proto.openDialog()">Re-analyze {{ proto.outdatedCount() }} outdated</button>
+          </span>
+          <button type="button" class="m-trailing" (click)="proto.openDialog()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></svg>
+            Re-analyze {{ proto.outdatedCount() }}
+          </button>
         }
       </p>
     } @else if (proto.nudge() === 'banner' && proto.showNudge() && !proto.bannerDismissed()) {
@@ -436,7 +461,7 @@ export class BatchProtoMenu {
           <strong>{{ outdatedPhrase(true) }}</strong>
           <span>Re-analyze to get dates on what needs your attention.</span>
         </div>
-        <button type="button" class="btn btn-tinted banner-go" (click)="proto.openDialog()">Re-analyze…</button>
+        <button type="button" class="btn btn-tinted banner-go" (click)="proto.openDialog()">Re-analyze</button>
         <button type="button" class="close-btn banner-x" (click)="proto.bannerDismissed.set(true)" aria-label="Dismiss">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
         </button>
@@ -446,6 +471,14 @@ export class BatchProtoMenu {
   styles: `
     :host { display: block; }
     .meta-line { margin: 0 0 0 6px; font-size: var(--kt-text-sm); color: var(--kt-text-muted); }
+    .m-short, .m-trailing { display: none; }
+    .m-trailing { align-items: center; gap: 4px; margin-left: auto; height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: var(--kt-accent-tint); color: var(--kt-accent); font: inherit; font-size: var(--kt-text-xs); font-weight: 600; cursor: pointer; flex-shrink: 0; }
+    @media (max-width: 768px) {
+      .meta-line[data-mobile='short'] .desk, .meta-line[data-mobile='trailing'] .desk { display: none; }
+      .meta-line[data-mobile='short'] .m-short { display: inline; }
+      .meta-line[data-mobile='trailing'] { display: flex; align-items: center; gap: var(--kt-space-2); }
+      .meta-line[data-mobile='trailing'] .m-trailing { display: inline-flex; }
+    }
     .link { border: 0; padding: 0; background: none; font: inherit; color: var(--kt-accent); cursor: pointer; }
     .link:hover { text-decoration: underline; }
     .banner { display: flex; align-items: center; gap: var(--kt-space-3); margin-top: var(--kt-space-4); padding: var(--kt-space-3) var(--kt-space-3) var(--kt-space-3) var(--kt-space-4); background: var(--kt-surface); border: 1px solid var(--kt-border); border-radius: var(--kt-radius-lg); }
@@ -627,16 +660,12 @@ export class BatchProtoDialog {
 
 // ---------------------------------------------------------------- root
 
-/** Mounted once on the library route: dialog, docked-bottom strip, switcher. */
+/** Mounted once on the library route: dialog and switcher. */
 @Component({
   selector: 'app-batch-reanalysis-prototype',
-  imports: [BatchProtoDialog, BatchProtoStrip],
-  host: { '[class.reading]': 'reading()' },
+  imports: [BatchProtoDialog],
   template: `
     @if (proto.dialogOpen()) { <app-batch-proto-dialog /> }
-    @if (proto.strip() === 'bottom' && proto.running()) {
-      <div class="dock"><app-batch-proto-strip /></div>
-    }
     @if (dev) {
       <div class="proto-switcher" [class.is-min]="minimized()" role="toolbar" aria-label="Prototype controls">
         <button type="button" class="proto-min" (click)="minimized.set(!minimized())">{{ minimized() ? 'Prototype ▴' : '▾' }}</button>
@@ -644,9 +673,9 @@ export class BatchProtoDialog {
           @for (row of rows; track row.key) {
             <div class="proto-row">
               <span class="proto-key">{{ row.key }}</span>
-              <button type="button" (click)="row.step(-1)" [attr.aria-label]="'Previous ' + row.key">‹</button>
+              <button type="button" (click)="step(row, -1)" [attr.aria-label]="'Previous ' + row.key">‹</button>
               <span class="proto-val">{{ names[row.value()] }}</span>
-              <button type="button" (click)="row.step(1)" [attr.aria-label]="'Next ' + row.key">›</button>
+              <button type="button" (click)="step(row, 1)" [attr.aria-label]="'Next ' + row.key">›</button>
             </div>
           }
           <div class="proto-actions">
@@ -658,44 +687,43 @@ export class BatchProtoDialog {
     }
   `,
   styles: [
-    STRIP_STYLES,
     `
-    .dock { position: fixed; z-index: var(--kt-z-chrome); left: 50%; bottom: 24px; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); border-radius: var(--kt-radius-lg); overflow: hidden; box-shadow: var(--kt-shadow-popover); background: var(--kt-bg); }
-    .dock .strip { background: rgba(255,255,255,0.94); backdrop-filter: blur(24px) saturate(180%); }
-    @media (min-width: 769px) { :host(.reading) .dock { left: calc((100vw - var(--kt-insights-width) - var(--kt-space-3)) / 2); } }
-    @media (max-width: 768px) {
-      .dock { bottom: calc(var(--kt-space-3) + env(safe-area-inset-bottom, 0px)); }
-      :host(.reading) .dock { bottom: calc(var(--kt-sheet-peek-height) + var(--kt-space-2) + env(safe-area-inset-bottom, 0px)); }
-    }
     .proto-switcher { position: fixed; z-index: 2000; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 16px; background: #111; color: #fff; font: 600 13px/1 system-ui, sans-serif; box-shadow: 0 6px 24px rgb(0 0 0 / 0.35); white-space: nowrap; opacity: 0.94; }
     .proto-switcher.is-min { padding: 4px; }
     .proto-min { align-self: flex-end; border: 0; background: #333; color: #fff; border-radius: 10px; font: inherit; font-size: 11px; padding: 4px 8px; cursor: pointer; }
-    .proto-row { display: grid; grid-template-columns: 62px 26px 170px 26px; align-items: center; gap: 6px; }
-    .proto-key { color: #999; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .proto-row { display: grid; grid-template-columns: 84px 26px 150px 26px; align-items: center; gap: 6px; }
+    .proto-key { color: #999; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
     .proto-val { text-align: center; overflow: hidden; text-overflow: ellipsis; }
     .proto-row button { width: 26px; height: 26px; border-radius: 50%; border: 0; background: #333; color: #fff; font-size: 16px; cursor: pointer; }
     .proto-actions { display: flex; gap: 6px; }
     .proto-text { flex: 1; border: 0; background: #333; color: #fff; border-radius: 10px; font: inherit; font-size: 12px; padding: 7px 8px; cursor: pointer; }
     .proto-text:disabled { opacity: 0.4; }
-    @media (max-width: 768px) { .proto-row { grid-template-columns: 52px 26px 130px 26px; } }
+    @media (max-width: 768px) { .proto-row { grid-template-columns: 70px 26px 120px 26px; } }
   `,
   ],
 })
 export class BatchReanalysisPrototype {
   protected readonly proto = inject(BatchProto);
-  readonly reading = input(false);
-  protected readonly dev = isDevMode() || new URLSearchParams(location.search).has('strip');
+  protected readonly dev = isDevMode() || new URLSearchParams(location.search).has('nudge');
   protected readonly names = NAMES;
   protected readonly minimized = signal(false);
   protected readonly rows = [
     this.row('Nudge', this.proto.nudge, NUDGES),
-    this.row('Strip', this.proto.strip, STRIPS),
+    this.row('Phone meta', this.proto.metaMobile, META_MOBILE),
+    this.row('Reader strip', this.proto.readerStrip, READER_STRIPS),
+    this.row('Reader nudge', this.proto.readerNudge, READER_NUDGES, true),
     this.row('Criteria', this.proto.criteriaUi, CRITERIA_UI),
     this.row('Scope', this.proto.scope, SCOPES),
     this.row('Outcome', this.proto.outcome, OUTCOMES),
   ];
 
-  private row<T extends string>(key: string, value: ReturnType<typeof signal<T>>, options: readonly T[]) {
-    return { key, value, step: (d: number) => value.set(cycle(options, value(), d)) };
+  /** The Guest reads `?readerNudge=` at boot, so that row reloads once the URL effect lands. */
+  protected step(row: (typeof this.rows)[number], delta: number): void {
+    row.step(delta);
+    if (row.reload) setTimeout(() => location.reload(), 50);
+  }
+
+  private row<T extends string>(key: string, value: ReturnType<typeof signal<T>>, options: readonly T[], reload = false) {
+    return { key, value, reload, step: (d: number) => value.set(cycle(options, value(), d)) };
   }
 }

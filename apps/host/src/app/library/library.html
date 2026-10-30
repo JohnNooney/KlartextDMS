@@ -72,7 +72,7 @@
       }
     </div>
     <div class="toolbar-actions">
-      <app-batch-proto-slot slot="toolbar" />
+      <app-batch-proto-slot slot="toolbar" where="library" />
       <!-- The mobile search affordance (issue #121) — swaps the collapsed
            field in for the title on its own row; desktop shows the field. -->
       <button type="button" class="btn-search" (click)="revealSearch()" aria-label="Search">
@@ -113,7 +113,7 @@
       <app-batch-proto-menu />
     </div>
   </header>
-  <app-batch-proto-slot slot="top" />
+  <app-batch-proto-slot slot="top" where="library" />
 
   <div
     class="library-drop"
@@ -277,4 +277,4 @@
   <app-reminder-dialog [draft]="draft" (closed)="reminders.close()" />
 }
 
-<app-batch-reanalysis-prototype [reading]="store.openDoc() !== null" />
+<app-batch-reanalysis-prototype />
