@@ -43,7 +43,8 @@ interface SheetDrag {
  * The one Host primitive every detent sheet shares (issue #152, ADR 0014):
  * a bottom sheet that snaps between an ordered, consumer-configured set of
  * detents — the Guest frame supplies peek / half / full; the attention
- * sheet will supply medium / large. Applied to the sheet element, it owns
+ * sheet supplies medium / large (issue #153). Applied to the sheet
+ * element, it owns
  * everything a detent sheet owes the user:
  *
  * - **The `data-sheet` attribute** the surface's stylesheet resolves each

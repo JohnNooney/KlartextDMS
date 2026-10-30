@@ -10,7 +10,7 @@ import {
   sheetTap as tap,
 } from './sheet.spec-support';
 
-// The attention sheet's future detent set (issue #152, ADR 0014): two
+// The attention sheet's detent set (issues #152/#153, ADR 0014): two
 // heights, no peek — the smallest is half the viewport.
 const TWO_DETENTS: readonly SheetDetent[] = [
   { name: 'medium', height: ({ viewportHeight }) => viewportHeight * 0.5 },

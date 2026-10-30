@@ -13,6 +13,7 @@ import { Reminders } from '../reminders/reminders';
 import { Library } from './library';
 import { LibraryStore } from './library.store';
 import { menuOverflowingViewport } from '../menu-viewport.spec-support';
+import { sheetPointer } from '../sheet.spec-support';
 
 function record(status: DocumentStatus, overrides: Partial<DocumentRecord> = {}): DocumentRecord {
   return {
@@ -571,7 +572,7 @@ describe('Library', () => {
       return ctx;
     }
 
-    const panel = (el: HTMLElement) => el.querySelector('app-attention-panel');
+    const panel = (el: HTMLElement) => el.querySelector<HTMLElement>('app-attention-panel');
 
     const seeAll = (el: HTMLElement) =>
       [...panel(el)!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent!.trim() === 'See All');
@@ -663,6 +664,140 @@ describe('Library', () => {
       fixture.detectChanges();
       expect(store.openAt).toHaveBeenCalledWith('d-top', { page: 2, quote: 'Gebühr' });
       expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    // Issue #153 (ADR 0014): on phones the See All sheet is a real modal
+    // sheet on the shared Sheet primitive — medium/large detents, an
+    // interactive grabber, swipe down to close — and its chrome carries no
+    // "Done" (that name belongs to the Action Item state).
+    describe('See All sheet (issue #153)', () => {
+      const sheet = (el: HTMLElement) => panel(el)!.querySelector<HTMLElement>('.sheet');
+      const grabber = (el: HTMLElement) => sheet(el)!.querySelector<HTMLButtonElement>('.sheet-handle');
+
+      /** Focuses See All — the remembered focus owner — and opens the sheet. */
+      const openSheet = (fixture: ComponentFixture<Library>, el: HTMLElement) => {
+        const button = seeAll(el)!;
+        button.focus();
+        button.click();
+        fixture.detectChanges();
+        return button;
+      };
+
+      it('opens at the medium detent with a real labelled grabber button', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('medium');
+        expect(sheet(el)!.querySelector('.sheet-grabber')).toBeNull();
+        const handle = grabber(el)!;
+        expect(handle.tagName).toBe('BUTTON');
+        expect(handle.getAttribute('aria-expanded')).toBe('false');
+        expect(handle.getAttribute('aria-label')).toBe('Expand');
+      });
+
+      it('the grabber tap toggles medium↔large with aria-expanded and label following', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+
+        grabber(el)!.click();
+        fixture.detectChanges();
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('large');
+        expect(grabber(el)!.getAttribute('aria-expanded')).toBe('true');
+        expect(grabber(el)!.getAttribute('aria-label')).toBe('Collapse');
+
+        grabber(el)!.click();
+        fixture.detectChanges();
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('medium');
+        expect(grabber(el)!.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('reopens at medium after closing at large', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        grabber(el)!.click();
+        fixture.detectChanges();
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('large');
+        sheet(el)!.querySelector<HTMLButtonElement>('.close-btn')!.click();
+        fixture.detectChanges();
+
+        openSheet(fixture, el);
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('medium');
+      });
+
+      it('a downward drag below medium closes the sheet', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        const vh = window.innerHeight;
+
+        sheetPointer(panel(el)!, 'pointerdown', vh * 0.5, 0);
+        sheetPointer(panel(el)!, 'pointermove', vh * 0.9, 1000);
+        sheetPointer(panel(el)!, 'pointerup', vh * 0.9, 1050);
+        fixture.detectChanges();
+        expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+      });
+
+      it('a downward flick from medium closes the sheet', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        const vh = window.innerHeight;
+
+        sheetPointer(panel(el)!, 'pointerdown', vh * 0.5, 0);
+        sheetPointer(panel(el)!, 'pointermove', vh * 0.55, 10);
+        sheetPointer(panel(el)!, 'pointerup', vh * 0.6, 20);
+        fixture.detectChanges();
+        expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+      });
+
+      it('an upward drag reaches large', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        const vh = window.innerHeight;
+
+        sheetPointer(panel(el)!, 'pointerdown', vh * 0.5, 0);
+        sheetPointer(panel(el)!, 'pointermove', vh * 0.1, 1000);
+        sheetPointer(panel(el)!, 'pointerup', vh * 0.1, 1050);
+        fixture.detectChanges();
+        expect(sheet(el)!.getAttribute('data-sheet')).toBe('large');
+      });
+
+      it('the X button closes the sheet and returns focus to See All', async () => {
+        const { fixture, el } = await withAttention();
+        const button = openSheet(fixture, el);
+        sheet(el)!.querySelector<HTMLButtonElement>('.close-btn')!.click();
+        fixture.detectChanges();
+        expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.activeElement).toBe(button);
+      });
+
+      it('a backdrop click closes the sheet and returns focus to See All', async () => {
+        const { fixture, el } = await withAttention();
+        const button = openSheet(fixture, el);
+        panel(el)!.querySelector<HTMLButtonElement>('.backdrop')!.click();
+        fixture.detectChanges();
+        expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.activeElement).toBe(button);
+      });
+
+      it('Escape closes the sheet and returns focus to See All', async () => {
+        const { fixture, el } = await withAttention();
+        const button = openSheet(fixture, el);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        fixture.detectChanges();
+        expect(panel(el)!.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.activeElement).toBe(button);
+      });
+
+      it('no sheet chrome carries the name "Done"', async () => {
+        const { fixture, el } = await withAttention();
+        openSheet(fixture, el);
+        const chrome = [
+          grabber(el)!,
+          ...sheet(el)!.querySelectorAll<HTMLButtonElement>('.sheet-head button'),
+        ];
+        for (const control of chrome) {
+          expect(control.textContent).not.toMatch(/done/i);
+          expect(control.getAttribute('aria-label') ?? '').not.toMatch(/done/i);
+        }
+      });
     });
 
     it('shows the empty state once every Extraction is read and nothing needs attention', async () => {

@@ -13,7 +13,7 @@
       }
     </button>
     @if (expanded() && count() + done().length > 0) {
-      <button type="button" class="attention-see-all" (click)="sheetOpen.set(true)">See All</button>
+      <button type="button" class="attention-see-all" (click)="showSheet()">See All</button>
     }
   </div>
 
@@ -49,16 +49,21 @@
     <div
       class="sheet"
       appModalSurface
-      #sheet="appModalSurface"
+      #modal="appModalSurface"
+      appSheet
+      [detents]="detents"
+      [(detent)]="sheetDetent"
+      [dismissible]="true"
+      (dismissRequested)="modal.requestClose()"
       role="dialog"
       aria-modal="true"
       aria-labelledby="attention-sheet-title"
       (closeRequested)="sheetOpen.set(false)"
     >
-      <div class="sheet-grabber" aria-hidden="true"></div>
+      <button appSheetHandle [label]="handleLabel()"></button>
       <header class="sheet-head">
         <h2 id="attention-sheet-title">Needs your attention</h2>
-        <button type="button" class="close-btn" (click)="sheet.requestClose()" aria-label="Close">
+        <button type="button" class="close-btn" (click)="modal.requestClose()" aria-label="Close">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
         </button>
       </header>

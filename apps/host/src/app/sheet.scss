@@ -8,10 +8,21 @@
 @media (max-width: 768px) {
   [data-sheet] {
     transition: height 0.2s ease;
+    // The one sheet entrance (issue #153): a bottom sheet rises in from
+    // below the viewport edge instead of popping.
+    animation: kt-sheet-in 0.2s ease;
 
     // While dragging, the inline height tracks the finger — no transition.
     &.is-dragging {
       transition: none;
     }
+  }
+}
+
+// `translate` animates independently of `transform`, so the entrance works
+// whether or not the consumer's placement already uses transform.
+@keyframes kt-sheet-in {
+  from {
+    translate: 0 100%;
   }
 }

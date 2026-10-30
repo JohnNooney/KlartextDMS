@@ -65,6 +65,18 @@ export function signedInPage(contextOptions?: BrowserContextOptions): () => Page
   return () => page;
 }
 
+/**
+ * Waits until every CSS animation and transition on the element settles
+ * (issue #153): a sheet's entrance or detent snap must land before its
+ * handle box is measured for a pointer drag, or the press misses it.
+ */
+export async function animationsSettled(page: Page, selector: string): Promise<void> {
+  await page.waitForFunction(
+    (s) => (document.querySelector(s)?.getAnimations({ subtree: true }) ?? []).length === 0,
+    selector,
+  );
+}
+
 /** The Guest insights panel, only ever reached through the Host's iframe. */
 export const guestPanel = (page: Page): FrameLocator =>
   page.frameLocator('iframe[title="Klartext insights panel"]');
