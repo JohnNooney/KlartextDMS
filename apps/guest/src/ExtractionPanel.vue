@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type {
+  ActionItemStates,
   ExtractionRecord,
   ExtractionState,
   GuestShowPagePayload,
+  IdentifiedActionItem,
   PanelPresentation,
 } from '@klartext/bus-contract';
-import { documentTypeLabel } from '@klartext/bus-contract';
+import { documentTypeLabel, isDone } from '@klartext/bus-contract';
 import TakeawaySection from './TakeawaySection.vue';
 
 // The insights panel as one continuous scroll (issue #75, layout settled by
@@ -30,8 +32,10 @@ const props = withDefaults(
     extraction: ExtractionRecord;
     extractionState?: ExtractionState;
     presentation?: PanelPresentation | null;
+    /** The open Document's Done marks (issue #144). */
+    actionItemStates?: ActionItemStates;
   }>(),
-  { extractionState: 'none', presentation: null },
+  { extractionState: 'none', presentation: null, actionItemStates: () => ({}) },
 );
 
 const emit = defineEmits<{
@@ -42,6 +46,8 @@ const emit = defineEmits<{
   expandPanel: [];
   /** An Action Item's "Add reminder" was tapped (issue #122). */
   createReminder: [actionItemId: string];
+  /** An Action Item's "Mark done" check was toggled (issue #144). */
+  doneToggled: [item: IdentifiedActionItem, done: boolean];
 }>();
 const menuOpen = ref(false);
 const menuTrigger = ref<HTMLButtonElement>();
@@ -69,6 +75,20 @@ const isComplete = computed(() => props.extraction.extractionStatus === 'COMPLET
 // Takeaways) — selection is single across both sections.
 const criticalTakeaways = computed(() =>
   props.extraction.actionItems.map((takeaway, index) => ({ takeaway, index })),
+);
+
+// Issue #144: the shared isDone splits Action Items — pending rows keep
+// their Urgency chip and Reminder button; Done rows collect in the
+// collapsed "Done (n)" group at the bottom of the section.
+const pendingTakeaways = computed(() =>
+  criticalTakeaways.value.filter(
+    ({ takeaway }) => !isDone(takeaway, props.actionItemStates[takeaway.id], new Date()),
+  ),
+);
+const doneTakeaways = computed(() =>
+  criticalTakeaways.value.filter(({ takeaway }) =>
+    isDone(takeaway, props.actionItemStates[takeaway.id], new Date()),
+  ),
 );
 const normalTakeaways = computed(() =>
   props.extraction.keyTakeaways.map((takeaway, i) => ({
@@ -125,7 +145,7 @@ const outlineItems = computed<OutlineItem[]>(() => {
       id: 'attention',
       label: 'Needs your attention',
       icon: OUTLINE_ICONS.attention,
-      count: criticalTakeaways.value.length,
+      count: pendingTakeaways.value.length,
       critical: true,
     });
   }
@@ -234,6 +254,16 @@ watch(
 function remindActionItem(index: number): void {
   const item = props.extraction.actionItems[index];
   if (item) emit('createReminder', item.id);
+}
+
+// The "Mark done" check (issue #144): the App turns the toggle into an
+// optimistic local mark plus GUEST_SET_ACTION_ITEM_DONE — the Host's
+// ACTION_ITEM_STATES push confirms or rolls it back.
+function toggleActionItemDone(index: number): void {
+  const item = props.extraction.actionItems[index];
+  if (item) {
+    emit('doneToggled', item, !isDone(item, props.actionItemStates[item.id], new Date()));
+  }
 }
 // The first PANEL_PRESENTATION often lands after mount — refresh the spy once
 // the rail (and its sections' final positions) has rendered.
@@ -413,11 +443,15 @@ function reanalyze(): void {
           v-if="criticalTakeaways.length"
           section="attention"
           title="Needs your attention"
-          :rows="criticalTakeaways"
+          :rows="pendingTakeaways"
+          :done-rows="doneTakeaways"
+          :all-done="pendingTakeaways.length === 0"
           remindable
+          checkable
           :selected-index="selectedTakeaway"
           @select="toggleTakeaway"
           @remind="remindActionItem"
+          @toggle-done="toggleActionItemDone"
         />
         <TakeawaySection
           v-if="normalTakeaways.length"

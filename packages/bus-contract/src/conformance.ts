@@ -4,6 +4,8 @@ import { isEnvelope } from './messages.js';
 import { createLinkedBusPair, type BusSink, type BusSource } from './testing.js';
 import { goldenFixtureMessages } from './fixtures.js';
 import type {
+  ActionItemDoneRequest,
+  ActionItemStates,
   ExtractionCandidate,
   ExtractionError,
   GuestShowPagePayload,
@@ -55,6 +57,15 @@ export interface HostProbe {
    * Reminder export; Klartext never tracks it.
    */
   reminderRequested(request: ReminderRequest): void;
+  /**
+   * GUEST_SET_ACTION_ITEM_DONE arrived for the current Session (issue #144):
+   * `documentId` is the Session's Document — the envelope carries only the
+   * Action Item's id and the wanted state, wire-vetted. The app resolves the
+   * item from `extractionsByDocId`, owns the write, and answers with an
+   * `ACTION_ITEM_STATES` push — also on failure, to roll back the Guest's
+   * optimistic state.
+   */
+  actionItemDoneRequested(request: ActionItemDoneRequest): void;
 }
 
 export interface HostAdapterContext {
@@ -83,6 +94,14 @@ export interface HostAdapter {
    * crossing, and resent when the Guest reloads.
    */
   setPresentation(mode: PanelPresentation): void;
+  /**
+   * Pushes the open Document's authoritative Done map (issue #144):
+   * `ACTION_ITEM_STATES` under the current Session — after every write
+   * (including a failed one, which rolls back the Guest's optimistic state)
+   * and on Host-side changes while the Document is open. Silent without a
+   * Session — the next INIT_SESSION carries the map anyway.
+   */
+  pushActionItemStates(states: ActionItemStates): void;
   dispose(): void;
 }
 
@@ -91,6 +110,12 @@ export interface GuestProbe {
   sessionApplied(session: Session): void;
   /** A `PANEL_PRESENTATION` with a valid `mode` was applied (issue #77). */
   presentationApplied(mode: PanelPresentation): void;
+  /**
+   * An `ACTION_ITEM_STATES` push with a wire-vetted `states` map was applied
+   * (issue #144): the authoritative Done map for the open Document — it
+   * replaces the local map wholesale, optimistic marks included.
+   */
+  actionItemStatesApplied(states: ActionItemStates): void;
 }
 
 export interface GuestAdapterContext {
@@ -131,6 +156,14 @@ export interface GuestAdapter {
    * reply, no watchdog, and silent while no Session exists.
    */
   createReminder(actionItemId: string): void;
+  /**
+   * An Action Item's "Mark done" check was toggled (issue #144):
+   * fire-and-forget `GUEST_SET_ACTION_ITEM_DONE` under the current Session —
+   * the Guest has already applied the mark optimistically; the Host's
+   * `ACTION_ITEM_STATES` push confirms or rolls it back. Silent while no
+   * Session exists.
+   */
+  setActionItemDone(actionItemId: string, done: boolean): void;
   dispose(): void;
 }
 
@@ -243,8 +276,13 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         pageRequested: vi.fn(),
         panelExpandRequested: vi.fn(),
         reminderRequested: vi.fn(),
+        actionItemDoneRequested: vi.fn(),
       };
-      guestProbe = { sessionApplied: vi.fn(), presentationApplied: vi.fn() };
+      guestProbe = {
+        sessionApplied: vi.fn(),
+        presentationApplied: vi.fn(),
+        actionItemStatesApplied: vi.fn(),
+      };
       jobDeferreds = [];
       jobPayloads = [];
       disposers = [];
@@ -580,6 +618,139 @@ export function runBusContractConformance(adapters: ConformanceAdapters): void {
         });
       }
       expect(hostProbe.reminderRequested).not.toHaveBeenCalled();
+    });
+
+    it('carries a mark-done toggle to the Host: GUEST_SET_ACTION_ITEM_DONE under the current Session (issue #144)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      guest.setActionItemDone('ai_3f9c2e7b1d4a58', true);
+
+      expect(envelopesOf(wireToHost, 'GUEST_SET_ACTION_ITEM_DONE')).toEqual([
+        {
+          v: 1,
+          type: 'GUEST_SET_ACTION_ITEM_DONE',
+          sessionId: session.sessionId,
+          payload: { actionItemId: 'ai_3f9c2e7b1d4a58', done: true },
+        },
+      ]);
+      // The adapter binds the Session's Document — the wire payload had none.
+      expect(hostProbe.actionItemDoneRequested).toHaveBeenCalledWith({
+        documentId: session.documentId,
+        actionItemId: 'ai_3f9c2e7b1d4a58',
+        done: true,
+      });
+    });
+
+    it('setActionItemDone before INIT_SESSION is silent', () => {
+      makeHost();
+      const guest = makeGuest();
+      guest.setActionItemDone('ai_3f9c2e7b1d4a58', false);
+      expect(envelopesOf(wireToHost, 'GUEST_SET_ACTION_ITEM_DONE')).toEqual([]);
+      expect(hostProbe.actionItemDoneRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores GUEST_SET_ACTION_ITEM_DONE for a stale sessionId', () => {
+      const host = makeHost();
+      host.openSession(session);
+      injectToHost({
+        v: 1,
+        type: 'GUEST_SET_ACTION_ITEM_DONE',
+        sessionId: 'sess-stale',
+        payload: { actionItemId: 'ai_3f9c2e7b1d4a58', done: true },
+      });
+      expect(hostProbe.actionItemDoneRequested).not.toHaveBeenCalled();
+    });
+
+    it('the Host ignores a malformed GUEST_SET_ACTION_ITEM_DONE', () => {
+      const host = makeHost();
+      host.openSession(session);
+      for (const payload of [
+        {},
+        { actionItemId: 'ai_9f' },
+        { actionItemId: '', done: true },
+        { actionItemId: 7, done: true },
+        { actionItemId: 'ai_9f', done: 'yes' },
+        null,
+        'ai_9f',
+      ]) {
+        injectToHost({
+          v: 1,
+          type: 'GUEST_SET_ACTION_ITEM_DONE',
+          sessionId: session.sessionId,
+          payload,
+        });
+      }
+      expect(hostProbe.actionItemDoneRequested).not.toHaveBeenCalled();
+    });
+
+    it('pushes the authoritative Done map to the Guest: ACTION_ITEM_STATES under the current Session (issue #144)', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+
+      const states: ActionItemStates = {
+        ai_3f9c2e7b1d4a58: { doneAt: '2026-10-21T08:00:00.000Z', doneThrough: '2026-11-03' },
+      };
+      host.pushActionItemStates(states);
+
+      expect(envelopesOf(wireToGuest, 'ACTION_ITEM_STATES')).toEqual([
+        { v: 1, type: 'ACTION_ITEM_STATES', sessionId: session.sessionId, payload: { states } },
+      ]);
+      expect(guestProbe.actionItemStatesApplied).toHaveBeenCalledWith(states);
+    });
+
+    it('pushActionItemStates without a Session is silent — the next INIT_SESSION carries the map', () => {
+      const host = makeHost();
+      host.pushActionItemStates({ ai_9f: { doneAt: '2026-10-21T08:00:00.000Z' } });
+      expect(envelopesOf(wireToGuest, 'ACTION_ITEM_STATES')).toEqual([]);
+    });
+
+    it('the Guest ignores a malformed ACTION_ITEM_STATES', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+      for (const payload of [
+        {},
+        { states: 'done' },
+        { states: [] },
+        { states: { ai_9f: 7 } },
+        null,
+        'states',
+      ]) {
+        injectToGuest({
+          v: 1,
+          type: 'ACTION_ITEM_STATES',
+          sessionId: session.sessionId,
+          payload,
+        });
+      }
+      expect(guestProbe.actionItemStatesApplied).not.toHaveBeenCalled();
+    });
+
+    it('the Guest strips malformed entries from an ACTION_ITEM_STATES map', () => {
+      const host = makeHost();
+      const guest = makeGuest();
+      guest.mount();
+      host.openSession(session);
+      injectToGuest({
+        v: 1,
+        type: 'ACTION_ITEM_STATES',
+        sessionId: session.sessionId,
+        payload: {
+          states: {
+            good: { doneAt: '2026-10-21T08:00:00.000Z' },
+            bad: { doneThrough: '2026-11-03' },
+          },
+        },
+      });
+      expect(guestProbe.actionItemStatesApplied).toHaveBeenCalledWith({
+        good: { doneAt: '2026-10-21T08:00:00.000Z' },
+      });
     });
 
     it('recovers a Guest reload: resends the Session and re-issues the job under a fresh jobId', async () => {

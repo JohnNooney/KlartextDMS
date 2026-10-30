@@ -22,7 +22,9 @@ import {
   isBusMessage,
   isExtractionError,
   isPanelPresentation,
+  sanitizeActionItemStates,
   sanitizeCreateReminder,
+  sanitizeSetActionItemDone,
   sanitizeShowPage,
   JOB_RESULT_TIMEOUT_MS,
   JOB_START_TIMEOUT_MS,
@@ -31,6 +33,7 @@ import {
 import { NO_SESSION } from './envelope.js';
 import type { BusEnd, BusMessageEvent, BusMessageListener, BusSink, BusSource } from './endpoints.js';
 import { isExtractionCandidate, normalizeExtractionRecord, type ExtractionCandidate } from './extraction.js';
+import type { ActionItemStates } from './urgency.js';
 import type {
   ExtractionError,
   ExtractDocumentPayload,
@@ -325,6 +328,20 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
         }
         break;
       }
+      case 'GUEST_SET_ACTION_ITEM_DONE': {
+        // Only the current Session may mark an Action Item (issue #144); the
+        // Session's Document is bound in, like every Session-bound request.
+        if (currentSession && msg.sessionId === currentSession.sessionId) {
+          const request = sanitizeSetActionItemDone(msg.payload);
+          if (request) {
+            ctx.probe.actionItemDoneRequested({
+              documentId: currentSession.documentId,
+              ...request,
+            });
+          }
+        }
+        break;
+      }
       default:
         break; // Host→Guest types arriving here are ignored
     }
@@ -336,6 +353,22 @@ export function createLoopbackHostAdapter(ctx: HostAdapterContext): HostAdapter 
     openSession(session: Session): void {
       currentSession = session;
       if (guestReady) sendSession();
+    },
+    pushActionItemStates(states: ActionItemStates): void {
+      // Session-bound (issue #144): with no Session there is no Guest state
+      // to correct — the next INIT_SESSION carries the map anyway.
+      if (!currentSession) return;
+      // The freshest map a Guest reload resends — mirrors the app adapter.
+      currentSession = { ...currentSession, actionItemStates: states };
+      ctx.sink.postMessage(
+        {
+          v: 1,
+          type: 'ACTION_ITEM_STATES',
+          sessionId: currentSession.sessionId,
+          payload: { states },
+        },
+        ctx.peerOrigin,
+      );
     },
     requestExtraction(document: JobDocument, bytes: ArrayBuffer): void {
       knownDocuments.set(document.documentId, { document, bytes });
@@ -415,6 +448,15 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
         if (isPanelPresentation(mode)) ctx.probe.presentationApplied(mode);
         break;
       }
+      case 'ACTION_ITEM_STATES': {
+        // Only the current Session's map may replace local state (issue
+        // #144); malformed payloads drop, malformed entries strip.
+        if (msg.sessionId === sessionId) {
+          const states = sanitizeActionItemStates(msg.payload);
+          if (states) ctx.probe.actionItemStatesApplied(states);
+        }
+        break;
+      }
       default:
         break; // Guest→Host types arriving here are ignored
     }
@@ -445,6 +487,12 @@ export function createLoopbackGuestAdapter(ctx: GuestAdapterContext): GuestAdapt
       // Host drops the message otherwise (issue #122).
       if (sessionId === null) return;
       post('GUEST_CREATE_REMINDER', sessionId, { actionItemId });
+    },
+    setActionItemDone(actionItemId: string, done: boolean): void {
+      // Session-bound like every Guest write-back (issue #144): the panel's
+      // check only exists inside a Session.
+      if (sessionId === null) return;
+      post('GUEST_SET_ACTION_ITEM_DONE', sessionId, { actionItemId, done });
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

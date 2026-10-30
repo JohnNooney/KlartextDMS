@@ -5,7 +5,8 @@
  *
  * - `envelope.ts`    — `{ v, type, sessionId, payload }` spine.
  * - `extraction.ts`  — Extraction schema types (issue #8).
- * - `urgency.ts`     — Action Item Urgency bucketing + labels (ADR 0012).
+ * - `urgency.ts`     — Action Item Urgency bucketing + labels (ADR 0012) and
+ *                      the Done mark rules `isDone`/`doneMark` (ADR 0013).
  * - `messages.ts`    — `BusMessage` discriminated union + guards (issue #7).
  * - `serialize.ts`   — reference JSON serializer; `EXTRACT_DOCUMENT` bytes are
  *                      base64 so every message has a canonical JSON form.

@@ -22,6 +22,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { deleteObject, getBytes, ref, uploadBytesResumable, type FirebaseStorage } from 'firebase/storage';
+import type { ActionItemStates } from '@klartext/bus-contract';
 import {
   MAX_DOCUMENT_BYTES,
   type DocumentRecord,
@@ -78,6 +79,13 @@ export interface DocumentRepository {
     documentId: string,
     failure: Omit<ExtractionFailure, 'failedAt'> | null,
   ): Promise<void>;
+  /**
+   * Replaces the Document's Done map (issue #144, ADR 0013): the caller
+   * computes the whole `actionItemStates` map — a toggle is the map with
+   * the entry set or removed, a re-analysis prune the map minus orphaned
+   * keys. The Document update rule already covers the field.
+   */
+  setActionItemStates(documentId: string, states: ActionItemStates): Promise<void>;
   /** Starts the abortable Storage upload of the Document's bytes. */
   uploadBytes(
     documentId: string,
@@ -149,6 +157,14 @@ export class FirestoreDocumentRepository implements DocumentRepository {
   ): Promise<void> {
     await updateDoc(this.metadataRef(documentId), {
       extractionFailure: failure === null ? null : { ...failure, failedAt: serverTimestamp() },
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  /** Writes the Done map (issue #144); bumps `updatedAt`. */
+  async setActionItemStates(documentId: string, states: ActionItemStates): Promise<void> {
+    await updateDoc(this.metadataRef(documentId), {
+      actionItemStates: states,
       updatedAt: serverTimestamp(),
     });
   }

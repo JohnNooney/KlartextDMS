@@ -3,6 +3,7 @@ import {
   isBusMessage,
   isExtractionError,
   isPanelPresentation,
+  sanitizeActionItemStates,
 } from '@klartext/bus-contract';
 import type {
   BusMessageEvent,
@@ -74,6 +75,15 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
         if (isPanelPresentation(mode)) ctx.probe.presentationApplied(mode);
         break;
       }
+      case 'ACTION_ITEM_STATES': {
+        // Only the current Session's map may replace local state (issue
+        // #144); a malformed push drops, malformed entries strip.
+        if (msg.sessionId === sessionId) {
+          const states = sanitizeActionItemStates(msg.payload);
+          if (states) ctx.probe.actionItemStatesApplied(states);
+        }
+        break;
+      }
       default:
         break; // Guest→Host types arriving here are ignored
     }
@@ -106,6 +116,13 @@ export function createGuestBusAdapter(ctx: GuestAdapterContext): GuestAdapter {
       // and the Host drops the message for any other sessionId.
       if (sessionId === null) return;
       post('GUEST_CREATE_REMINDER', sessionId, { actionItemId });
+    },
+    setActionItemDone(actionItemId: string, done: boolean): void {
+      // Session-bound like the other panel write-backs (issue #144): the
+      // mark was already applied optimistically; the Host's
+      // ACTION_ITEM_STATES push confirms or rolls it back.
+      if (sessionId === null) return;
+      post('GUEST_SET_ACTION_ITEM_DONE', sessionId, { actionItemId, done });
     },
     dispose(): void {
       ctx.source.removeEventListener('message', onMessage);

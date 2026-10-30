@@ -48,7 +48,7 @@ test('Action Items carry timing chips and an Add-reminder button', async () => {
   const panel = guestPanel(page());
   const attention = panel.locator('[data-section="attention"]');
   await expect(attention.locator('[data-timing-chip]').first()).toHaveText('3 months’ notice · moving out');
-  await expect(attention.locator('[data-timing-chip]').last()).toHaveText('Monthly by the 3rd working day');
+  await expect(attention.locator('[data-timing-chip]').last()).toContainText('Monthly by the 3rd working day');
   await expect(attention.locator('li')).toHaveCount(4);
   await expect(attention.getByRole('button', { name: 'Add reminder' })).toHaveCount(4);
   const takeaways = panel.locator('[data-section="takeaways"]');

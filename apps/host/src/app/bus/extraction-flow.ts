@@ -1,6 +1,8 @@
 import { DestroyRef, Injectable, effect, inject, untracked } from '@angular/core';
-import { normalizeExtractionRecord } from '@klartext/bus-contract';
+import { doneMark, normalizeExtractionRecord } from '@klartext/bus-contract';
 import type {
+  ActionItemDoneRequest,
+  ActionItemStates,
   ExtractionCandidate,
   ExtractionError,
   ExtractionRecord,
@@ -69,6 +71,15 @@ export class ExtractionFlow implements HostBusProbe {
   private swept = false;
   private lastSent: SentSession | null = null;
   private refreshSeq = 0;
+  /** The Done map last pushed to the Guest — resends only on a real change. */
+  private lastPushedStates: { documentId: string; states: ActionItemStates | undefined } | null =
+    null;
+  /**
+   * Serializes Done writes per Document (issue #144): a whole-map write
+   * computed from a stale read would clobber a mark that landed meanwhile,
+   * so each write chains onto the previous one for the same Document.
+   */
+  private readonly doneWriteChains = new Map<string, Promise<void>>();
 
   constructor() {
     const events = inject(HostBusEvents);
@@ -84,6 +95,20 @@ export class ExtractionFlow implements HostBusProbe {
           ? null
           : (this.store.documents()?.find((d) => d.id === docId) ?? null);
       void this.refreshSession(doc, this.store.extractionJobs().get(docId ?? ''), this.auth.user());
+    });
+    // Done-mark push (issue #144, ADR 0013): while a Document is open, every
+    // change to its `actionItemStates` — a Host-side mark or un-mark, a
+    // prune on Extraction save — goes out as ACTION_ITEM_STATES. A fresh
+    // Session already carries the map, so only same-Document changes push.
+    effect(() => {
+      const docId = this.open.docId();
+      const states = docId === null ? undefined : this.docById(docId)?.actionItemStates;
+      const changed =
+        docId !== null &&
+        this.lastPushedStates?.documentId === docId &&
+        !sameActionItemStates(this.lastPushedStates.states, states);
+      this.lastPushedStates = docId === null ? null : { documentId: docId, states };
+      if (changed) this.bus.pushActionItemStates(states ?? {});
     });
   }
 
@@ -186,6 +211,101 @@ export class ExtractionFlow implements HostBusProbe {
     this.reminders.open(request.documentId, request.actionItemId);
   }
 
+  /**
+   * GUEST_SET_ACTION_ITEM_DONE (issue #144): the adapter has already vetted
+   * the Session and the wire shape; the write is validated against the
+   * Extraction index like `Reminders` resolves items. The Guest already
+   * marked optimistically — silence, no toast.
+   */
+  actionItemDoneRequested(request: ActionItemDoneRequest): void {
+    this.enqueueDoneWrite(request.documentId, () =>
+      this.persistActionItemDone(request.documentId, request.actionItemId, request.done),
+    );
+  }
+
+  /**
+   * The attention overview's Mark done / un-mark (issue #144): the same
+   * write path the Bus request takes, plus the Host-facing Undo toast a
+   * successful mark shows.
+   */
+  async setActionItemDone(
+    documentId: string,
+    actionItemId: string,
+    done: boolean,
+  ): Promise<void> {
+    const succeeded = await this.enqueueDoneWrite(documentId, () =>
+      this.persistActionItemDone(documentId, actionItemId, done),
+    );
+    if (succeeded && done) {
+      this.toasts.show({
+        tone: 'success',
+        title: 'Marked done',
+        action: {
+          label: 'Undo',
+          run: () => void this.setActionItemDone(documentId, actionItemId, false),
+        },
+      });
+    }
+  }
+
+  /**
+   * Chains a Done write onto the Document's pending writes (issue #144) so
+   * concurrent toggles can't clobber each other's marks.
+   */
+  private enqueueDoneWrite(documentId: string, write: () => Promise<boolean>): Promise<boolean> {
+    const chain = (this.doneWriteChains.get(documentId) ?? Promise.resolve()).then(write);
+    this.doneWriteChains.set(
+      documentId,
+      chain.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return chain;
+  }
+
+  /**
+   * Writes one Done mark (issue #144, ADR 0013): resolves the item from the
+   * Extraction index — a request for an id the Document no longer has is
+   * refused and answered with the authoritative map, rolling back the
+   * Guest's optimistic state. The Host computes `doneThrough` for a
+   * computable recurrence via the contract's `doneMark` and answers every
+   * write — including a failed one — with the authoritative map. Returns
+   * whether the write landed.
+   */
+  private async persistActionItemDone(
+    documentId: string,
+    actionItemId: string,
+    done: boolean,
+  ): Promise<boolean> {
+    const doc = this.docById(documentId);
+    const item = this.store
+      .extractionsByDocId()
+      .get(documentId)
+      ?.actionItems.find((i) => i.id === actionItemId);
+    const current = doc?.actionItemStates ?? {};
+    if (!doc || doc.status !== 'ready' || !item) {
+      // Refused — still push the authoritative map so an optimistic Guest
+      // rolls its mark back.
+      if (doc && this.open.docId() === documentId) this.bus.pushActionItemStates(current);
+      return false;
+    }
+    const next: ActionItemStates = { ...current };
+    if (done) next[actionItemId] = doneMark(item, new Date());
+    else delete next[actionItemId];
+    try {
+      await this.documents.setActionItemStates(documentId, next);
+      if (this.open.docId() === documentId) this.bus.pushActionItemStates(next);
+      return true;
+    } catch (err) {
+      console.warn('[done] could not write Action Item state for', documentId, err);
+      this.toasts.show({ tone: 'error', title: "Couldn't update the item", body: 'Try again.' });
+      // On failure the stored map stands — push it so the Guest rolls back.
+      if (this.open.docId() === documentId) this.bus.pushActionItemStates(current);
+      return false;
+    }
+  }
+
   // -- Job queue feeders ----------------------------------------------------
 
   private sweep(documents: DocumentRecord[] | null): void {
@@ -274,6 +394,7 @@ export class ExtractionFlow implements HostBusProbe {
         normalizeExtractionRecord({ ...candidate, createdAt: nowTimestamp() });
       if (this.docById(documentId)) this.store.setExtraction(documentId, record);
       this.store.clearExtractionJob(documentId);
+      await this.pruneActionItemStates(documentId, record);
       const doc = this.docById(documentId);
       if (doc && this.open.docId() === documentId) {
         // The adapter already resent INIT_SESSION with the result — mark that
@@ -349,6 +470,7 @@ export class ExtractionFlow implements HostBusProbe {
       authToken,
       extraction,
       extractionState,
+      actionItemStates: doc.actionItemStates,
     };
     this.bus.openSession(session);
     this.lastSent = {
@@ -377,9 +499,50 @@ export class ExtractionFlow implements HostBusProbe {
     this.store.clearExtractionJob(documentId);
   }
 
+  /**
+   * Orphaned Done keys — ids the new Extraction no longer carries — are
+   * pruned when an Extraction is saved (ADR 0013). Resurfacing a changed
+   * item not-Done is cheap; hiding a genuinely new one is not.
+   */
+  private async pruneActionItemStates(
+    documentId: string,
+    record: ExtractionRecord,
+  ): Promise<void> {
+    const states = this.docById(documentId)?.actionItemStates;
+    if (!states) return;
+    const keep = new Set(record.actionItems.map((i) => i.id));
+    if (Object.keys(states).every((id) => keep.has(id))) return;
+    const pruned = Object.fromEntries(
+      Object.entries(states).filter(([id]) => keep.has(id)),
+    );
+    try {
+      await this.documents.setActionItemStates(documentId, pruned);
+    } catch (err) {
+      console.warn('[done] could not prune Action Item states for', documentId, err);
+    }
+  }
+
   private docById(documentId: string): DocumentRecord | undefined {
     return this.store.documents()?.find((d) => d.id === documentId);
   }
+}
+
+/** Entry-wise equality — snapshots rebuild records, so reference isn't enough. */
+function sameActionItemStates(
+  a: ActionItemStates | undefined,
+  b: ActionItemStates | undefined,
+): boolean {
+  const left = a ?? {};
+  const right = b ?? {};
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const id of keys) {
+    const la = left[id];
+    const lb = right[id];
+    if (!la !== !lb || (la && lb && (la.doneAt !== lb.doneAt || la.doneThrough !== lb.doneThrough))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function nowTimestamp(): ExtractionRecord['createdAt'] {

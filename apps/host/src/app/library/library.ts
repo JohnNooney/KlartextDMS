@@ -368,6 +368,11 @@ export class Library {
     );
   }
 
+  /** A mark-done check or a Done row's un-mark (issue #144) — the flow owns the write and the toast. */
+  protected toggleDone(item: AttentionItem, done: boolean): void {
+    void this.flow.setActionItemDone(item.documentId, item.id, done);
+  }
+
   protected openFolder(folderId: string | null): void {
     this.openDocument.openFolder(folderId);
   }

@@ -44,6 +44,7 @@
         "timing": {
           "kind": "RECURRING",
           "cadence": "MONTHLY",
+          "dayOfMonth": 3,
           "scheduleLabel": "Monthly by the 3rd working day"
         }
       }

@@ -4,7 +4,7 @@
  * `DocumentRepository`. PDF bytes live in Storage at `storagePath`. The Guest
  * never sees this type — repositories are Host-only.
  */
-import type { ExtractionErrorCode, Timestamp } from '@klartext/bus-contract';
+import type { ActionItemStates, ExtractionErrorCode, Timestamp } from '@klartext/bus-contract';
 
 /** The metadata-first machine (issues #9/#16): where a Document stands. */
 export type DocumentStatus = 'uploading' | 'ready' | 'failed' | 'deleting';
@@ -40,6 +40,13 @@ export interface DocumentRecord {
    * written before the field existed; `null` means no recorded failure.
    */
   extractionFailure?: ExtractionFailure | null;
+  /**
+   * The Document's Done marks (issue #144, ADR 0013): one entry per Action
+   * Item the user marked, keyed by content-hash `actionItemId`. Absent on
+   * Documents written before the field existed. Keys whose Action Item left
+   * the Extraction are pruned when a new Extraction is saved.
+   */
+  actionItemStates?: ActionItemStates;
   /** `null` = root ("Documents"). */
   folderId: string | null;
   createdAt: Timestamp;

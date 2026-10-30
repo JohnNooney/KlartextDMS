@@ -7,6 +7,7 @@ import { createExtractionJobRunner } from './extraction/run-extraction-job';
 import { initGuestFirebase, signInThenReady } from './firebase';
 import { loadGuestConfig, referrerPeerOrigin } from './guest-config';
 import {
+  doneSender,
   expandPanelSender,
   loadFixtureSession,
   reminderSender,
@@ -47,6 +48,7 @@ if (window.parent === window) {
   showPageSender.value = (request) => adapter.showPage(request);
   expandPanelSender.value = () => adapter.expandPanel();
   reminderSender.value = (actionItemId) => adapter.createReminder(actionItemId);
+  doneSender.value = (actionItemId, done) => adapter.setActionItemDone(actionItemId, done);
   // GUEST_READY goes out only once anonymous sign-in resolves (issue #10).
   void signInThenReady(() => signInAnonymously(auth), adapter);
 }

@@ -11,10 +11,14 @@ const props = defineProps<{
   takeaway: KeyTakeaway & { timing?: ActionTiming };
   /** Offers the Action Item's "Add reminder" button (issue #122). */
   remindable?: boolean;
+  /** Offers the Action Item's "Mark done" check (issue #144). */
+  checkable?: boolean;
+  /** A Done row (issue #144): checked, muted, no chip or reminder. */
+  done?: boolean;
   selected?: boolean;
   divider?: boolean;
 }>();
-const emit = defineEmits<{ select: []; remind: [] }>();
+const emit = defineEmits<{ select: []; remind: []; toggleDone: [] }>();
 
 // Timing chip per Action Item (issue #118): text and Urgency tint from the
 // shared rules (ADR 0012, issue #133) — red Overdue, orange This week,
@@ -28,7 +32,7 @@ const CHIP_TINTS: Record<Urgency, string> = {
 };
 const timingChip = computed(() => {
   const timing = props.takeaway.timing;
-  if (!timing) return null;
+  if (!timing || props.done) return null;
   const { urgency, label } = actionUrgency(timing, new Date());
   return label === null ? null : { urgency, label, tint: CHIP_TINTS[urgency] };
 });
@@ -46,9 +50,23 @@ const timingChip = computed(() => {
       :class="remindable ? 'left-13' : 'left-4'"
     ></span>
     <button
-      v-if="remindable"
+      v-if="checkable"
       type="button"
-      class="ml-kt-3 mr-kt-2 mt-kt-3 grid size-8 shrink-0 place-items-center rounded-kt-sm text-kt-text-muted hover:bg-kt-fill hover:text-kt-accent"
+      role="checkbox"
+      :aria-checked="done"
+      class="ml-kt-3 mr-kt-1 mt-kt-3 grid size-8 shrink-0 place-items-center rounded-full text-kt-text-muted hover:bg-kt-fill hover:text-kt-accent"
+      :class="{ 'text-kt-accent': done }"
+      :title="done ? 'Mark not done' : 'Mark done'"
+      :aria-label="done ? 'Mark not done' : 'Mark done'"
+      @click="emit('toggleDone')"
+    >
+      <svg v-if="done" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg>
+      <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/></svg>
+    </button>
+    <button
+      v-if="remindable && !done"
+      type="button"
+      class="mr-kt-2 mt-kt-3 grid size-8 shrink-0 place-items-center rounded-kt-sm text-kt-text-muted hover:bg-kt-fill hover:text-kt-accent"
       title="Add reminder"
       aria-label="Add reminder"
       @click="emit('remind')"
@@ -58,8 +76,8 @@ const timingChip = computed(() => {
     <button
       type="button"
       class="grid min-w-0 flex-1 grid-cols-[1fr_auto] items-start gap-kt-3 py-kt-3 pr-kt-4 text-left"
-      :class="remindable ? 'pl-0' : 'pl-kt-4'"
-      :aria-expanded="selected"
+      :class="[remindable || checkable ? 'pl-0' : 'pl-kt-4', done ? 'text-kt-text-faint' : '']"
+      :aria-expanded="done ? undefined : selected"
       @click="emit('select')"
     >
       <span class="min-w-0">

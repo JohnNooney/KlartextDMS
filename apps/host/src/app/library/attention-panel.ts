@@ -28,14 +28,19 @@ interface CardItem {
 })
 export class AttentionPanel {
   readonly groups = input.required<AttentionGroup[]>();
+  /** Done items (issue #144) — hidden from the card, collapsed group in the sheet. */
+  readonly done = input<AttentionItem[]>([]);
   /** Set while the Extraction index is still loading: "Reading read of total documents…". */
   readonly reading = input<{ read: number; total: number } | null>(null);
   readonly itemOpened = output<AttentionItem>();
   /** A row's "Add reminder" affordance (issue #122) — the Library opens the dialog. */
   readonly reminderRequested = output<AttentionItem>();
+  /** A row's mark-done check or a Done row's un-mark (issue #144). */
+  readonly doneToggled = output<{ item: AttentionItem; done: boolean }>();
 
   protected readonly expanded = signal(true);
   protected readonly sheetOpen = signal(false);
+  protected readonly doneOpen = signal(false);
   protected readonly toggle = (open: boolean): boolean => !open;
 
   protected readonly count = computed(() =>
@@ -56,6 +61,14 @@ export class AttentionPanel {
   protected remind(item: AttentionItem): void {
     this.sheetOpen.set(false);
     this.reminderRequested.emit(item);
+  }
+
+  protected markDone(item: AttentionItem): void {
+    this.doneToggled.emit({ item, done: true });
+  }
+
+  protected unmarkDone(item: AttentionItem): void {
+    this.doneToggled.emit({ item, done: false });
   }
 }
 

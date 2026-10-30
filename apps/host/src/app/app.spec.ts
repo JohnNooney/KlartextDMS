@@ -72,6 +72,7 @@ async function setup(
     requestExtraction: vi.fn(),
     cancelJobs: vi.fn(),
     setPresentation: vi.fn(),
+    pushActionItemStates: vi.fn(),
     dispose: vi.fn(),
   };
   TestBed.overrideComponent(Library, {

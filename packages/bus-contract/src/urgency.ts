@@ -1,9 +1,10 @@
 /**
  * Action Item Urgency (ADR 0012): the single definition of how soon an
  * Action Item's timing comes due, derived at read time against `today` and
- * shared so the Host and Guest bucket and label it identically.
+ * shared so the Host and Guest bucket and label it identically. The Done
+ * mark's read and write rules live beside it (ADR 0013).
  */
-import type { ActionTiming, NoticeUnit } from './extraction.js';
+import type { ActionItem, ActionTiming, NoticeUnit } from './extraction.js';
 
 const DAY_MS = 86_400_000;
 const WEEK_DAYS = 7;
@@ -63,6 +64,68 @@ export function actionUrgency(timing: ActionTiming, today: Date): ActionUrgency 
     case 'NONE':
       return { urgency: 'noDate', label: null, dueDate: null };
   }
+}
+
+/**
+ * An Action Item's persisted Done mark (ADR 0013): one map entry per marked
+ * item on the DocumentRecord, keyed by the content-hash `actionItemId`.
+ */
+export interface ActionItemDoneState {
+  /** When the user marked it — an ISO timestamp; provenance, never read by `isDone`. */
+  doneAt: string;
+  /** Computable recurrences only: the `YYYY-MM-DD` occurrence this mark covers. */
+  doneThrough?: string;
+}
+
+/** A Document's Done marks: `users/{uid}/documents/{documentId}.actionItemStates`. */
+export type ActionItemStates = Record<string, ActionItemDoneState>;
+
+/** Whether an item's `timing` is a computable recurrence (`MONTHLY` + `dayOfMonth`). */
+function isComputableRecurrence(
+  timing: ActionTiming,
+): timing is ActionTiming & { kind: 'RECURRING'; cadence: 'MONTHLY'; dayOfMonth: number } {
+  return (
+    timing.kind === 'RECURRING' &&
+    timing.cadence === 'MONTHLY' &&
+    timing.dayOfMonth !== undefined
+  );
+}
+
+/**
+ * The single definition of whether an Action Item is Done today (ADR 0013).
+ * A computable recurrence is Done only while today's next occurrence is
+ * covered by the mark's `doneThrough` — it returns by itself when the next
+ * cycle comes up. Every other item is Done while a state exists.
+ * `actionUrgency` stays unaware of Done; recurring items remain never-Overdue.
+ */
+export function isDone(
+  item: Pick<ActionItem, 'timing'>,
+  state: ActionItemDoneState | undefined,
+  today: Date,
+): boolean {
+  if (!state) return false;
+  if (isComputableRecurrence(item.timing)) {
+    return (
+      state.doneThrough !== undefined &&
+      nextOccurrence(item.timing.dayOfMonth, localIso(today)) <= state.doneThrough
+    );
+  }
+  return true;
+}
+
+/**
+ * The Done mark a write stores (ADR 0013): `doneAt` plus, for a computable
+ * recurrence, `doneThrough` = the `dueDate` of the occurrence shown — the
+ * same `nextOccurrence` `actionUrgency` reports today.
+ */
+export function doneMark(item: Pick<ActionItem, 'timing'>, now: Date): ActionItemDoneState {
+  if (isComputableRecurrence(item.timing)) {
+    return {
+      doneAt: now.toISOString(),
+      doneThrough: nextOccurrence(item.timing.dayOfMonth, localIso(now)),
+    };
+  }
+  return { doneAt: now.toISOString() };
 }
 
 /**

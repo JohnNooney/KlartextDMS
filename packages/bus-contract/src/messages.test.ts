@@ -5,7 +5,9 @@ import {
   isBusMessage,
   isEnvelope,
   isPanelPresentation,
+  sanitizeActionItemStates,
   sanitizeCreateReminder,
+  sanitizeSetActionItemDone,
   type BusMessage,
   type GuestToHostMessage,
   type HostToGuestMessage,
@@ -84,6 +86,18 @@ describe('BusMessage union', () => {
         sessionId: 'sess-1',
         payload: { actionItemId: 'ai_123' },
       },
+      {
+        v: 1,
+        type: 'GUEST_SET_ACTION_ITEM_DONE',
+        sessionId: 'sess-1',
+        payload: { actionItemId: 'ai_123', done: true },
+      },
+      {
+        v: 1,
+        type: 'ACTION_ITEM_STATES',
+        sessionId: 'sess-1',
+        payload: { states: { ai_123: { doneAt: '2026-10-21T08:00:00.000Z', doneThrough: '2026-11-03' } } },
+      },
     ];
     for (const m of messages) expect(isBusMessage(m)).toBe(true);
   });
@@ -113,7 +127,8 @@ describe('BusMessage union', () => {
       if (
         m.type === 'INIT_SESSION' ||
         m.type === 'EXTRACT_DOCUMENT' ||
-        m.type === 'PANEL_PRESENTATION'
+        m.type === 'PANEL_PRESENTATION' ||
+        m.type === 'ACTION_ITEM_STATES'
       ) {
         toGuest.push(m);
       } else {
@@ -182,6 +197,69 @@ describe('sanitizeCreateReminder', () => {
     ['a string', 'ai_9f'],
   ])('rejects %s', (_label, payload) => {
     expect(sanitizeCreateReminder(payload)).toBeNull();
+  });
+});
+
+describe('sanitizeSetActionItemDone', () => {
+  it('accepts an id and a boolean done, stripping extras', () => {
+    expect(
+      sanitizeSetActionItemDone({ actionItemId: 'ai_9f', done: false, page: 3 }),
+    ).toEqual({ actionItemId: 'ai_9f', done: false });
+  });
+
+  it.each([
+    ['a missing id', { done: true }],
+    ['an empty id', { actionItemId: '', done: true }],
+    ['a non-string id', { actionItemId: 7, done: true }],
+    ['a missing done', { actionItemId: 'ai_9f' }],
+    ['a non-boolean done', { actionItemId: 'ai_9f', done: 'yes' }],
+    ['null', null],
+    ['a string', 'ai_9f'],
+  ])('rejects %s', (_label, payload) => {
+    expect(sanitizeSetActionItemDone(payload)).toBeNull();
+  });
+});
+
+describe('sanitizeActionItemStates', () => {
+  it('accepts a map of well-formed states and strips extras', () => {
+    expect(
+      sanitizeActionItemStates({
+        states: {
+          ai_1: { doneAt: '2026-10-21T08:00:00.000Z', doneThrough: '2026-11-03', extra: 1 },
+          ai_2: { doneAt: '2026-10-18T17:32:11.000Z' },
+        },
+        other: true,
+      }),
+    ).toEqual({
+      ai_1: { doneAt: '2026-10-21T08:00:00.000Z', doneThrough: '2026-11-03' },
+      ai_2: { doneAt: '2026-10-18T17:32:11.000Z' },
+    });
+  });
+
+  it('strips malformed entries but keeps the well-formed ones', () => {
+    expect(
+      sanitizeActionItemStates({
+        states: {
+          good: { doneAt: 'x' },
+          missingDoneAt: { doneThrough: '2026-11-03' },
+          nonObject: 7,
+          badThrough: { doneAt: 'x', doneThrough: 3 },
+        },
+      }),
+    ).toEqual({
+      good: { doneAt: 'x' },
+      badThrough: { doneAt: 'x' },
+    });
+  });
+
+  it.each([
+    ['a missing states', {}],
+    ['a non-object states', { states: 'done' }],
+    ['an array states', { states: [] }],
+    ['null', null],
+    ['a string', 'states'],
+  ])('rejects %s', (_label, payload) => {
+    expect(sanitizeActionItemStates(payload)).toBeNull();
   });
 });
 

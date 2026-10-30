@@ -35,6 +35,14 @@ reply for unknown types. The conformance suite pins this behaviour.
 | Guest → Host | `AI_PROCESSING_SUCCESS` | `{ jobId, extraction }` — an `ExtractionCandidate`; the Host adds `createdAt` |
 | Guest → Host | `AI_PROCESSING_ERROR` | `{ jobId, error }` — `ExtractionError { code, message, retryable }` |
 | Guest → Host | `RETRY_EXTRACTION` | `{ documentId }` — the Guest holds no bytes after transfer |
+| Host → Guest | `ACTION_ITEM_STATES` | `{ states }` — the authoritative Done map (ADR 0013); after every write and on Host-side changes while the Document is open |
+| Guest → Host | `GUEST_SET_ACTION_ITEM_DONE` | `{ actionItemId, done }` — the "Mark done" check; Session-bound like the other panel write-backs (`GUEST_SHOW_PAGE`, `GUEST_EXPAND_PANEL`, `GUEST_CREATE_REMINDER`) |
+
+`Session` additionally carries `actionItemStates` — the Document's Done map
+(`Record<actionItemId, { doneAt: string; doneThrough?: string }>`), so the
+Guest renders it from the first frame. `urgency.ts` owns the shared read
+and write rules: `isDone(item, state, today)` and `doneMark(item, now)`
+(ADR 0013).
 
 Error codes: `AI_UNAVAILABLE`, `INVALID_EXTRACTION`, `QUOTA_EXCEEDED`,
 `APP_CHECK_FAILED`, `UNKNOWN`.
