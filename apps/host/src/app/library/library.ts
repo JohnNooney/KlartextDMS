@@ -18,6 +18,12 @@ import { Reader } from '../reader/reader';
 import { ReminderDialog } from '../reminders/reminder-dialog';
 import { Reminders } from '../reminders/reminders';
 import { AttentionPanel } from './attention-panel';
+import {
+  BatchProtoMenu,
+  BatchProtoNudge,
+  BatchProtoSlot,
+  BatchReanalysisPrototype,
+} from './batch-reanalysis-prototype';
 import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
@@ -64,6 +70,10 @@ type DialogState =
   styleUrls: ['./library.scss', './search-field.scss'],
   imports: [
     AttentionPanel,
+    BatchProtoMenu,
+    BatchProtoNudge,
+    BatchProtoSlot,
+    BatchReanalysisPrototype,
     DocumentTile,
     FolderTile,
     FolderTreeView,

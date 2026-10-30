@@ -72,6 +72,7 @@
       }
     </div>
     <div class="toolbar-actions">
+      <app-batch-proto-slot slot="toolbar" />
       <!-- The mobile search affordance (issue #121) — swaps the collapsed
            field in for the title on its own row; desktop shows the field. -->
       <button type="button" class="btn-search" (click)="revealSearch()" aria-label="Search">
@@ -109,8 +110,10 @@
           </div>
         }
       </span>
+      <app-batch-proto-menu />
     </div>
   </header>
+  <app-batch-proto-slot slot="top" />
 
   <div
     class="library-drop"
@@ -152,7 +155,8 @@
         </button>
       </div>
     } @else {
-      <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
+      <app-batch-proto-nudge slot="meta" />
+      <app-batch-proto-nudge slot="banner" />
       @if (store.deepDocumentCount() > 0) {
         <app-attention-panel
           [groups]="attention().groups"
@@ -272,3 +276,5 @@
 @if (reminders.draft(); as draft) {
   <app-reminder-dialog [draft]="draft" (closed)="reminders.close()" />
 }
+
+<app-batch-reanalysis-prototype [reading]="store.openDoc() !== null" />

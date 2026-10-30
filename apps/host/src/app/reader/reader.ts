@@ -2,6 +2,7 @@ import { Component, computed, DestroyRef, effect, inject, input, signal, viewChi
 import type { GuestShowPagePayload } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import type { FolderRecord } from '../data/folder';
+import { BatchProtoSlot } from '../library/batch-reanalysis-prototype';
 import { LibraryStore } from '../library/library.store';
 import { MenuViewport } from '../menu-viewport';
 import { OpenDocument } from '../open-document';
@@ -20,7 +21,7 @@ import { siblingsOf, stepperFor } from './siblings';
   selector: 'app-reader',
   templateUrl: './reader.html',
   styleUrl: './reader.scss',
-  imports: [PdfViewer, MenuViewport],
+  imports: [PdfViewer, MenuViewport, BatchProtoSlot],
 })
 export class Reader {
   readonly doc = input.required<DocumentRecord>();
