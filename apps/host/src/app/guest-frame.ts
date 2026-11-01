@@ -12,8 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
-import type { HostAdapter } from '@klartext/bus-contract/conformance';
-import { HOST_BUS_ADAPTER_FACTORY } from './bus/host-bus.adapter';
+import { HOST_BUS_ADAPTER_FACTORY, type HostBusAdapter } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
 import { HostBus } from './bus/host-bus';
 import { windowBusSource } from './bus/window-bus';
@@ -78,7 +77,7 @@ const GUEST_DETENTS: readonly SheetDetent[] = [
 export class GuestFrame {
   private readonly frame = viewChild.required<ElementRef<HTMLIFrameElement>>('frame');
   private readonly sheet = viewChild.required(Sheet);
-  private adapter: HostAdapter | null = null;
+  private adapter: HostBusAdapter | null = null;
   /** Removes the breakpoint listener wired by {@link watchPresentation}. */
   private unwatchPresentation: (() => void) | null = null;
 

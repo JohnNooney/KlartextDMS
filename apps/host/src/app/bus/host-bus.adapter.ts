@@ -49,7 +49,21 @@ export interface HostBusContext extends Omit<HostAdapterContext, 'probe'> {
   probe: HostBusProbe;
 }
 
-export type HostBusAdapterFactory = (ctx: HostBusContext) => HostAdapter;
+/**
+ * The serial queue's priorities, highest first (issue #158, ADR 0015):
+ * `normal` is upload, retry and other user-initiated work; `batch` is Batch
+ * re-analysis members, which run only when nothing else waits. One job still
+ * runs at a time (ADR 0003). Translations (#124, ADR 0009) add their lane here.
+ */
+export const JOB_PRIORITIES = ['normal', 'batch'] as const;
+export type JobPriority = (typeof JOB_PRIORITIES)[number];
+
+/** The Host's adapter: the contract surface plus a queue priority per job. */
+export interface HostBusAdapter extends HostAdapter {
+  requestExtraction(document: JobDocument, bytes: ArrayBuffer, priority?: JobPriority): void;
+}
+
+export type HostBusAdapterFactory = (ctx: HostBusContext) => HostBusAdapter;
 
 /** DI seam for the adapter: tests substitute a capturing stub factory. */
 export const HOST_BUS_ADAPTER_FACTORY = new InjectionToken<HostBusAdapterFactory>(
@@ -72,6 +86,7 @@ const INVALID_EXTRACTION: ExtractionError = {
 interface QueuedJob {
   document: JobDocument;
   bytes: ArrayBuffer;
+  priority: JobPriority;
 }
 
 interface ActiveJob extends QueuedJob {
@@ -89,11 +104,13 @@ interface ActiveJob extends QueuedJob {
  * Buffers the current Session until `GUEST_READY`, runs one Extraction Job
  * at a time under the 10 s/10 s/120 s watchdogs, discards replies for a
  * stale `sessionId`/`jobId`, and on a Guest reload resends the Session and
- * re-issues the in-flight job under a fresh `jobId`. Also reports the
+ * re-issues the in-flight job under a fresh `jobId`. Jobs wait in one FIFO
+ * lane per `JobPriority` (issue #158); the next dispatch takes the head of
+ * the highest non-empty lane. Also reports the
  * frame's lane/sheet presentation (issue #77): buffered until ready like
  * the Session and resent on each reload.
  */
-export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
+export function createHostBusAdapter(ctx: HostBusContext): HostBusAdapter {
   let guestReady = false;
   let sessionSeq = 0;
   let jobSeq = 0;
@@ -101,7 +118,7 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
   let sessionAckTimer: ReturnType<typeof setTimeout> | null = null;
   let presentation: PanelPresentation | null = null;
   const knownDocuments = new Map<string, QueuedJob>();
-  const queue: QueuedJob[] = [];
+  const lanes: Record<JobPriority, QueuedJob[]> = { normal: [], batch: [] };
   let activeJob: ActiveJob | null = null;
 
   const failSession = (): void => {
@@ -148,8 +165,9 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
   };
 
   const pumpQueue = (): void => {
-    if (!guestReady || activeJob !== null || queue.length === 0) return;
-    dispatchJob(queue.shift()!);
+    if (!guestReady || activeJob !== null) return;
+    const lane = JOB_PRIORITIES.find((p) => lanes[p].length > 0);
+    if (lane) dispatchJob(lanes[lane].shift()!);
   };
 
   const settleJob = (error: ExtractionError | null, extraction?: ExtractionCandidate): void => {
@@ -199,7 +217,8 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         if (activeJob !== null) {
           // Re-issue the in-flight job under a fresh jobId; stale results are discarded.
           clearTimeout(activeJob.watchdog);
-          queue.unshift({ document: activeJob.document, bytes: activeJob.bytes });
+          const { document, bytes, priority } = activeJob;
+          lanes[priority].unshift({ document, bytes, priority });
           activeJob = null;
         }
         pumpQueue();
@@ -250,9 +269,10 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
         // The app may own the re-enqueue (clears the failure record, refetches
         // bytes — also the only path for a Document this session never queued).
         if (ctx.probe.retryRequested?.(documentId)) break;
+        // A Guest-side retry is user-initiated, whatever queued it first.
         const known = knownDocuments.get(documentId);
         if (known) {
-          queue.push(known);
+          lanes.normal.push({ ...known, priority: 'normal' });
           pumpQueue();
         }
         break;
@@ -315,15 +335,22 @@ export function createHostBusAdapter(ctx: HostBusContext): HostAdapter {
       currentSession = session;
       if (guestReady) sendSession();
     },
-    requestExtraction(document: JobDocument, bytes: ArrayBuffer): void {
-      knownDocuments.set(document.documentId, { document, bytes });
-      queue.push({ document, bytes });
+    requestExtraction(
+      document: JobDocument,
+      bytes: ArrayBuffer,
+      priority: JobPriority = 'normal',
+    ): void {
+      const job = { document, bytes, priority };
+      knownDocuments.set(document.documentId, job);
+      lanes[priority].push(job);
       pumpQueue();
     },
     cancelJobs(documentId: string): void {
       knownDocuments.delete(documentId);
-      for (let i = queue.length - 1; i >= 0; i--) {
-        if (queue[i]!.document.documentId === documentId) queue.splice(i, 1);
+      for (const lane of Object.values(lanes)) {
+        for (let i = lane.length - 1; i >= 0; i--) {
+          if (lane[i]!.document.documentId === documentId) lane.splice(i, 1);
+        }
       }
       if (activeJob && activeJob.document.documentId === documentId) {
         // Dropping the active job orphans its jobId: a late result no longer

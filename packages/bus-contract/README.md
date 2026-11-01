@@ -61,6 +61,11 @@ within `SESSION_ACK_TIMEOUT_MS` (10 s) of `INIT_SESSION`;
 `ExtractionCandidate`, `ExtractionRecord` (`createdAt` is a structural
 `Timestamp` — dependency-free, Firestore-compatible).
 
+`CURRENT_EXTRACTION_SCHEMA_VERSION` is the `schemaVersion` Klartext now
+produces; `isOutdatedExtraction(record)` flags an Outdated Extraction — one
+stored in an earlier schema, the Host's Batch re-analysis criterion
+(issue #158, ADR 0015).
+
 ## Golden fixtures
 
 `src/fixtures/*.json` — one canonical Envelope JSON per message type.

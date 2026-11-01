@@ -615,3 +615,95 @@ describe('HostBus adapter — Done marks (issue #144)', () => {
     expect(statesSent(sink)).toEqual([]);
   });
 });
+
+// Issue #158, ADR 0015: the serial queue has two priorities — upload, retry
+// and other user-initiated work runs first, Batch re-analysis members last —
+// and still dispatches one job at a time (ADR 0003).
+describe('HostBus adapter — job priority (issue #158)', () => {
+  const doc = (documentId: string) => ({
+    documentId,
+    documentTitle: documentId,
+    contentType: 'application/pdf',
+  });
+
+  const dispatched = (sink: BusSink) =>
+    (sink.postMessage as ReturnType<typeof vi.fn>).mock.calls
+      .map(([data]) => data as { type: string; payload: { jobId: string; document: { documentId: string } } })
+      .filter((d) => d.type === 'EXTRACT_DOCUMENT');
+
+  /** Acks and fails the in-flight job so the queue advances. */
+  function finish(source: FakeSource, sink: BusSink): void {
+    const { jobId } = dispatched(sink).at(-1)!.payload;
+    const error = { code: 'UNKNOWN', message: 'x', retryable: true };
+    for (const data of [
+      { v: 1, type: 'AI_PROCESSING_STARTED', sessionId: '', payload: { jobId } },
+      { v: 1, type: 'AI_PROCESSING_ERROR', sessionId: '', payload: { jobId, error } },
+    ]) {
+      source.emit({ data, origin: PEER_ORIGIN, source: sink });
+    }
+  }
+
+  const order = (sink: BusSink) => dispatched(sink).map((d) => d.payload.document.documentId);
+
+  it('runs a Document requested mid-batch ahead of the unstarted batch members', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-2'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-3'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('upload'), new ArrayBuffer(1));
+
+    for (let i = 0; i < 3; i++) finish(source, sink);
+
+    expect(order(sink)).toEqual(['batch-1', 'upload', 'batch-2', 'batch-3']);
+  });
+
+  it('still runs one job at a time — a priority job never preempts the running one', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('upload'), new ArrayBuffer(1));
+
+    expect(order(sink)).toEqual(['batch-1']);
+  });
+
+  it('keeps FIFO order within each priority', () => {
+    const { source, sink, adapter } = setup();
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('upload-1'), new ArrayBuffer(1));
+    adapter.requestExtraction(doc('batch-2'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('upload-2'), new ArrayBuffer(1), 'normal');
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+
+    for (let i = 0; i < 3; i++) finish(source, sink);
+
+    expect(order(sink)).toEqual(['upload-1', 'upload-2', 'batch-1', 'batch-2']);
+  });
+
+  it('re-issues an in-flight batch job first on a Guest reload, keeping its priority', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-2'), new ArrayBuffer(1), 'batch');
+
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('upload'), new ArrayBuffer(1));
+    finish(source, sink);
+    finish(source, sink);
+
+    expect(order(sink)).toEqual(['batch-1', 'batch-1', 'upload', 'batch-2']);
+  });
+
+  it('cancelJobs drops a queued batch member', () => {
+    const { source, sink, adapter } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-2'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-3'), new ArrayBuffer(1), 'batch');
+
+    adapter.cancelJobs('batch-2');
+    finish(source, sink);
+
+    expect(order(sink)).toEqual(['batch-1', 'batch-3']);
+  });
+});

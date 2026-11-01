@@ -3,25 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionUser } from '@klartext/bus-contract';
-import type {
-  ActionItemStates,
-  ExtractionCandidate,
-  ExtractionRecord,
-  JobDocument,
-  Session,
-} from '@klartext/bus-contract';
-import { goldenFixtureMessages, normalizeExtractionRecord } from '@klartext/bus-contract';
+import type { ExtractionRecord, JobDocument, Session, SessionUser } from '@klartext/bus-contract';
 import { AuthService } from '../auth.service';
-import type {
-  DocumentRecord,
-  DocumentStatus,
-  ExtractionFailure,
-  NewDocument,
-} from '../data/document';
-import type { DocumentRepository, DocumentUpload } from '../data/document-repository';
-import type { ExtractionRepository } from '../data/extraction-repository';
-import type { FolderRepository } from '../data/folder-repository';
 import {
   DOCUMENT_REPOSITORY,
   EXTRACTION_REPOSITORY,
@@ -35,171 +18,26 @@ import { PageFocus } from '../page-focus';
 import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { ExtractionFlow } from './extraction-flow';
+import {
+  BYTES,
+  FakeDocumentRepository,
+  FakeExtractionRepository,
+  candidate,
+  fakeFolderRepository,
+  flush,
+  jobDocument,
+  storedRecord,
+} from './extraction-flow.spec-support';
 import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
 
 const USER: SessionUser = { uid: 'u1', displayName: 'Test User', email: 'test-user@test.com' };
-const BYTES = new Uint8Array([0x25, 0x50, 0x44, 0x46]).buffer;
-
-function candidate(documentId: string): ExtractionCandidate {
-  return {
-    ...goldenFixtureMessages.AI_PROCESSING_SUCCESS.payload.extraction,
-    documentId,
-  };
-}
-
-function storedRecord(documentId: string): ExtractionRecord {
-  return normalizeExtractionRecord({
-    ...candidate(documentId),
-    createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
-  });
-}
-
-function jobDocument(documentId: string, documentTitle = 'seed'): JobDocument {
-  return { documentId, documentTitle, contentType: 'application/pdf' };
-}
-
-/** Snapshot-emitting DocumentRepository double — same shape as the store spec's. */
-class FakeDocumentRepository implements DocumentRepository {
-  readonly records = new Map<string, DocumentRecord>();
-  readonly calls: string[] = [];
-  readonly bytesByDoc = new Map<string, ArrayBuffer>();
-
-  private seq = 0;
-  private readonly listeners = new Set<(documents: DocumentRecord[]) => void>();
-
-  private emit(): void {
-    const documents = [...this.records.values()];
-    for (const listener of this.listeners) listener(documents);
-  }
-
-  watch(listener: (documents: DocumentRecord[]) => void): () => void {
-    this.listeners.add(listener);
-    listener([...this.records.values()]);
-    return () => this.listeners.delete(listener);
-  }
-
-  async list(): Promise<DocumentRecord[]> {
-    return [...this.records.values()];
-  }
-
-  async create(input: NewDocument): Promise<DocumentRecord> {
-    const id = `doc-${++this.seq}`;
-    const record: DocumentRecord = {
-      id,
-      ownerId: 'owner',
-      title: input.title,
-      originalFilename: input.originalFilename,
-      contentType: 'application/pdf',
-      sizeBytes: input.sizeBytes,
-      storagePath: `users/owner/documents/${id}.pdf`,
-      status: 'uploading',
-      extractionFailure: null,
-      folderId: input.folderId,
-      createdAt: { seconds: 1, nanoseconds: 0 },
-      updatedAt: { seconds: 1, nanoseconds: 0 },
-    };
-    this.records.set(id, record);
-    this.emit();
-    return { ...record };
-  }
-
-  async setStatus(documentId: string, status: DocumentStatus): Promise<void> {
-    const record = this.records.get(documentId);
-    if (!record) throw notFound();
-    this.records.set(documentId, { ...record, status });
-    this.emit();
-  }
-
-  async setExtractionFailure(
-    documentId: string,
-    failure: Omit<ExtractionFailure, 'failedAt'> | null,
-  ): Promise<void> {
-    this.calls.push(`extraction-failure:${documentId}`);
-    const record = this.records.get(documentId);
-    if (!record) throw notFound();
-    this.records.set(documentId, {
-      ...record,
-      extractionFailure:
-        failure === null ? null : { ...failure, failedAt: { seconds: 1, nanoseconds: 0 } },
-    });
-    this.emit();
-  }
-
-  async setActionItemStates(documentId: string, states: ActionItemStates): Promise<void> {
-    this.calls.push(`action-item-states:${documentId}`);
-    const record = this.records.get(documentId);
-    if (!record) throw notFound();
-    this.records.set(documentId, { ...record, actionItemStates: states });
-    this.emit();
-  }
-
-  async rename(): Promise<void> {}
-  async setFolder(): Promise<void> {}
-  async delete(): Promise<void> {}
-
-  async getBytes(documentId: string): Promise<ArrayBuffer> {
-    return this.bytesByDoc.get(documentId) ?? BYTES;
-  }
-
-  uploadBytes(): DocumentUpload {
-    throw new Error('not used');
-  }
-
-  /** Seeds a Document straight into the feed under `overrides`. */
-  async seed(overrides: Partial<DocumentRecord> = {}): Promise<DocumentRecord> {
-    const record = await this.create({
-      title: 'seed',
-      originalFilename: 'seed.pdf',
-      sizeBytes: 4,
-      folderId: null,
-    });
-    this.records.set(record.id, { ...record, status: 'ready', ...overrides });
-    this.emit();
-    return this.records.get(record.id)!;
-  }
-}
-
-class FakeExtractionRepository implements ExtractionRepository {
-  readonly records = new Map<string, ExtractionRecord>();
-  readonly saves: Array<{ documentId: string; extraction: ExtractionCandidate }> = [];
-
-  async get(documentId: string): Promise<ExtractionRecord | null> {
-    return this.records.get(documentId) ?? null;
-  }
-
-  async save(documentId: string, extraction: ExtractionCandidate): Promise<void> {
-    this.saves.push({ documentId, extraction });
-    this.records.set(
-      documentId,
-      normalizeExtractionRecord({
-        ...extraction,
-        createdAt: { seconds: 1_700_000_000, nanoseconds: 0 },
-      }),
-    );
-  }
-}
-
-function notFound(): Error {
-  return Object.assign(new Error('not found'), { code: 'not-found' });
-}
-
-const fakeFolderRepository = {
-  watch: vi.fn((emit: (folders: never[]) => void) => {
-    emit([]);
-    return () => {};
-  }),
-} as unknown as FolderRepository;
 
 const fakeRouter = {
   events: NEVER,
   routerState: { snapshot: { root: { firstChild: null } } },
   navigate: vi.fn(async () => true),
 };
-
-async function flush(): Promise<void> {
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-}
 
 function setup(repository = new FakeDocumentRepository()) {
   const extractions = new FakeExtractionRepository();
@@ -216,7 +54,7 @@ function setup(repository = new FakeDocumentRepository()) {
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT_REPOSITORY, useValue: repository },
-      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
+      { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository() },
       { provide: EXTRACTION_REPOSITORY, useValue: extractions },
       { provide: UploadPipeline, useFactory: () => new UploadPipeline(repository) },
       { provide: HostBus, useValue: bus },

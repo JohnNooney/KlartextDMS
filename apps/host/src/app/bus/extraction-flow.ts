@@ -14,7 +14,7 @@ import type {
   SessionUser,
 } from '@klartext/bus-contract';
 import { AuthService } from '../auth.service';
-import type { DocumentRecord } from '../data/document';
+import type { DocumentRecord, ExtractionFailure } from '../data/document';
 import type { DocumentRepository } from '../data/document-repository';
 import type { ExtractionRepository } from '../data/extraction-repository';
 import { DOCUMENT_REPOSITORY, EXTRACTION_REPOSITORY } from '../data/providers';
@@ -26,7 +26,15 @@ import { SheetExpand } from '../sheet-expand';
 import { ToastService } from '../toasts/toast.service';
 import { HostBus } from './host-bus';
 import { HostBusEvents } from './host-bus-events';
-import type { HostBusProbe } from './host-bus.adapter';
+import type { HostBusProbe, JobPriority } from './host-bus.adapter';
+
+/** Batch re-analysis's view of its members' outcomes (issue #158). */
+export interface BatchObserver {
+  /** A member's per-Document toasts are suppressed — the batch summarizes. */
+  isMember(documentId: string): boolean;
+  /** A member's job settled: its Extraction persisted (`true`) or it failed. */
+  settled(documentId: string, analyzed: boolean): void;
+}
 
 /** What the panel is presumed to show — resends only on a real change. */
 interface SentSession {
@@ -80,6 +88,12 @@ export class ExtractionFlow implements HostBusProbe {
    * so each write chains onto the previous one for the same Document.
    */
   private readonly doneWriteChains = new Map<string, Promise<void>>();
+  private batch: BatchObserver | null = null;
+  /**
+   * Failure records a retry cleared, held until the job starts (issue #158)
+   * so cancelling it before then restores the Couldn't-analyze state.
+   */
+  private readonly clearedFailures = new Map<string, ExtractionFailure>();
 
   constructor() {
     const events = inject(HostBusEvents);
@@ -123,6 +137,7 @@ export class ExtractionFlow implements HostBusProbe {
   }
 
   jobStarted(_jobId: string, document: JobDocument): void {
+    this.clearedFailures.delete(document.documentId);
     this.setJobState(document.documentId, 'running');
   }
 
@@ -154,9 +169,12 @@ export class ExtractionFlow implements HostBusProbe {
   }
 
   jobFailedFor(_jobId: string, document: JobDocument, error: ExtractionError): void {
+    this.clearedFailures.delete(document.documentId);
     this.setJobState(document.documentId, 'failed');
     void this.recordFailure(document.documentId, error);
-    if (this.open.docId() !== document.documentId) {
+    if (this.batch?.isMember(document.documentId)) {
+      this.batch.settled(document.documentId, false);
+    } else if (this.open.docId() !== document.documentId) {
       const title = this.docById(document.documentId)?.title ?? document.documentTitle;
       this.toasts.show({
         tone: 'error',
@@ -175,12 +193,51 @@ export class ExtractionFlow implements HostBusProbe {
    * never saw. Unknown/deleted Documents are swallowed, never re-queued.
    */
   retryRequested(documentId: string): boolean {
+    this.reanalyze(documentId);
+    return true;
+  }
+
+  /**
+   * Re-runs a Document's Extraction Job through the retry path — the
+   * Guest's retry, a failure toast's Try again, and Batch re-analysis
+   * members (issue #158, at `batch` priority). Returns whether the job was
+   * accepted: unknown, non-ready, and already queued/running Documents are
+   * refused.
+   */
+  reanalyze(documentId: string, priority: JobPriority = 'normal'): boolean {
     const doc = this.docById(documentId);
     // A queued/running job needs no second enqueue — the retry is a no-op.
     const inFlight = ['queued', 'running'].includes(
       this.store.extractionJobs().get(documentId) ?? '',
     );
-    if (doc && doc.status === 'ready' && !inFlight) void this.retry(doc);
+    if (!doc || doc.status !== 'ready' || inFlight) return false;
+    void this.retry(doc, priority);
+    return true;
+  }
+
+  /**
+   * Registers Batch re-analysis (issue #158): its members' outcomes are
+   * reported to it instead of toasting per Document.
+   */
+  observeBatch(observer: BatchObserver | null): void {
+    this.batch = observer;
+  }
+
+  /**
+   * Drops a re-analysis that hasn't started (issue #158): the queued job
+   * never dispatches and a failure record its retry cleared is restored.
+   * Returns `false` when the job is no longer waiting — a running job
+   * finishes and persists.
+   */
+  cancelReanalysis(documentId: string): boolean {
+    if (this.store.extractionJobs().get(documentId) !== 'queued') return false;
+    this.bus.cancelJobsFor(documentId);
+    this.clearJobState(documentId);
+    const failure = this.clearedFailures.get(documentId);
+    if (failure) {
+      this.clearedFailures.delete(documentId);
+      void this.recordFailure(documentId, failure);
+    }
     return true;
   }
 
@@ -345,17 +402,24 @@ export class ExtractionFlow implements HostBusProbe {
     }
   }
 
-  private async retry(doc: DocumentRecord): Promise<void> {
+  private async retry(doc: DocumentRecord, priority: JobPriority): Promise<void> {
     this.setJobState(doc.id, 'queued');
     try {
       const bytes = await this.documents.getBytes(doc.id);
+      // Cancelled while the bytes were in flight (issue #158) — never enqueue.
+      if (!this.isQueued(doc.id)) return;
       // Clearing lands only once fresh bytes are in hand — a Storage failure
       // leaves the recorded failure visible.
-      await this.documents.setExtractionFailure(doc.id, null);
-      this.bus.requestExtraction(toJobDocument(doc), bytes);
+      if (doc.extractionFailure) {
+        this.clearedFailures.set(doc.id, doc.extractionFailure);
+        await this.documents.setExtractionFailure(doc.id, null);
+        if (!this.isQueued(doc.id)) return;
+      }
+      this.bus.requestExtraction(toJobDocument(doc), bytes, priority);
     } catch (err) {
       this.clearJobState(doc.id);
       console.warn('[extraction] retry could not enqueue', doc.id, err);
+      if (this.batch?.isMember(doc.id)) return this.batch.settled(doc.id, false);
       this.toasts.show({
         tone: 'error',
         title: `Couldn't analyze ${doc.title}`,
@@ -396,6 +460,7 @@ export class ExtractionFlow implements HostBusProbe {
       this.store.clearExtractionJob(documentId);
       await this.pruneActionItemStates(documentId, record);
       const doc = this.docById(documentId);
+      const member = this.batch?.isMember(documentId) ?? false;
       if (doc && this.open.docId() === documentId) {
         // The adapter already resent INIT_SESSION with the result — mark that
         // resend so the Session refresh dedupes rather than double-sending.
@@ -405,7 +470,7 @@ export class ExtractionFlow implements HostBusProbe {
           extractionState: 'none',
           extraction: record,
         };
-      } else {
+      } else if (!member) {
         this.toasts.show({
           tone: 'success',
           title: `"${doc?.title ?? documentId}" is ready`,
@@ -419,11 +484,13 @@ export class ExtractionFlow implements HostBusProbe {
           },
         });
       }
+      if (member) this.batch!.settled(documentId, true);
     } catch (err) {
       // A failed Firestore write is a Host-side error, not a Bus concern (#7):
       // nothing is recorded, so the next load re-queues the Document.
       this.clearJobState(documentId);
       console.warn('[extraction] could not persist Extraction for', documentId, err);
+      if (this.batch?.isMember(documentId)) return this.batch.settled(documentId, false);
       this.toasts.show({ tone: 'error', title: "Couldn't save the Extraction", body: 'Try again.' });
     }
   }
@@ -497,6 +564,10 @@ export class ExtractionFlow implements HostBusProbe {
 
   private clearJobState(documentId: string): void {
     this.store.clearExtractionJob(documentId);
+  }
+
+  private isQueued(documentId: string): boolean {
+    return this.store.extractionJobs().get(documentId) === 'queued';
   }
 
   /**

@@ -148,6 +148,18 @@ interface ExtractionRecordMeta {
 export type ExtractionRecord = Omit<ExtractionContent, 'actionItems'> &
   ExtractionRecordMeta & { actionItems: IdentifiedActionItem[] };
 
+/** The `schemaVersion` Klartext now produces — every candidate carries it. */
+export const CURRENT_EXTRACTION_SCHEMA_VERSION = 2;
+
+/**
+ * An Outdated Extraction (ADR 0015): stored in an earlier schema than the
+ * current one — readable via normalization, but missing what the current
+ * format adds until the user re-analyzes. `promptVersion` is ignored.
+ */
+export function isOutdatedExtraction(record: Pick<ExtractionRecord, 'schemaVersion'>): boolean {
+  return record.schemaVersion < CURRENT_EXTRACTION_SCHEMA_VERSION;
+}
+
 /** A v1 takeaway as stored before `klartext-extraction-v2`. */
 export interface LegacyKeyTakeaway extends KeyTakeaway {
   importance: 'NORMAL' | 'CRITICAL';

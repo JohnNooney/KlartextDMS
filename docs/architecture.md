@@ -429,7 +429,7 @@ interface Envelope<TType extends string = string, TPayload = unknown> {
 | `SESSION_ACK_TIMEOUT_MS` | `10,000 ms` (10 s) | [`apps/host/src/app/bus/host-bus.adapter.ts:24`](../apps/host/src/app/bus/host-bus.adapter.ts) | Max wait for `SESSION_ACK` after sending `INIT_SESSION` before reporting `sessionFailed`. |
 | `JOB_START_TIMEOUT_MS` | `10,000 ms` (10 s) | [`apps/host/src/app/bus/host-bus.adapter.ts:25`](../apps/host/src/app/bus/host-bus.adapter.ts) | Max wait for `AI_PROCESSING_STARTED` after dispatching `EXTRACT_DOCUMENT`. |
 | `JOB_RESULT_TIMEOUT_MS` | `120,000 ms` (120 s) | [`apps/host/src/app/bus/host-bus.adapter.ts:26`](../apps/host/src/app/bus/host-bus.adapter.ts) | Max wait for `AI_PROCESSING_SUCCESS` / `AI_PROCESSING_ERROR` after `AI_PROCESSING_STARTED`. |
-| Job Queue Concurrency | `1` active job | [`apps/host/src/app/bus/host-bus.adapter.ts:146-149`](../apps/host/src/app/bus/host-bus.adapter.ts) | Serial queue per signed-in Host session; deduplicated by `documentId`. |
+| Job Queue Concurrency | `1` active job | [`apps/host/src/app/bus/host-bus.adapter.ts:146-149`](../apps/host/src/app/bus/host-bus.adapter.ts) | Serial queue per signed-in Host session; deduplicated by `documentId`. Jobs wait in one FIFO lane per priority (`JOB_PRIORITIES`: `normal` for upload and retry, then `batch` for Batch re-analysis members, issue #158, [ADR 0015](./adr/0015-batch-reanalysis-user-initiated.md)); the next dispatch takes the head of the highest non-empty lane. |
 | Gemini Repair Passes | `1` retry max | [`apps/guest/src/extraction/gemini-provider.ts:189-204`](../apps/guest/src/extraction/gemini-provider.ts) | Single repair prompt sent on JSON parse or Zod schema failure before failing closed. |
 
 ---
