@@ -45,6 +45,7 @@ function setup(repository = new FakeDocumentRepository()) {
     openSession: vi.fn(),
     requestExtraction: vi.fn(),
     cancelJobsFor: vi.fn(),
+    dropQueuedJobsFor: vi.fn(() => true),
     pushActionItemStates: vi.fn(),
   };
   const auth = {

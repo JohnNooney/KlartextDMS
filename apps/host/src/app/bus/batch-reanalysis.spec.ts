@@ -78,6 +78,7 @@ async function setup(lib: Library = library()) {
     openSession: vi.fn(),
     requestExtraction: vi.fn(),
     cancelJobsFor: vi.fn(),
+    dropQueuedJobsFor: vi.fn((_documentId: string) => true),
     pushActionItemStates: vi.fn(),
   };
   TestBed.configureTestingModule({
@@ -395,7 +396,7 @@ describe('BatchReanalysis — consecutive-failure stop (issue #158)', () => {
     await fail(h, docs[2]!);
     await fail(h, docs[3]!);
 
-    expect(h.bus.cancelJobsFor.mock.calls.map(([id]) => id)).toEqual([docs[4]!.id, docs[5]!.id]);
+    expect(h.bus.dropQueuedJobsFor.mock.calls.map(([id]) => id)).toEqual([docs[4]!.id, docs[5]!.id]);
     expect(h.store.extractionJobs().has(docs[4]!.id)).toBe(false);
     // The unstarted members never ran: no failure recorded, prior Extraction kept.
     expect(h.repository.records.get(docs[4]!.id)?.extractionFailure).toBeNull();
@@ -412,7 +413,7 @@ describe('BatchReanalysis — consecutive-failure stop (issue #158)', () => {
     await fail(h, docs[3]!);
     await fail(h, docs[4]!);
 
-    expect(h.bus.cancelJobsFor).not.toHaveBeenCalled();
+    expect(h.bus.dropQueuedJobsFor).not.toHaveBeenCalled();
     expect(h.batch.progress()).toEqual({ running: true, done: 5, total: 6 });
   });
 
@@ -447,7 +448,7 @@ describe('BatchReanalysis — cancel (issue #158)', () => {
 
     h.batch.cancel();
 
-    expect(h.bus.cancelJobsFor.mock.calls.map(([id]) => id)).toEqual([waiting.id]);
+    expect(h.bus.dropQueuedJobsFor.mock.calls.map(([id]) => id)).toEqual([waiting.id]);
     expect(h.batch.progress().running).toBe(false);
     expect(titles(h)).toEqual(['Re-analysis cancelled']);
 
@@ -455,6 +456,30 @@ describe('BatchReanalysis — cancel (issue #158)', () => {
     await flush();
     expect(h.extractions.saves.map((s) => s.documentId)).toEqual([running.id]);
     // Still a batch member: no "is ready" toast, and no summary.
+    expect(titles(h)).toEqual(['Re-analysis cancelled']);
+  });
+
+  it('lets a member already dispatched to the Guest finish, even before it starts', async () => {
+    const lib = library();
+    const dispatched = await seedFailed(lib, { title: 'Dispatched' });
+    const waiting = await seedFailed(lib, { title: 'Waiting' });
+    const h = await setup(lib);
+    h.batch.start(null, 'failed');
+    await flush();
+    // The adapter has sent EXTRACT_DOCUMENT; AI_PROCESSING_STARTED is pending.
+    h.bus.dropQueuedJobsFor.mockImplementation((id: string) => id !== dispatched.id);
+
+    h.batch.cancel();
+    await flush();
+
+    expect(h.bus.cancelJobsFor).not.toHaveBeenCalled();
+    expect(h.store.extractionJobs().get(dispatched.id)).toBe('queued');
+    expect(h.repository.records.get(dispatched.id)?.extractionFailure).toBeNull();
+    expect(h.repository.records.get(waiting.id)?.extractionFailure).toMatchObject({
+      code: RECORDED_FAILURE.code,
+    });
+    await succeed(h, dispatched);
+    expect(h.extractions.saves.map((s) => s.documentId)).toEqual([dispatched.id]);
     expect(titles(h)).toEqual(['Re-analysis cancelled']);
   });
 
@@ -475,7 +500,7 @@ describe('BatchReanalysis — cancel (issue #158)', () => {
 
     h.batch.cancel();
 
-    const cancelled = h.bus.cancelJobsFor.mock.calls.map(([id]) => id);
+    const cancelled = h.bus.dropQueuedJobsFor.mock.calls.map(([id]) => id);
     expect(cancelled).not.toContain(failed.id);
     expect(cancelled).not.toContain(uploaded.id);
     expect(h.store.extractionJobs().get(failed.id)).toBe('queued');

@@ -41,6 +41,14 @@ export class HostBus {
     this.adapter?.cancelJobs(documentId);
   }
 
+  /**
+   * Drops `documentId`'s waiting jobs (issue #158). Returns `false` when its
+   * job is already dispatched to the Guest — it runs to its result.
+   */
+  dropQueuedJobsFor(documentId: string): boolean {
+    return this.adapter?.dropQueued(documentId) ?? true;
+  }
+
   /** Pushes the open Document's authoritative Done map to the Guest (#144). */
   pushActionItemStates(states: ActionItemStates): void {
     this.adapter?.pushActionItemStates(states);

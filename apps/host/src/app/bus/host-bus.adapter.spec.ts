@@ -706,4 +706,25 @@ describe('HostBus adapter — job priority (issue #158)', () => {
 
     expect(order(sink)).toEqual(['batch-1', 'batch-3']);
   });
+
+  it('dropQueued drops a waiting job but leaves a dispatched one running', () => {
+    const { source, sink, adapter, probe } = setup();
+    source.emit({ data: GUEST_READY, origin: PEER_ORIGIN, source: sink });
+    adapter.requestExtraction(doc('batch-1'), new ArrayBuffer(1), 'batch');
+    adapter.requestExtraction(doc('batch-2'), new ArrayBuffer(1), 'batch');
+
+    // batch-1 is dispatched but not yet acked — it already belongs to the Guest.
+    expect(adapter.dropQueued('batch-1')).toBe(false);
+    expect(adapter.dropQueued('batch-2')).toBe(true);
+    const { jobId } = dispatched(sink).at(-1)!.payload;
+    source.emit({
+      data: { v: 1, type: 'AI_PROCESSING_STARTED', sessionId: '', payload: { jobId } },
+      origin: PEER_ORIGIN,
+      source: sink,
+    });
+
+    expect(probe.jobStarted).toHaveBeenCalledWith(jobId, doc('batch-1'));
+    finish(source, sink);
+    expect(order(sink)).toEqual(['batch-1']);
+  });
 });

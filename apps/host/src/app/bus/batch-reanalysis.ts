@@ -224,7 +224,7 @@ export class BatchReanalysis implements BatchObserver {
   private summarize({ analyzed, failed }: BatchState): void {
     const total = analyzed.length + failed.length;
     if (failed.length === 0) {
-      this.toasts.show({ tone: 'success', title: `Re-analyzed ${documents(total)}` });
+      this.toasts.show({ tone: 'success', title: `Re-analyzed ${documentCount(total)}` });
       return;
     }
     this.toasts.show({
@@ -235,6 +235,6 @@ export class BatchReanalysis implements BatchObserver {
   }
 }
 
-function documents(count: number): string {
+function documentCount(count: number): string {
   return `${count} document${count === 1 ? '' : 's'}`;
 }

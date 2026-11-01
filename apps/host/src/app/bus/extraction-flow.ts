@@ -226,12 +226,12 @@ export class ExtractionFlow implements HostBusProbe {
   /**
    * Drops a re-analysis that hasn't started (issue #158): the queued job
    * never dispatches and a failure record its retry cleared is restored.
-   * Returns `false` when the job is no longer waiting — a running job
-   * finishes and persists.
+   * Returns `false` when the job is no longer waiting — a running job, or
+   * one already dispatched to the Guest, finishes and persists.
    */
   cancelReanalysis(documentId: string): boolean {
     if (this.store.extractionJobs().get(documentId) !== 'queued') return false;
-    this.bus.cancelJobsFor(documentId);
+    if (!this.bus.dropQueuedJobsFor(documentId)) return false;
     this.clearJobState(documentId);
     const failure = this.clearedFailures.get(documentId);
     if (failure) {

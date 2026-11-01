@@ -61,6 +61,11 @@ export type JobPriority = (typeof JOB_PRIORITIES)[number];
 /** The Host's adapter: the contract surface plus a queue priority per job. */
 export interface HostBusAdapter extends HostAdapter {
   requestExtraction(document: JobDocument, bytes: ArrayBuffer, priority?: JobPriority): void;
+  /**
+   * Drops `documentId`'s waiting jobs, leaving a dispatched one alone — it
+   * runs to its result. Returns `false` when the job is already dispatched.
+   */
+  dropQueued(documentId: string): boolean;
 }
 
 export type HostBusAdapterFactory = (ctx: HostBusContext) => HostBusAdapter;
@@ -161,6 +166,14 @@ export function createHostBusAdapter(ctx: HostBusContext): HostBusAdapter {
     );
     if (!active.acknowledged) {
       active.watchdog = setTimeout(() => settleJob(AI_UNAVAILABLE), JOB_START_TIMEOUT_MS);
+    }
+  };
+
+  const dropFromLanes = (documentId: string): void => {
+    for (const lane of Object.values(lanes)) {
+      for (let i = lane.length - 1; i >= 0; i--) {
+        if (lane[i]!.document.documentId === documentId) lane.splice(i, 1);
+      }
     }
   };
 
@@ -345,13 +358,14 @@ export function createHostBusAdapter(ctx: HostBusContext): HostBusAdapter {
       lanes[priority].push(job);
       pumpQueue();
     },
+    dropQueued(documentId: string): boolean {
+      if (activeJob?.document.documentId === documentId) return false;
+      dropFromLanes(documentId);
+      return true;
+    },
     cancelJobs(documentId: string): void {
       knownDocuments.delete(documentId);
-      for (const lane of Object.values(lanes)) {
-        for (let i = lane.length - 1; i >= 0; i--) {
-          if (lane[i]!.document.documentId === documentId) lane.splice(i, 1);
-        }
-      }
+      dropFromLanes(documentId);
       if (activeJob && activeJob.document.documentId === documentId) {
         // Dropping the active job orphans its jobId: a late result no longer
         // matches and is discarded. The queue advances to the next Document.
