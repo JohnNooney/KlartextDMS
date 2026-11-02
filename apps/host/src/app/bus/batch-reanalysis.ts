@@ -12,7 +12,7 @@ import { isOutdatedExtraction } from '@klartext/bus-contract';
 import type { DocumentRecord } from '../data/document';
 import { folderSubtree } from '../data/folder-tree';
 import { LibraryStore } from '../library/library.store';
-import { ToastService } from '../toasts/toast.service';
+import { ToastService, type ToastAction } from '../toasts/toast.service';
 import { ExtractionFlow, type BatchObserver } from './extraction-flow';
 
 /** The Batch re-analysis criteria (ADR 0015). */
@@ -72,6 +72,12 @@ export class BatchReanalysis implements BatchObserver {
       untracked(() => this.forgetGone(documents));
     });
   }
+
+  /**
+   * A cancelled batch still waiting on the member it had already started —
+   * the strip reads "Finishing the current document…" until it settles.
+   */
+  readonly finishing = signal(false);
 
   /** The running batch's progress — `running: false` while idle. */
   readonly progress = computed<BatchProgress>(() => {
@@ -138,8 +144,15 @@ export class BatchReanalysis implements BatchObserver {
   cancel(): void {
     const state = this.state();
     if (state === null) return;
+    const total = state.analyzed.length + state.failed.length + state.pending.size;
     this.end(state);
-    this.toasts.show({ tone: 'info', title: 'Re-analysis cancelled' });
+    this.finishing.set(this.draining.size > 0);
+    this.toasts.show({
+      tone: 'info',
+      title: 'Re-analysis cancelled',
+      body: `${state.analyzed.length} of ${total} done.`,
+      ...(state.failed.length > 0 ? { action: this.retry(state.failed) } : {}),
+    });
   }
 
   // -- BatchObserver ---------------------------------------------------------
@@ -149,7 +162,10 @@ export class BatchReanalysis implements BatchObserver {
   }
 
   settled(documentId: string, analyzed: boolean): void {
-    if (this.draining.delete(documentId)) return;
+    if (this.draining.delete(documentId)) {
+      this.finishing.set(this.finishing() && this.draining.size > 0);
+      return;
+    }
     const state = this.state();
     if (!state?.pending.has(documentId)) return;
     const pending = new Set(state.pending);
@@ -184,6 +200,7 @@ export class BatchReanalysis implements BatchObserver {
   private forgetGone(documents: readonly DocumentRecord[]): void {
     const ready = new Set(documents.filter((d) => d.status === 'ready').map((d) => d.id));
     for (const id of this.draining) if (!ready.has(id)) this.draining.delete(id);
+    if (this.draining.size === 0) this.finishing.set(false);
     const state = this.state();
     if (state === null || [...state.pending].every((id) => ready.has(id))) return;
     const next = { ...state, pending: new Set([...state.pending].filter((id) => ready.has(id))) };
@@ -215,8 +232,9 @@ export class BatchReanalysis implements BatchObserver {
     const unstarted = this.end(state);
     this.toasts.show({
       tone: 'error',
-      title: `Re-analysis stopped — AI is unavailable right now. ${state.analyzed.length} of ${total} done.`,
-      action: { label: 'Try again', run: () => void this.run([...state.failed, ...unstarted]) },
+      title: 'Re-analysis stopped',
+      body: `AI is unavailable right now. ${state.analyzed.length} of ${total} done.`,
+      action: this.retry([...state.failed, ...unstarted]),
     });
   }
 
@@ -229,9 +247,14 @@ export class BatchReanalysis implements BatchObserver {
     }
     this.toasts.show({
       tone: 'error',
-      title: `Re-analyzed ${analyzed.length} of ${total} — ${failed.length} couldn't be analyzed`,
-      action: { label: 'Try again', run: () => void this.run(failed) },
+      title: `Re-analyzed ${analyzed.length} of ${total}`,
+      body: `${failed.length} couldn't be analyzed`,
+      action: this.retry(failed),
     });
+  }
+
+  private retry(documentIds: readonly string[]): ToastAction {
+    return { label: 'Try again', run: () => void this.run(documentIds) };
   }
 }
 
