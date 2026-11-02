@@ -7,15 +7,18 @@ const page = signedInPage();
 // Host's attention overview — out of the card and its count, into the See
 // All sheet's collapsed Done group — with an Undo toast. Every mark this
 // file makes is un-marked again so the shared seeded state stays clean.
+// The tax-office Document is analyzed after load and its Overdue item
+// re-sorts the card when it lands — so every mark targets that item by text,
+// never "the first row", which can change under the click.
+const TAX_ITEM = 'File your 2023 tax return';
+
 test('the Host hides a Done item and its Undo toast brings it back', async () => {
   await browseRoot(page());
   const overview = page().getByRole('region', { name: 'Needs your attention' });
-  await expect(overview).toBeVisible();
-
-  const firstRow = overview.locator('.attention-row').first();
-  const target = (await firstRow.locator('.attention-text').textContent())!.trim();
-  await expect(firstRow).toBeVisible();
-  await firstRow.getByRole('button', { name: 'Mark done' }).click();
+  const target = TAX_ITEM;
+  const row = overview.locator('.attention-row', { hasText: target });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Mark done' }).click();
 
   // Hidden from the card; the toast offers Undo.
   await expect(toast(page(), 'Marked done')).toBeVisible();
@@ -29,9 +32,10 @@ test('the Host’s See All sheet keeps Done items in a collapsed group with un-m
   await browseRoot(page());
   const overview = page().getByRole('region', { name: 'Needs your attention' });
 
-  const firstRow = overview.locator('.attention-row').first();
-  const target = (await firstRow.locator('.attention-text').textContent())!.trim();
-  await firstRow.getByRole('button', { name: 'Mark done' }).click();
+  const target = TAX_ITEM;
+  const row = overview.locator('.attention-row', { hasText: target });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Mark done' }).click();
   await expect(toast(page(), 'Marked done')).toBeVisible();
 
   await overview.getByRole('button', { name: 'See All' }).click();
@@ -44,7 +48,10 @@ test('the Host’s See All sheet keeps Done items in a collapsed group with un-m
 
   await doneToggle.click();
   await expect(doneToggle).toHaveAttribute('aria-expanded', 'true');
-  const doneRow = sheet.getByRole('listitem').filter({ hasText: target });
+  const doneRow = sheet
+    .getByRole('listitem')
+    .filter({ has: page().getByRole('button', { name: 'Mark not done' }) })
+    .filter({ hasText: target });
   await expect(doneRow).toBeVisible();
   await doneRow.getByRole('button', { name: 'Mark not done' }).click();
 
