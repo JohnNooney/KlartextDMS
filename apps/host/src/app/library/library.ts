@@ -7,6 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { BatchReanalysis } from '../bus/batch-reanalysis';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
@@ -92,7 +93,7 @@ type DialogState =
   },
   // The data layer is scoped to the signed-in session: this component only
   // exists inside the auth gate's signed-in branch.
-  providers: [...provideDocumentData(), ExtractionFlow, Reminders],
+  providers: [...provideDocumentData(), ExtractionFlow, BatchReanalysis, Reminders],
 })
 export class Library {
   protected readonly store = inject(LibraryStore);

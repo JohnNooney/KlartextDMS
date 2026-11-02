@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURRENT_EXTRACTION_SCHEMA_VERSION,
   documentTypeLabel,
   isExtractionCandidate,
+  isOutdatedExtraction,
   normalizeExtractionRecord,
+  type ExtractionRecord,
 } from './extraction.js';
 import {
   goldenFixtureMessages,
@@ -153,6 +156,35 @@ describe('normalizeExtractionRecord', () => {
   it('is idempotent on an already-normalized record', () => {
     const once = normalizeExtractionRecord(v1);
     expect(normalizeExtractionRecord(once)).toEqual(once);
+  });
+});
+
+describe('isOutdatedExtraction (ADR 0015)', () => {
+  const CREATED_AT = { seconds: 1_700_000_000, nanoseconds: 0 };
+  const v1 = normalizeExtractionRecord({
+    ...legacyV1ExtractionFixtures['doc-versicherungsschein']!,
+    createdAt: CREATED_AT,
+  });
+  const v2 = normalizeExtractionRecord({
+    ...seededExtractionFixtures['doc-mietvertrag']!,
+    createdAt: CREATED_AT,
+  });
+
+  it('pins the current schema at 2', () => {
+    expect(CURRENT_EXTRACTION_SCHEMA_VERSION).toBe(2);
+  });
+
+  it('flags a normalized schemaVersion 1 record as outdated', () => {
+    expect(isOutdatedExtraction(v1)).toBe(true);
+  });
+
+  it('treats a current-schema record as up to date', () => {
+    expect(isOutdatedExtraction(v2)).toBe(false);
+  });
+
+  it('ignores promptVersion — only the schema decides', () => {
+    const olderPrompt: ExtractionRecord = { ...v2, promptVersion: 'klartext-extraction-v1' };
+    expect(isOutdatedExtraction(olderPrompt)).toBe(false);
   });
 });
 

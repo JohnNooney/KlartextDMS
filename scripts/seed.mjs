@@ -1,9 +1,10 @@
 /**
  * Deterministic emulator seed (issues #9, #20, #22).
  *
- * Creates the demo Auth user, the prototype Folder tree, and three fixture
- * Documents — two with a stored Extraction, one without to exercise first-time
- * processing. Ids are stable so the fake AI provider and e2e tests can key off
+ * Creates the demo Auth user, the prototype Folder tree, and the fixture
+ * Documents — stored v2 and v1 (Outdated) Extractions, one without to exercise
+ * first-time processing, and one recorded failure for Batch re-analysis
+ * (issue #158). Ids are stable so the fake AI provider and e2e tests can key off
  * them; fixture Extractions in packages/bus-contract/src/fixtures/extractions.json
  * are what the Guest's fake provider returns (issue #30).
  *
@@ -81,9 +82,10 @@ const legacyV1Fixtures = JSON.parse(
   ).toString('utf8'),
 );
 
-// Three fixture Documents spread across nested Folders and the root, matching
+// Fixture Documents spread across nested Folders and the root, matching
 // the prototype library. `hasExtraction` controls whether a stored Extraction is
-// seeded at documents/{id}/extractions/current.
+// seeded at documents/{id}/extractions/current; `fixtureFile` reuses another
+// fixture's bytes, `legacyV1From` another Document's v1 Extraction.
 const DOCUMENTS = [
   {
     id: 'doc-mietvertrag',
@@ -121,6 +123,37 @@ const DOCUMENTS = [
     originalFilename: 'brief-finanzamt.pdf',
     folderId: null,
     hasExtraction: false,
+  },
+  // Batch re-analysis (issue #158, ADR 0015): more Outdated Extractions across
+  // a parent Folder (Versicherungen) and its nested Folder (Krankenversicherung),
+  // so "Outdated format" counts differ by scope. They reuse the TK fixture's
+  // bytes and v1 Extraction, re-stamped; the fake provider answers unknown ids
+  // with the golden v2 Extraction, so a batch run upgrades them.
+  ...[
+    { id: 'doc-haftpflicht', title: 'Haftpflichtversicherung', folderId: 'versicherungen' },
+    { id: 'doc-hausrat', title: 'Hausratversicherung', folderId: 'versicherungen' },
+    { id: 'doc-zahnzusatz', title: 'Zahnzusatzversicherung', folderId: 'kranken' },
+  ].map((doc) => ({
+    ...doc,
+    originalFilename: `${doc.id.slice(4)}.pdf`,
+    fixtureFile: 'versicherungsschein-tk.pdf',
+    hasExtraction: true,
+    legacyV1From: 'doc-versicherungsschein',
+  })),
+  // "Couldn't analyze": a recorded failure and no Extraction — never
+  // auto-requeued on load, only re-run by the user.
+  {
+    id: 'doc-kuendigung',
+    title: 'Kündigungsbestätigung Mobilfunk',
+    originalFilename: 'kuendigung-mobilfunk.pdf',
+    fixtureFile: 'brief-finanzamt.pdf',
+    folderId: 'internet',
+    hasExtraction: false,
+    extractionFailure: {
+      code: 'AI_UNAVAILABLE',
+      message: 'The document assistant is not responding.',
+      retryable: true,
+    },
   },
 ];
 
@@ -171,7 +204,7 @@ await batch.commit();
 console.log(`seeded ${FOLDERS.length} folders`);
 
 for (const doc of DOCUMENTS) {
-  const bytes = fixture(doc.originalFilename);
+  const bytes = fixture(doc.fixtureFile ?? doc.originalFilename);
   const storagePath = `users/${USER.uid}/documents/${doc.id}.pdf`;
   await bucket.file(storagePath).save(bytes, { contentType: 'application/pdf' });
   await db.doc(`users/${USER.uid}/documents/${doc.id}`).set({
@@ -185,12 +218,18 @@ for (const doc of DOCUMENTS) {
     status: 'ready',
     folderId: doc.folderId,
     ...(doc.actionItemStates ? { actionItemStates: doc.actionItemStates() } : {}),
+    extractionFailure: doc.extractionFailure
+      ? { ...doc.extractionFailure, failedAt: FieldValue.serverTimestamp() }
+      : null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
   if (doc.hasExtraction) {
+    const stored = doc.legacyV1From
+      ? { ...legacyV1Fixtures[doc.legacyV1From], documentId: doc.id }
+      : (legacyV1Fixtures[doc.id] ?? extractionFixtures[doc.id]);
     await db.doc(`users/${USER.uid}/documents/${doc.id}/extractions/current`).set({
-      ...(legacyV1Fixtures[doc.id] ?? extractionFixtures[doc.id]),
+      ...stored,
       createdAt: FieldValue.serverTimestamp(),
     });
   }

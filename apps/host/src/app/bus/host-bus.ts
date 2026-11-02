@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import type { ActionItemStates, JobDocument, Session } from '@klartext/bus-contract';
-import type { HostAdapter } from '@klartext/bus-contract/conformance';
+import type { HostBusAdapter, JobPriority } from './host-bus.adapter';
 
 /**
  * App-side handle on the live Host Bus adapter (issues #28, #31). The Guest
  * frame attaches the adapter once mounted; the rest of the app talks to it
  * through this service without owning Bus wiring — Sessions on open
- * (`openSession`), Extraction Jobs (`requestExtraction`), and job
+ * (`openSession`), Extraction Jobs (`requestExtraction`, at a queue priority
+ * since #158), and job
  * cancellation on delete (`cancelJobsFor`, issue #16), and Done-map pushes
  * (`pushActionItemStates`, issue #144). Every call is a no-op
  * before the frame attaches: a deleted-before-ready Document has nothing to
@@ -15,13 +16,13 @@ import type { HostAdapter } from '@klartext/bus-contract/conformance';
  */
 @Injectable({ providedIn: 'root' })
 export class HostBus {
-  private adapter: HostAdapter | null = null;
+  private adapter: HostBusAdapter | null = null;
 
-  attach(adapter: HostAdapter): void {
+  attach(adapter: HostBusAdapter): void {
     this.adapter = adapter;
   }
 
-  detach(adapter: HostAdapter): void {
+  detach(adapter: HostBusAdapter): void {
     if (this.adapter === adapter) this.adapter = null;
   }
 
@@ -31,13 +32,21 @@ export class HostBus {
   }
 
   /** Enqueues an Extraction Job for a Document whose bytes the Host holds. */
-  requestExtraction(document: JobDocument, bytes: ArrayBuffer): void {
-    this.adapter?.requestExtraction(document, bytes);
+  requestExtraction(document: JobDocument, bytes: ArrayBuffer, priority?: JobPriority): void {
+    this.adapter?.requestExtraction(document, bytes, priority);
   }
 
   /** Drops queued jobs for `documentId` and discards a running job's result. */
   cancelJobsFor(documentId: string): void {
     this.adapter?.cancelJobs(documentId);
+  }
+
+  /**
+   * Drops `documentId`'s waiting jobs (issue #158). Returns `false` when its
+   * job is already dispatched to the Guest — it runs to its result.
+   */
+  dropQueuedJobsFor(documentId: string): boolean {
+    return this.adapter?.dropQueued(documentId) ?? true;
   }
 
   /** Pushes the open Document's authoritative Done map to the Guest (#144). */
