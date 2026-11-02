@@ -1,5 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import type { BatchCandidates, BatchCriterion } from '../bus/batch-reanalysis';
+import { documentCount, type BatchCandidates, type BatchCriterion } from '../bus/batch-reanalysis';
 import type { DocumentRecord } from '../data/document';
 import { folderAncestry, type FolderRecord } from '../data/folder';
 import { ModalSurface } from './modal-surface';
@@ -94,8 +94,4 @@ export class BatchReanalysisDialog {
 
 function doneCount(doc: DocumentRecord): number {
   return Object.keys(doc.actionItemStates ?? {}).length;
-}
-
-function documentCount(count: number): string {
-  return `${count} document${count === 1 ? '' : 's'}`;
 }

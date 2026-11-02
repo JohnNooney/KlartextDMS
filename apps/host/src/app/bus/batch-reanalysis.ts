@@ -258,6 +258,7 @@ export class BatchReanalysis implements BatchObserver {
   }
 }
 
-function documentCount(count: number): string {
+/** "1 document" / "14 documents" — the batch copy's count phrase. */
+export function documentCount(count: number): string {
   return `${count} document${count === 1 ? '' : 's'}`;
 }
