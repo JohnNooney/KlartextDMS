@@ -5,6 +5,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import type { DocumentRecord, DocumentStatus } from '../data/document';
 import type { FolderRecord } from '../data/folder';
+import { BatchReanalysis, type BatchCandidates, type BatchProgress } from '../bus/batch-reanalysis';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { DOCUMENT_REPOSITORY } from '../data/providers';
 import { OpenDocument } from '../open-document';
@@ -118,11 +119,21 @@ const fakePdfEngine = {
 
 const fakeRepository = { getBytes: vi.fn(async () => new ArrayBuffer(4)) };
 
+class FakeBatch {
+  readonly progress = signal<BatchProgress>({ running: false, done: 0, total: 0 });
+  readonly finishing = signal(false);
+  readonly scoped = signal<BatchCandidates | null>({ outdated: [], failed: [], all: [] });
+  candidates = vi.fn((_scope: string | null) => this.scoped);
+  start = vi.fn(() => true);
+  cancel = vi.fn();
+}
+
 async function setup() {
   const store = new FakeStore();
   const openDocument = new FakeOpenDocument();
   const flow = { retryRequested: vi.fn(() => true) };
   const reminders = { draft: signal(null), open: vi.fn(), close: vi.fn() };
+  const batch = new FakeBatch();
   Object.assign(URL, {
     createObjectURL: vi.fn(() => 'blob:fake'),
     revokeObjectURL: vi.fn(),
@@ -141,13 +152,22 @@ async function setup() {
           { provide: LibraryStore, useValue: store },
           { provide: ExtractionFlow, useValue: flow },
           { provide: Reminders, useValue: reminders },
+          { provide: BatchReanalysis, useValue: batch },
         ],
       },
     })
     .compileComponents();
   const fixture = TestBed.createComponent(Library);
   fixture.detectChanges();
-  return { fixture, store, openDocument, flow, reminders, el: fixture.nativeElement as HTMLElement };
+  return {
+    fixture,
+    store,
+    openDocument,
+    flow,
+    reminders,
+    batch,
+    el: fixture.nativeElement as HTMLElement,
+  };
 }
 
 function dropFiles(el: Element, files: File[]): void {
@@ -519,6 +539,134 @@ describe('Library', () => {
     } finally {
       rectSpy.mockRestore();
     }
+  });
+
+  // Issue #159: Batch re-analysis — the ⋯ entry, the meta-line nudge, the
+  // dialog and the progress strip.
+  describe('Batch re-analysis', () => {
+    const outdated = (n: number) =>
+      Array.from({ length: n }, (_, i) => record('ready', { id: `old-${i}`, title: `Old ${i}` }));
+
+    async function browsing(outdatedCount = 0) {
+      const h = await setup();
+      const docs = [record('ready'), ...outdated(outdatedCount)];
+      h.store.documents.set(docs);
+      h.store.visible.set(docs);
+      h.store.deepDocumentCount.set(docs.length);
+      h.batch.scoped.set({ outdated: docs.slice(1), failed: [], all: docs });
+      h.fixture.detectChanges();
+      return h;
+    }
+
+    const moreItem = (el: HTMLElement) =>
+      el.querySelector<HTMLButtonElement>('.more-wrap [role="menuitem"]');
+
+    function openMore(h: Awaited<ReturnType<typeof setup>>): HTMLButtonElement {
+      h.el.querySelector<HTMLButtonElement>('.btn-more')!.click();
+      h.fixture.detectChanges();
+      return moreItem(h.el)!;
+    }
+
+    it('⋯ offers "Re-analyze documents", which opens the dialog over the browsed scope', async () => {
+      const h = await browsing(2);
+      h.openDocument.folderId.set('f-1');
+      h.fixture.detectChanges();
+      const item = openMore(h);
+      expect(item.textContent!.trim()).toBe('Re-analyze documents');
+      expect(item.disabled).toBe(false);
+
+      item.click();
+      h.fixture.detectChanges();
+
+      expect(h.batch.candidates).toHaveBeenLastCalledWith('f-1');
+      expect(h.el.querySelector('app-batch-reanalysis-dialog')).toBeTruthy();
+      expect(moreItem(h.el)).toBeNull();
+    });
+
+    it('⋯ item is disabled and reads "Re-analyzing documents" while a batch runs', async () => {
+      const h = await browsing(2);
+      h.batch.progress.set({ running: true, done: 1, total: 3 });
+      h.fixture.detectChanges();
+      const item = openMore(h);
+      expect(item.textContent!.trim()).toBe('Re-analyzing documents');
+      expect(item.disabled).toBe(true);
+    });
+
+    it('Escape dismisses the ⋯ menu', async () => {
+      const h = await browsing();
+      openMore(h);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      h.fixture.detectChanges();
+      expect(moreItem(h.el)).toBeNull();
+    });
+
+    it('the meta line nudges when the scope has Outdated Extractions — desktop and phone copy', async () => {
+      const h = await browsing(22);
+      const text = (id: string) =>
+        h.el.querySelector(`[data-testid="${id}"]`)!.textContent!.replace(/\s+/g, ' ').trim();
+      expect(text('nudge-wide')).toBe('· 22 use an earlier analysis format — Re-analyze');
+      expect(text('nudge-narrow')).toBe('· Re-analyze 22 outdated');
+      expect(h.el.querySelector('.meta-line')!.textContent).toContain('23 documents');
+
+      h.el.querySelector<HTMLButtonElement>('[data-testid="nudge-narrow"] button')!.click();
+      h.fixture.detectChanges();
+      const dialog = h.el.querySelector('app-batch-reanalysis-dialog')!;
+      expect(dialog.querySelector<HTMLInputElement>('[data-criterion="outdated"] input')!.checked).toBe(true);
+    });
+
+    it('a single Outdated Extraction reads "uses"', async () => {
+      const h = await browsing(1);
+      expect(h.el.querySelector('[data-testid="nudge-wide"]')!.textContent).toContain(
+        '1 uses an earlier analysis format',
+      );
+    });
+
+    it('no nudge without Outdated Extractions, or while a batch runs', async () => {
+      const none = await browsing(0);
+      expect(none.el.querySelector('.nudge')).toBeNull();
+      TestBed.resetTestingModule();
+
+      const running = await browsing(3);
+      running.batch.progress.set({ running: true, done: 0, total: 3 });
+      running.fixture.detectChanges();
+      expect(running.el.querySelector('.nudge')).toBeNull();
+    });
+
+    it('starting from the dialog runs the batch over the scope and closes it', async () => {
+      const h = await browsing(2);
+      h.openDocument.folderId.set('f-1');
+      h.fixture.detectChanges();
+      h.el.querySelector<HTMLButtonElement>('[data-testid="nudge-wide"] button')!.click();
+      h.fixture.detectChanges();
+
+      h.el.querySelector<HTMLButtonElement>('app-batch-reanalysis-dialog .btn-primary')!.click();
+      h.fixture.detectChanges();
+
+      expect(h.batch.start).toHaveBeenCalledWith('f-1', 'outdated');
+      expect(h.el.querySelector('app-batch-reanalysis-dialog')).toBeNull();
+    });
+
+    it('shows the progress strip below the toolbar; Cancel cancels the batch', async () => {
+      const h = await browsing(2);
+      expect(h.el.querySelector('.strip')).toBeNull();
+      h.batch.progress.set({ running: true, done: 2, total: 14 });
+      h.fixture.detectChanges();
+
+      const strip = h.el.querySelector('.strip')!;
+      expect(strip.textContent!.replace(/\s+/g, ' ').trim()).toBe('Re-analyzing 3 of 14 ·Cancel');
+      strip.querySelector<HTMLButtonElement>('.strip-cancel')!.click();
+      expect(h.batch.cancel).toHaveBeenCalled();
+    });
+
+    it('never shows the strip in the reader', async () => {
+      const h = await browsing(2);
+      h.batch.progress.set({ running: true, done: 0, total: 2 });
+      h.store.openDoc.set(record('ready'));
+      h.openDocument.docId.set('doc-1');
+      h.fixture.detectChanges();
+      expect(h.el.querySelector('app-reader')).toBeTruthy();
+      expect(h.el.querySelector('.strip')).toBeNull();
+    });
   });
 
   // Issue #120: the Folder attention overview above the tile grid.

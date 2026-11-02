@@ -1,0 +1,191 @@
+@use 'tokens' as kt;
+
+.batch {
+  width: min(520px, calc(100vw - 32px));
+
+  // The dialog scrolls as a whole — its sections must never shrink to fit.
+  > * {
+    flex-shrink: 0;
+  }
+}
+
+.radios {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-lg;
+  overflow: hidden;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: kt.$kt-space-3;
+  min-height: kt.$kt-touch-target;
+  padding: kt.$kt-space-3 kt.$kt-space-4;
+  cursor: pointer;
+
+  & + & {
+    border-top: 1px solid kt.$kt-border;
+  }
+
+  &.is-on {
+    background: kt.$kt-accent-tint;
+  }
+
+  &.is-disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: kt.$kt-accent;
+  }
+}
+
+.radio-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.radio-label {
+  font-size: kt.$kt-text-sm;
+  font-weight: 600;
+}
+
+.radio-hint {
+  font-size: kt.$kt-text-xs;
+  color: kt.$kt-text-muted;
+}
+
+.radio-count {
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: right;
+  font-size: kt.$kt-text-sm;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: kt.$kt-text-muted;
+}
+
+.list-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font-size: kt.$kt-text-sm;
+  color: kt.$kt-accent;
+}
+
+.chev {
+  transition: transform 0.15s;
+
+  &.is-open {
+    transform: rotate(90deg);
+  }
+}
+
+.list-rows {
+  list-style: none;
+  margin: kt.$kt-space-2 0 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid kt.$kt-border;
+  border-radius: kt.$kt-radius-md;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: kt.$kt-space-2;
+    padding: 8px kt.$kt-space-3;
+    font-size: kt.$kt-text-sm;
+  }
+
+  li + li {
+    border-top: 1px solid kt.$kt-border;
+  }
+}
+
+.list-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  flex-shrink: 0;
+  max-width: 45%;
+  padding: 1px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: kt.$kt-fill;
+  color: kt.$kt-text-muted;
+  font-size: kt.$kt-text-xs;
+}
+
+.chip-done {
+  background: kt.$kt-warning-tint;
+  color: kt.$kt-warning-text;
+}
+
+.warn {
+  display: flex;
+  gap: kt.$kt-space-2;
+  margin: 0;
+  padding: kt.$kt-space-3;
+  border-radius: kt.$kt-radius-md;
+  background: kt.$kt-warning-tint;
+  color: kt.$kt-warning-text;
+  font-size: kt.$kt-text-sm;
+  line-height: 1.4;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+.quota {
+  margin: 0;
+  font-size: kt.$kt-text-xs;
+  color: kt.$kt-text-muted;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .batch {
+    padding: kt.$kt-space-5 kt.$kt-space-4;
+  }
+
+  .radio {
+    padding: 10px kt.$kt-space-3;
+  }
+
+  .radio:not(.is-on) .radio-hint {
+    display: none;
+  }
+
+  // The footer stacks with the primary on top.
+  .dialog-foot {
+    flex-direction: column-reverse;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}

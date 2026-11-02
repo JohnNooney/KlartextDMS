@@ -290,6 +290,7 @@ async function fail(h: Harness, doc: DocumentRecord): Promise<void> {
 }
 
 const titles = (h: Harness) => h.toasts.toasts().map((t) => t.title);
+const bodies = (h: Harness) => h.toasts.toasts().map((t) => t.body);
 
 // Issue #158: batch members raise no per-Document toasts; one summary lands
 // when the last member settles, its Try again re-running only the failures.
@@ -328,7 +329,8 @@ describe('BatchReanalysis — outcomes (issue #158)', () => {
     expect(h.repository.records.get(a.id)?.extractionFailure).toMatchObject({
       code: 'AI_UNAVAILABLE',
     });
-    expect(titles(h)).toEqual(["Re-analyzed 1 of 2 — 1 couldn't be analyzed"]);
+    expect(titles(h)).toEqual(['Re-analyzed 1 of 2']);
+    expect(bodies(h)).toEqual(["1 couldn't be analyzed"]);
   });
 
   it('Try again on the summary re-runs only the failed members', async () => {
@@ -347,7 +349,8 @@ describe('BatchReanalysis — outcomes (issue #158)', () => {
     h.bus.requestExtraction.mockClear();
 
     const summary = h.toasts.toasts().find((t) => t.action?.label === 'Try again');
-    expect(summary?.title).toBe("Re-analyzed 1 of 3 — 2 couldn't be analyzed");
+    expect(summary?.title).toBe('Re-analyzed 1 of 3');
+    expect(summary?.body).toBe("2 couldn't be analyzed");
     summary!.action!.run();
     await flush();
 
@@ -400,7 +403,8 @@ describe('BatchReanalysis — consecutive-failure stop (issue #158)', () => {
     expect(h.store.extractionJobs().has(docs[4]!.id)).toBe(false);
     // The unstarted members never ran: no failure recorded, prior Extraction kept.
     expect(h.repository.records.get(docs[4]!.id)?.extractionFailure).toBeNull();
-    expect(titles(h)).toEqual(['Re-analysis stopped — AI is unavailable right now. 1 of 6 done.']);
+    expect(titles(h)).toEqual(['Re-analysis stopped']);
+    expect(bodies(h)).toEqual(['AI is unavailable right now. 1 of 6 done.']);
     expect(h.batch.progress().running).toBe(false);
   });
 
@@ -451,12 +455,41 @@ describe('BatchReanalysis — cancel (issue #158)', () => {
     expect(h.bus.dropQueuedJobsFor.mock.calls.map(([id]) => id)).toEqual([waiting.id]);
     expect(h.batch.progress().running).toBe(false);
     expect(titles(h)).toEqual(['Re-analysis cancelled']);
+    expect(bodies(h)).toEqual(['0 of 2 done.']);
+    expect(h.toasts.toasts()[0]?.action).toBeUndefined();
+    // Issue #159: the strip reads "Finishing the current document…" meanwhile.
+    expect(h.batch.finishing()).toBe(true);
 
     h.flow.jobSucceeded('job-1', candidate(running.id));
     await flush();
     expect(h.extractions.saves.map((s) => s.documentId)).toEqual([running.id]);
+    expect(h.batch.finishing()).toBe(false);
     // Still a batch member: no "is ready" toast, and no summary.
     expect(titles(h)).toEqual(['Re-analysis cancelled']);
+  });
+
+  it('offers Try again for the failed members when a cancelled batch had failures', async () => {
+    const lib = library();
+    const failing = await seedOutdated(lib);
+    const done = await seedOutdated(lib);
+    await seedOutdated(lib);
+    const h = await setup(lib);
+    h.batch.start(null, 'outdated');
+    await flush();
+    await fail(h, failing);
+    await succeed(h, done);
+
+    h.batch.cancel();
+    await flush();
+    h.tick();
+    await flush();
+    h.bus.requestExtraction.mockClear();
+
+    expect(bodies(h)).toEqual(['1 of 3 done.']);
+    expect(h.batch.finishing()).toBe(false);
+    h.toasts.toasts()[0]!.action!.run();
+    await flush();
+    expect(enqueued(h.bus)).toEqual([[failing.id, 'batch']]);
   });
 
   it('lets a member already dispatched to the Guest finish, even before it starts', async () => {

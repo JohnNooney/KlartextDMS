@@ -221,7 +221,59 @@
   }
 }
 
+// The toolbar ⋯ overflow (issue #159) — both breakpoints.
+.more-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.btn-more {
+  width: kt.$kt-control-height;
+  height: kt.$kt-control-height;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: kt.$kt-accent;
+  display: grid;
+  place-items: center;
+
+  &:hover {
+    background: kt.$kt-accent-tint;
+  }
+}
+
+// The meta line's Outdated Extraction nudge (issue #159): the wide phrase
+// on desktop, the short one on phones.
+.nudge-narrow {
+  display: none;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: kt.$kt-accent;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 @media (max-width: 768px) {
+  .nudge-wide {
+    display: none;
+  }
+
+  .nudge-narrow {
+    display: inline;
+  }
+
+  .btn-more {
+    width: kt.$kt-touch-target;
+    height: kt.$kt-touch-target;
+    background: kt.$kt-accent-tint;
+  }
+
   // iOS-style two-part header (issue #59): the navigation row carries
   // ‹ parent left and the + affordance right; the Folder title renders on
   // its own line below at large-title size.

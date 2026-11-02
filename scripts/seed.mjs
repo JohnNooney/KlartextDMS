@@ -139,6 +139,20 @@ const DOCUMENTS = [
     fixtureFile: 'versicherungsschein-tk.pdf',
     hasExtraction: true,
     legacyV1From: 'doc-versicherungsschein',
+    // Issue #159: one Outdated Extraction carries a Done mark, so the batch
+    // dialog's Done warning shows. v1 CRITICAL takeaways normalize to
+    // Action Items with `timing: NONE` — key the mark the same way.
+    ...(doc.id === 'doc-hausrat'
+      ? {
+          actionItemStates: () => {
+            const item = legacyV1Fixtures['doc-versicherungsschein'].keyTakeaways.find(
+              (t) => t.importance === 'CRITICAL',
+            );
+            const id = actionItemId({ ...item, timing: { kind: 'NONE' } });
+            return { [id]: { doneAt: new Date().toISOString() } };
+          },
+        }
+      : {}),
   })),
   // "Couldn't analyze": a recorded failure and no Extraction — never
   // auto-requeued on load, only re-run by the user.
