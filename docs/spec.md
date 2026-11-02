@@ -66,7 +66,7 @@ Feature decisions without ADRs: [Folder attention overview](https://github.com/J
 
 ## v2 build order
 
-Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. Phase A (extraction and Host features) and Phase B (translation) are independent and can run in parallel; Phase C (overlay surfaces) runs alongside them, with only C5 and C6 waiting on A8. Phase D (batch re-analysis) starts now with D0 and D1 in parallel; D2 waits on both plus A8, C2 and C3.
+Same rules as v1. Each slice carries its own unit, contract, integration and Playwright coverage; there is no trailing e2e ticket. **Phase B (translation) is deferred out of `v2.0.0` to a planned v2.2.0**; its decisions (#105, ADR 0009) stand unchanged. Phase A (extraction and Host features) and Phase B are independent; Phase C (overlay surfaces) runs alongside them, with only C5 and C6 waiting on A8. Phase D (batch re-analysis) starts now with D0 and D1 in parallel; D2 waits on both plus A8, C2 and C3.
 
 | # | Issue | Blocked by | Decisions it implements |
 |---|---|---|---|
@@ -100,6 +100,7 @@ Phase D implements [#156](https://github.com/JohnNooney/KlartextDMS/issues/156).
 
 ## Explicitly not in v2
 
+- Full literal Document translation, Phase B ([#123](https://github.com/JohnNooney/KlartextDMS/issues/123), [#124](https://github.com/JohnNooney/KlartextDMS/issues/124), [#125](https://github.com/JohnNooney/KlartextDMS/issues/125)): deferred to v2.2.0; designed here, not shipped in `v2.0.0`.
 - Direct Google Calendar API event creation via OAuth ([#104](https://github.com/JohnNooney/KlartextDMS/issues/104)).
 - Split original/translated view, search over Translations, Translations as Extraction input ([#105](https://github.com/JohnNooney/KlartextDMS/issues/105)).
 - Search backend, fuzzy matching, EN↔DE query translation ([#103](https://github.com/JohnNooney/KlartextDMS/issues/103)); libraries beyond ~2,000 Documents ([#101](https://github.com/JohnNooney/KlartextDMS/issues/101)).
@@ -107,3 +108,22 @@ Phase D implements [#156](https://github.com/JohnNooney/KlartextDMS/issues/156).
 - Bottom action sheets for menus, sheets for every dialog on phones, and a Done/Cancel sheet header ([#141](https://github.com/JohnNooney/KlartextDMS/issues/141), ADR 0014).
 - Automatic re-analysis on a schema bump, persisted batches, and hand-picked multi-select in the library grid ([#160](https://github.com/JohnNooney/KlartextDMS/issues/160), ADR 0015).
 - Carrying Done marks across an Extraction schema upgrade ([#161](https://github.com/JohnNooney/KlartextDMS/issues/161), ADR 0013 kept).
+
+---
+
+# v2.1
+
+Wayfinder map: [Klartext v2.1](https://github.com/JohnNooney/KlartextDMS/issues/174). Released as `v2.1.0`. In progress: decisions are recorded here as each ticket resolves, and [Assemble the v2.1 handoff spec and implementation slices](https://github.com/JohnNooney/KlartextDMS/issues/177) writes the build order.
+
+Open tracks:
+
+- Extraction wire-schema enforcement of root-level conditional requirements ([#137](https://github.com/JohnNooney/KlartextDMS/issues/137), research [#175](https://github.com/JohnNooney/KlartextDMS/issues/175)).
+- Individual occurrences of recurring Action Items ([#143](https://github.com/JohnNooney/KlartextDMS/issues/143)), then carrying Done marks across an Extraction schema upgrade ([#161](https://github.com/JohnNooney/KlartextDMS/issues/161)).
+- A general library grid selection mode with bulk re-analysis, move, and delete ([#160](https://github.com/JohnNooney/KlartextDMS/issues/160), prototype [#176](https://github.com/JohnNooney/KlartextDMS/issues/176)).
+- Mobile attention panel ([#165](https://github.com/JohnNooney/KlartextDMS/issues/165), moved from the v2 map).
+
+Already `ready-for-agent` and sequenced into the v2.1 build order: [#169](https://github.com/JohnNooney/KlartextDMS/issues/169), [#147](https://github.com/JohnNooney/KlartextDMS/issues/147), [#146](https://github.com/JohnNooney/KlartextDMS/issues/146), [#72](https://github.com/JohnNooney/KlartextDMS/issues/72).
+
+## Explicitly not in v2.1
+
+- Full literal Document translation (v2 Phase B), planned for v2.2.0.
