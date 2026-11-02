@@ -38,16 +38,18 @@ test('the Host’s See All sheet keeps Done items in a collapsed group with un-m
   const sheet = page().getByRole('dialog', { name: 'Needs your attention' });
   // The item is out of the Urgency groups; the Done group sits collapsed at the bottom.
   await expect(sheet.getByRole('button', { name: new RegExp(escapeRegExp(target)) })).toHaveCount(0);
-  const doneToggle = sheet.getByRole('button', { name: 'Done (1)' });
+  // The seed already marks one Hausratversicherung item Done (issue #159).
+  const doneToggle = sheet.getByRole('button', { name: 'Done (2)' });
   await expect(doneToggle).toHaveAttribute('aria-expanded', 'false');
 
   await doneToggle.click();
   await expect(doneToggle).toHaveAttribute('aria-expanded', 'true');
-  await expect(sheet.getByText(target)).toBeVisible();
-  await sheet.getByRole('button', { name: 'Mark not done' }).click();
+  const doneRow = sheet.getByRole('listitem').filter({ hasText: target });
+  await expect(doneRow).toBeVisible();
+  await doneRow.getByRole('button', { name: 'Mark not done' }).click();
 
-  // Un-marked: the group empties and the item is back in its Urgency group.
-  await expect(sheet.getByRole('button', { name: 'Done (1)' })).toHaveCount(0);
+  // Un-marked: the group shrinks back and the item is in its Urgency group.
+  await expect(sheet.getByRole('button', { name: 'Done (1)' })).toBeVisible();
   await expect(
     sheet.getByRole('button', { name: new RegExp(escapeRegExp(target)) }),
   ).toBeVisible();
