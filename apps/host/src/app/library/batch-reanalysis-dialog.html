@@ -1,0 +1,91 @@
+<div
+  class="dialog batch"
+  appModalSurface
+  #surface="appModalSurface"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="batch-title"
+  (closeRequested)="closed.emit()"
+>
+  <header class="dialog-head">
+    <h2 id="batch-title">Re-analyze documents</h2>
+    <button type="button" class="close-btn" (click)="surface.requestClose()" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+    </button>
+  </header>
+
+  <p class="dialog-body" data-testid="batch-scope">
+    @if (scope(); as scope) {
+      In <strong lang="de">{{ scope.name }}</strong> and the folders inside it.
+    } @else {
+      Across all your documents.
+    }
+    Klartext reads each one again with the current analysis.
+  </p>
+
+  <div class="radios" role="radiogroup" aria-label="Which documents">
+    @for (c of criteria; track c.key) {
+      <label class="radio" [class.is-disabled]="count(c.key) === 0" [class.is-on]="selected() === c.key" [attr.data-criterion]="c.key">
+        <input
+          type="radio"
+          name="batch-criterion"
+          [value]="c.key"
+          [checked]="selected() === c.key"
+          [disabled]="count(c.key) === 0"
+          (change)="pick(c.key)"
+        />
+        <span class="radio-text">
+          <span class="radio-label">{{ c.label }}</span>
+          <span class="radio-hint">{{ c.hint }}</span>
+        </span>
+        <span class="radio-count">{{ count(c.key) }}</span>
+      </label>
+    }
+  </div>
+
+  @if (members().length) {
+    <div class="list">
+      <button type="button" class="list-toggle" [attr.aria-expanded]="listOpen()" (click)="listOpen.set(!listOpen())">
+        <svg class="chev" [class.is-open]="listOpen()" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        {{ listOpen() ? 'Hide' : 'Show' }} {{ plural(members().length) }}
+      </button>
+      @if (listOpen()) {
+        <ul class="list-rows">
+          @for (doc of members(); track doc.id) {
+            <li>
+              <span class="list-title" lang="de">{{ doc.title }}</span>
+              @if (relativePath(doc); as path) {
+                <span class="chip" lang="de">{{ path }}</span>
+              }
+              @if (doneCount(doc); as done) {
+                <span class="chip chip-done">{{ done }} done</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  @if (withDone(); as n) {
+    <p class="warn" data-testid="batch-done-warning">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8 2.9 19.5h18.2z"/><path d="M12 10v4"/><path d="M12 16.9v.2"/></svg>
+      <span>{{ n === 1 ? '1 of these documents has' : n + ' of these documents have' }} items marked Done. Re-analyzing can bring them back as not done, and a reminder you add again may duplicate one already in your calendar.</span>
+    </p>
+  }
+
+  @if (members().length > largeBatch) {
+    <p class="quota" data-testid="batch-quota">This is a large batch — {{ members().length }} documents can take several minutes and use a lot of your AI analysis. You can keep working meanwhile.</p>
+  }
+
+  <footer class="dialog-foot">
+    <button type="button" class="btn btn-secondary" (click)="surface.requestClose()">Cancel</button>
+    <button type="button" class="btn btn-primary" [disabled]="members().length === 0" (click)="start()" autofocus>
+      @if (members().length) {
+        Re-analyze {{ plural(members().length) }}
+      } @else {
+        Nothing to re-analyze
+      }
+    </button>
+  </footer>
+</div>

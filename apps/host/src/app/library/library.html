@@ -109,8 +109,43 @@
           </div>
         }
       </span>
+      <!-- The ⋯ overflow (issue #159): library-wide actions — today just
+           Batch re-analysis, disabled while a batch runs. -->
+      <span class="more-wrap">
+        <button
+          type="button"
+          class="btn-more"
+          (click)="toggleMoreMenu()"
+          aria-label="More"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="moreMenuOpen()"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>
+        </button>
+        @if (moreMenuOpen()) {
+          <button type="button" class="menu-shield" (click)="closeMoreMenu()" aria-hidden="true" tabindex="-1"></button>
+          <div class="menu" role="menu" aria-label="More">
+            <button
+              type="button"
+              class="menu-item"
+              role="menuitem"
+              [disabled]="batchBusy() || batchCandidates() === null"
+              (click)="openReanalyze()"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></svg>
+              <span>{{ batchBusy() ? 'Re-analyzing documents' : 'Re-analyze documents' }}</span>
+            </button>
+          </div>
+        }
+      </span>
     </div>
   </header>
+
+  <app-batch-progress-strip
+    [progress]="batch.progress()"
+    [finishing]="batch.finishing()"
+    (cancel)="batch.cancel()"
+  />
 
   <div
     class="library-drop"
@@ -152,7 +187,20 @@
         </button>
       </div>
     } @else {
-      <p class="meta-line">{{ describeContents(store.deepDocumentCount(), 0) }}</p>
+      <p class="meta-line">
+        {{ describeContents(store.deepDocumentCount(), 0) }}
+        <!-- The Outdated Extraction nudge (issue #159) — desktop and phone
+             phrase it differently; only one renders per breakpoint. -->
+        @if (outdatedCount(); as outdated) {
+          <span class="nudge nudge-wide" data-testid="nudge-wide">
+            · {{ outdated }} {{ outdated === 1 ? 'uses' : 'use' }} an earlier analysis format —
+            <button type="button" class="link" (click)="openReanalyze()">Re-analyze</button>
+          </span>
+          <span class="nudge nudge-narrow" data-testid="nudge-narrow">
+            · <button type="button" class="link" (click)="openReanalyze()">Re-analyze {{ outdated }} outdated</button>
+          </span>
+        }
+      </p>
       @if (store.deepDocumentCount() > 0) {
         <app-attention-panel
           [groups]="attention().groups"
@@ -254,6 +302,17 @@
         (moved)="store.moveFolder(dialog.folder.id, $event); closeDialog()"
         (closed)="closeDialog()"
       />
+    }
+    @case ('reanalyze') {
+      @if (batchCandidates(); as candidates) {
+        <app-batch-reanalysis-dialog
+          [candidates]="candidates"
+          [scope]="store.folderById(openDocument.folderId()) ?? null"
+          [folders]="store.folders() ?? []"
+          (started)="startBatch($event)"
+          (closed)="closeDialog()"
+        />
+      }
     }
     @case ('delete-folder') {
       <app-folder-delete-dialog

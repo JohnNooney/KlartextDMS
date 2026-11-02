@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { BatchReanalysis } from '../bus/batch-reanalysis';
+import { BatchReanalysis, type BatchCriterion } from '../bus/batch-reanalysis';
 import { ExtractionFlow } from '../bus/extraction-flow';
 import { provideDocumentData } from '../data/providers';
 import type { DocumentRecord } from '../data/document';
@@ -19,6 +19,8 @@ import { Reader } from '../reader/reader';
 import { ReminderDialog } from '../reminders/reminder-dialog';
 import { Reminders } from '../reminders/reminders';
 import { AttentionPanel } from './attention-panel';
+import { BatchProgressStrip } from './batch-progress-strip';
+import { BatchReanalysisDialog } from './batch-reanalysis-dialog';
 import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
 import { DeleteDialog } from './delete-dialog';
 import { DocumentTile, type TileAction } from './document-tile';
@@ -48,6 +50,7 @@ type DialogState =
   | { kind: 'rename-folder'; folder: FolderRecord }
   | { kind: 'move-folder'; folder: FolderRecord }
   | { kind: 'delete-folder'; folder: FolderRecord }
+  | { kind: 'reanalyze' }
   | null;
 
 /**
@@ -65,6 +68,8 @@ type DialogState =
   styleUrls: ['./library.scss', './search-field.scss'],
   imports: [
     AttentionPanel,
+    BatchProgressStrip,
+    BatchReanalysisDialog,
     DocumentTile,
     FolderTile,
     FolderTreeView,
@@ -80,7 +85,7 @@ type DialogState =
     MenuViewport,
   ],
   host: {
-    '(document:keydown.escape)': 'closeAddMenu()',
+    '(document:keydown.escape)': 'closeAddMenu(); closeMoreMenu()',
     '(document:keydown)': 'onGlobalKeydown($event)',
     '[class.reading]': 'openDocument.docId() !== null',
     // Desktop: the card makes room for the floating insights lane beside it.
@@ -103,6 +108,23 @@ export class Library {
   // the signed-in session (issue #31); it self-attaches to the Bus, and the
   // tile's ⋮ Retry analysis routes through it (issue #32).
   protected readonly flow = inject(ExtractionFlow);
+  protected readonly batch = inject(BatchReanalysis);
+
+  /** Batch re-analysis criteria over the browsed Folder's subtree (issue #159). */
+  private readonly scopeCandidates = computed(() =>
+    this.batch.candidates(this.openDocument.folderId()),
+  );
+  protected readonly batchCandidates = computed(() => this.scopeCandidates()());
+
+  /** A batch is running, or a cancelled one is finishing its current member. */
+  protected readonly batchBusy = computed(
+    () => this.batch.progress().running || this.batch.finishing(),
+  );
+
+  /** The meta-line nudge's count — hidden (0) while a batch is busy. */
+  protected readonly outdatedCount = computed(() =>
+    this.batchBusy() ? 0 : (this.batchCandidates()?.outdated.length ?? 0),
+  );
 
   /** The Folder attention overview (issue #120): Action Items under the browsed Folder, deep. */
   protected readonly attention = computed(() =>
@@ -334,6 +356,28 @@ export class Library {
   protected pickAdd(kind: 'upload' | 'new-folder'): void {
     this.addMenuOpen.set(false);
     this.dialog.set(kind === 'upload' ? { kind: 'upload' } : { kind: 'new-folder' });
+  }
+
+  /** The toolbar ⋯ overflow menu (issue #159), desktop and phone. */
+  protected readonly moreMenuOpen = signal(false);
+
+  protected toggleMoreMenu(): void {
+    this.moreMenuOpen.update((open) => !open);
+  }
+
+  protected closeMoreMenu(): void {
+    this.moreMenuOpen.set(false);
+  }
+
+  /** ⋯ → Re-analyze documents, or the meta-line nudge. */
+  protected openReanalyze(): void {
+    this.moreMenuOpen.set(false);
+    if (!this.batchBusy()) this.dialog.set({ kind: 'reanalyze' });
+  }
+
+  protected startBatch(criterion: BatchCriterion): void {
+    this.dialog.set(null);
+    this.batch.start(this.openDocument.folderId(), criterion);
   }
 
   protected openUpload(): void {
