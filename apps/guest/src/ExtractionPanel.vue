@@ -8,7 +8,7 @@ import type {
   IdentifiedActionItem,
   PanelPresentation,
 } from '@klartext/bus-contract';
-import { documentTypeLabel, isDone } from '@klartext/bus-contract';
+import { documentTypeLabel, isDone, isOutdatedExtraction } from '@klartext/bus-contract';
 import TakeawaySection from './TakeawaySection.vue';
 
 // The insights panel as one continuous scroll (issue #75, layout settled by
@@ -289,6 +289,16 @@ const jobInFlight = computed(
   () => props.extractionState === 'queued' || props.extractionState === 'running',
 );
 
+// Issue #159 (from #157): an Outdated Extraction gets a second meta line
+// nudging a re-analysis for dates — hidden while a job is in flight and
+// after a failed one, where the banner already offers Try again.
+const showOutdatedNudge = computed(
+  () =>
+    isOutdatedExtraction(props.extraction) &&
+    !jobInFlight.value &&
+    props.extractionState !== 'failed',
+);
+
 // The failed re-analysis banner is dismissible (#32); a new failure after
 // another retry re-shows it.
 const bannerDismissed = ref(false);
@@ -340,6 +350,20 @@ function reanalyze(): void {
           <h1 class="text-kt-lg font-semibold">{{ typeLabel }}</h1>
           <p class="mt-kt-1 text-kt-xs text-kt-text-muted">
             Translated from {{ sourceLanguage }} · Analyzed {{ analyzedAt }}
+          </p>
+          <p
+            v-if="showOutdatedNudge"
+            data-testid="outdated-nudge"
+            class="mt-kt-1 text-kt-xs text-kt-text-muted"
+          >
+            Earlier analysis format ·
+            <button
+              type="button"
+              class="font-semibold text-kt-accent hover:underline"
+              @click="reanalyze"
+            >
+              Re-analyze for dates
+            </button>
           </p>
         </div>
         <div v-if="isComplete" class="relative shrink-0">

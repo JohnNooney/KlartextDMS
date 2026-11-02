@@ -303,6 +303,31 @@ describe('ExtractionPanel', () => {
     expect(item!.attributes('disabled')).toBeDefined();
   });
 
+  // Issue #159 (from #157): an Outdated Extraction nudges under the meta
+  // line — "Earlier analysis format · Re-analyze for dates" — through the
+  // same `reanalyze` emit as the ⋯ menu.
+
+  it('nudges an Outdated Extraction to re-analyze for dates', async () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: record({ schemaVersion: 1 }) } });
+    const nudge = wrapper.find('[data-testid="outdated-nudge"]');
+    expect(nudge.text().replace(/\s+/g, ' ')).toBe('Earlier analysis format · Re-analyze for dates');
+
+    await nudge.find('button').trigger('click');
+    expect(wrapper.emitted('reanalyze')).toHaveLength(1);
+  });
+
+  it('no nudge for a current-format Extraction', () => {
+    const wrapper = mount(ExtractionPanel, { props: { extraction: record({ schemaVersion: 2 }) } });
+    expect(wrapper.find('[data-testid="outdated-nudge"]').exists()).toBe(false);
+  });
+
+  it.each(['queued', 'running', 'failed'] as const)('hides the nudge while %s', (state) => {
+    const wrapper = mount(ExtractionPanel, {
+      props: { extraction: record({ schemaVersion: 1 }), extractionState: state },
+    });
+    expect(wrapper.find('[data-testid="outdated-nudge"]').exists()).toBe(false);
+  });
+
   // Issue #148: the ⋯ menu dismisses like every Host menu (ADR 0014) — a
   // click anywhere outside is swallowed by the shield, Escape closes it and
   // returns focus to the trigger.

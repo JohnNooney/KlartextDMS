@@ -9,6 +9,7 @@ import { routes } from './app.routes';
 import { AuthService } from './auth.service';
 import { HOST_BUS_ADAPTER_FACTORY, type HostBusContext } from './bus/host-bus.adapter';
 import { HostBusEvents } from './bus/host-bus-events';
+import { BatchReanalysis } from './bus/batch-reanalysis';
 import { ExtractionFlow } from './bus/extraction-flow';
 import type { DocumentRepository } from './data/document-repository';
 import type { FolderRepository } from './data/folder-repository';
@@ -82,6 +83,14 @@ async function setup(
         { provide: FOLDER_REPOSITORY, useValue: fakeFolderRepository },
         { provide: UploadPipeline, useValue: fakePipeline },
         { provide: ExtractionFlow, useValue: {} },
+        {
+          provide: BatchReanalysis,
+          useValue: {
+            progress: signal({ running: false, done: 0, total: 0 }),
+            finishing: signal(false),
+            candidates: () => signal(null),
+          },
+        },
         { provide: Reminders, useValue: { draft: signal(null), open: vi.fn(), close: vi.fn() } },
         LibraryStore,
       ],
