@@ -1,0 +1,426 @@
+@if (!enabled) {
+  <app-attention-panel
+    [groups]="groups()"
+    [done]="done()"
+    [reading]="reading()"
+    (itemOpened)="itemOpened.emit($event)"
+    (reminderRequested)="reminderRequested.emit($event)"
+    (doneToggled)="doneToggled.emit($event)"
+  />
+} @else {
+  <div class="proto-desktop">
+    <app-attention-panel
+      [groups]="groups()"
+      [done]="done()"
+      [reading]="reading()"
+      (itemOpened)="itemOpened.emit($event)"
+      (reminderRequested)="reminderRequested.emit($event)"
+      (doneToggled)="doneToggled.emit($event)"
+    />
+  </div>
+
+  <div class="proto-mobile">
+    @if (showBanner()) {
+      @if (count() === 0 && variant() !== 'A') {
+        <section class="attention proto-empty" aria-label="Needs your attention">
+          <p>Nothing needs your attention</p>
+          @if (readingFixture(); as progress) {
+            <p class="attention-note" role="status">
+              <span class="spinner" aria-hidden="true"></span>
+              Reading {{ progress.read }} of {{ progress.total }} documents…
+            </p>
+          }
+        </section>
+      } @else {
+        @switch (variant()) {
+          @case ('A') {
+            <section class="attention" aria-labelledby="mobile-attention-title">
+              <div class="attention-head">
+                <button
+                  type="button"
+                  class="attention-toggle"
+                  [attr.aria-expanded]="expanded()"
+                  (click)="expanded.update(toggle)"
+                >
+                  <svg
+                    class="chevron"
+                    [class.is-open]="expanded()"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                  <span id="mobile-attention-title" class="attention-title"
+                    >Needs your attention</span
+                  >
+                  @if (!readingFixture() && count() > 0) {
+                    <span class="attention-count">{{ count() }}</span>
+                  }
+                </button>
+                @if (expanded() && count() > 0) {
+                  <button type="button" class="attention-see-all" (click)="showSheet()">
+                    See All
+                  </button>
+                }
+              </div>
+              @if (expanded()) {
+                @if (readingFixture(); as progress) {
+                  <p class="attention-note" role="status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    Reading {{ progress.read }} of {{ progress.total }} documents…
+                  </p>
+                } @else if (count() === 0) {
+                  <p class="attention-note">Nothing needs your attention</p>
+                }
+                @for (row of cardItems(); track row.item.id) {
+                  <div class="attention-row">
+                    <button
+                      type="button"
+                      class="icon-button attention-done"
+                      (click)="recordAction('Dummy Mark done — no data changed.')"
+                      title="Mark done"
+                      aria-label="Mark done"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="8.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-button attention-remind"
+                      (click)="recordAction('Dummy Add reminder — no data changed.')"
+                      title="Add reminder"
+                      aria-label="Add reminder"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+                        <path d="M8 3v4M16 3v4M3.5 10h17" />
+                        <path d="M12 13v4M10 15h4" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="attention-hit"
+                      (click)="recordAction('Document opening is disabled for fixture items.')"
+                    >
+                      <span class="attention-text">{{ row.item.text }}</span>
+                      @if (row.when) {
+                        <span class="attention-when" [attr.data-urgency]="row.key">{{
+                          row.when
+                        }}</span>
+                      }
+                      <svg
+                        class="attention-disclosure"
+                        width="8"
+                        height="13"
+                        viewBox="0 0 8 13"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M1.5 1.5 6.5 6.5 1.5 11.5"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                }
+              }
+            </section>
+          }
+          @case ('B') {
+            <section class="attention proto-banner-shell" aria-label="Needs your attention">
+              <button type="button" class="proto-banner" (click)="showSheet()">
+                <span class="proto-banner-line">
+                  <strong>{{ countText() }}</strong>
+                  <span class="proto-see-all">See All</span>
+                </span>
+                @if (readingFixture(); as progress) {
+                  <span class="proto-reading" role="status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    Reading {{ progress.read }} of {{ progress.total }} documents…
+                  </span>
+                }
+              </button>
+            </section>
+          }
+          @case ('C') {
+            <section class="attention proto-banner-shell" aria-label="Needs your attention">
+              <button type="button" class="proto-banner" (click)="showSheet()">
+                <span class="proto-banner-line">
+                  <strong>{{ countText() }}</strong>
+                  <span class="proto-see-all">See All</span>
+                </span>
+                @if (urgencySummary()) {
+                  <span class="proto-urgencies">
+                    @if (overdue()) {
+                      <span class="proto-urgency" data-urgency="overdue"
+                        >{{ overdue() }} overdue</span
+                      >
+                    }
+                    @if (thisWeek()) {
+                      <span class="proto-urgency" data-urgency="thisWeek"
+                        >{{ thisWeek() }} this week</span
+                      >
+                    }
+                  </span>
+                }
+                @if (readingFixture(); as progress) {
+                  <span class="proto-reading" role="status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    Reading {{ progress.read }} of {{ progress.total }} documents…
+                  </span>
+                }
+              </button>
+            </section>
+          }
+          @case ('D') {
+            <section class="attention" aria-labelledby="mobile-attention-title">
+              <div class="attention-head">
+                <button
+                  type="button"
+                  class="attention-toggle"
+                  [attr.aria-expanded]="expanded()"
+                  (click)="expanded.update(toggle)"
+                >
+                  <svg
+                    class="chevron"
+                    [class.is-open]="expanded()"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                  <span id="mobile-attention-title" class="attention-title"
+                    >Needs your attention</span
+                  >
+                  @if (!readingFixture() && count() > 0) {
+                    <span class="attention-count">{{ count() }}</span>
+                  }
+                </button>
+                @if (expanded() && count() > 0) {
+                  <button type="button" class="attention-see-all" (click)="showSheet()">
+                    See All
+                  </button>
+                }
+              </div>
+              @if (expanded()) {
+                @if (readingFixture(); as progress) {
+                  <p class="attention-note proto-peek-reading" role="status">
+                    <span class="spinner" aria-hidden="true"></span>
+                    Reading {{ progress.read }} of {{ progress.total }} documents…
+                  </p>
+                }
+                @if (first(); as row) {
+                  <button
+                    type="button"
+                    class="proto-peek"
+                    (click)="recordAction('Document opening is disabled for fixture items.')"
+                  >
+                    <span class="proto-peek-text">{{ row.item.text }}</span>
+                    @if (row.when) {
+                      <span class="proto-peek-when" [attr.data-urgency]="row.key">{{
+                        row.when
+                      }}</span>
+                    }
+                  </button>
+                  @if (count() > 1) {
+                    <button type="button" class="proto-more" (click)="showSheet()">
+                      +{{ count() - 1 }} more · See All
+                    </button>
+                  }
+                }
+              }
+            </section>
+          }
+        }
+      }
+    }
+
+    @if (sheetOpen()) {
+      <div
+        class="proto-sheet"
+        appModalSurface
+        #modal="appModalSurface"
+        appSheet
+        [detents]="detents"
+        [(detent)]="sheetDetent"
+        [dismissible]="true"
+        (dismissRequested)="modal.requestClose()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-attention-sheet-title"
+        (closeRequested)="sheetOpen.set(false)"
+      >
+        <button appSheetHandle [label]="handleLabel()"></button>
+        <header class="proto-sheet-head">
+          <h2 id="mobile-attention-sheet-title">Needs your attention</h2>
+          <button type="button" class="close-btn" (click)="modal.requestClose()" aria-label="Close">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+            </svg>
+          </button>
+        </header>
+        <div class="proto-sheet-body">
+          @for (group of fixtureGroups(); track group.key) {
+            <section class="proto-sheet-group" [attr.data-urgency]="group.key">
+              <h3>
+                @if (group.key === 'overdue' || group.key === 'thisWeek') {
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 3.8 2.9 19.5h18.2z" />
+                    <path d="M12 10v4" />
+                    <path d="M12 16.9v.2" />
+                  </svg>
+                }
+                {{ group.label }}
+              </h3>
+              <ul class="proto-sheet-list">
+                @for (item of group.items; track item.id) {
+                  <li [attr.data-layout]="sheetLayout()">
+                    <button
+                      type="button"
+                      class="proto-item-open"
+                      (click)="recordAction('Document opening is disabled for fixture items.')"
+                    >
+                      <span class="proto-item-main">
+                        <span class="proto-item-text">{{ item.text }}</span>
+                        @if (item.timingLabel) {
+                          <span class="proto-item-chip">{{ item.timingLabel }}</span>
+                        }
+                        <span class="proto-item-doc">
+                          <span lang="de">{{ item.documentTitle }}</span>
+                          @if (item.path) {
+                            · <span lang="de">{{ item.path }}</span>
+                          }
+                          @if (item.page) {
+                            · <span class="proto-item-page">p. {{ item.page }}</span>
+                          }
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="proto-item-action proto-item-done"
+                      (click)="recordAction('Dummy Mark done — no data changed.')"
+                      title="Mark done"
+                      aria-label="Mark done"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="8.5" />
+                      </svg>
+                      <span class="proto-action-label">Mark done</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="proto-item-action proto-item-remind"
+                      (click)="recordAction('Dummy Add reminder — no data changed.')"
+                      title="Add reminder"
+                      aria-label="Add reminder"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+                        <path d="M8 3v4M16 3v4M3.5 10h17" />
+                        <path d="M12 13v4M10 15h4" />
+                      </svg>
+                      <span class="proto-action-label">Add reminder</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <app-mobile-attention-prototype-switcher
+    [variant]="variant()"
+    [sheetLayout]="sheetLayout()"
+    [items]="items()"
+    [empty]="empty()"
+    [reading]="readingSample()"
+    [lastAction]="lastAction()"
+    (variantStep)="stepVariant($event)"
+    (sheetStep)="stepSheet($event)"
+    (itemsStep)="stepItems($event)"
+    (emptyToggled)="toggleEmpty()"
+    (readingToggled)="readingSample.set(!readingSample())"
+  />
+}

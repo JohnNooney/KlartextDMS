@@ -18,7 +18,7 @@ import { PageFocus } from '../page-focus';
 import { Reader } from '../reader/reader';
 import { ReminderDialog } from '../reminders/reminder-dialog';
 import { Reminders } from '../reminders/reminders';
-import { AttentionPanel } from './attention-panel';
+import { MobileAttentionPrototype } from './mobile-attention-prototype';
 import { BatchProgressStrip } from './batch-progress-strip';
 import { BatchReanalysisDialog } from './batch-reanalysis-dialog';
 import { buildAttentionOverview, readyDocumentsInScope, type AttentionItem } from './attention-overview';
@@ -67,7 +67,7 @@ type DialogState =
   templateUrl: './library.html',
   styleUrls: ['./library.scss', './search-field.scss'],
   imports: [
-    AttentionPanel,
+    MobileAttentionPrototype,
     BatchProgressStrip,
     BatchReanalysisDialog,
     DocumentTile,
