@@ -37,11 +37,15 @@ Something in a Document the user must do, comply with when acting, or track on a
 _Avoid_: risk, alert, red flag, critical warning
 
 **Urgency**:
-How soon an Action Item's timing comes due, derived at read time and bucketed identically in Host and Guest: *Overdue* (a fixed deadline has passed), *This week* (a fixed deadline or the next occurrence of a monthly recurring item falls within 7 days), *Later* (further out, a recurrence too loosely specified to compute, or a notice period), or *No date*. Urgency is never stored and says nothing about importance — colour means Urgency, never the Action Item category itself.
+How soon an Action Item's timing comes due, derived at read time and bucketed identically in Host and Guest: *Overdue* (a fixed deadline or the oldest unfinished tracked monthly Occurrence has passed), *This week* (a fixed deadline or the oldest unfinished tracked monthly Occurrence falls within 7 days), *Later* (further out, a recurrence too loosely specified to compute, or a notice period), or *No date*. A newer Done Occurrence never hides an older miss. Urgency is never stored and says nothing about importance — colour means Urgency, never the Action Item category itself.
 _Avoid_: priority, severity, status
 
+**Occurrence**:
+One due cycle of a monthly recurring Action Item, identified by its actual due date. Every month has an Occurrence: a day-of-month beyond the month's length clamps to its last day, including leap-year February. The oldest unfinished tracked Occurrence drives the Action Item's Urgency.
+_Avoid_: cycle, instance
+
 **Done**:
-The user's reversible mark that an Action Item no longer needs their attention — filed, paid, or simply acknowledged. One state for every kind of timing: a monthly recurring item is Done only for the occurrence it was marked against and returns when the next one comes up; any other Action Item stays Done until the user undoes it. An Action Item whose quotation changes on re-analysis counts as a new item and is no longer Done.
+The user's reversible mark that an Action Item no longer needs their attention — filed, paid, or simply acknowledged. One state for every kind of timing: a monthly recurring item is Done per Occurrence, and the whole item is Done only when every tracked Occurrence through the current one is Done. Mark done addresses the oldest unfinished Occurrence; aggregate Undo reopens the latest Done Occurrence. Any other Action Item stays Done until the user undoes it. An Action Item whose quotation changes on re-analysis counts as a new item and is no longer Done.
 _Avoid_: completed, dismissed, resolved, archived, acknowledged
 
 **Key Takeaway**:
@@ -60,8 +64,12 @@ _Avoid_: summary, transcript, translated summary
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
 _Avoid_: analysis, task, background job
 
+**Library selection**:
+The user's transient, explicit set of Documents hand-picked from those visible in the current library grid — never Folders or Documents hidden in nested Folders — to re-analyze, move, or delete together.
+_Avoid_: multi-select, bulk selection
+
 **Batch re-analysis**:
-The user's explicit request to re-analyze every Document in a Folder (and its nested Folders) that matches one criterion — Outdated Extraction, couldn't be analyzed, or all of them — run as ordinary Extraction Jobs. Klartext never starts one on its own.
+The user's explicit request to re-analyze many Documents as ordinary Extraction Jobs, with membership chosen either by one criterion — Outdated Extraction, couldn't be analyzed, or all Documents — over a Folder and its nested Folders, or by a hand-picked Library selection. Klartext never starts one on its own.
 _Avoid_: migration, bulk update, reprocess
 
 ### Cross-frame communication

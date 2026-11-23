@@ -42,7 +42,7 @@ Domain terms (Host, Guest, Document, Extraction, Action Item, Bus, Envelope, Ses
 
 ## Status
 
-v1 is shipped: sign-in, folder library, uploads, the reader, and persisted Extractions. v2 is in progress: the Extraction v2 schema, Action Items, and the Host extraction index are done; library search, calendar reminders, and per-page Translation are planned. See [`docs/spec.md`](./docs/spec.md).
+v1 is shipped: sign-in, folder library, uploads, the reader, and persisted Extractions. v2 (`v2.0.0`) is built: the Extraction v2 schema, Action Items with Urgency and Done, the Host extraction index, Folder attention overview, library search, calendar reminders, shared overlay surfaces, and batch re-analysis. v2.1 is being planned; per-page Translation is deferred to v2.2. See [`docs/spec.md`](./docs/spec.md).
 
 ## Repository layout
 
