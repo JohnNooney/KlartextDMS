@@ -64,8 +64,12 @@ _Avoid_: summary, transcript, translated summary
 One request from the Host for the Guest to produce a Document's Extraction, carrying that Document's bytes. Extraction Jobs run in the background, one at a time, independent of which Document is open.
 _Avoid_: analysis, task, background job
 
+**Library selection**:
+The user's transient, explicit set of Documents hand-picked from those visible in the current library grid — never Folders or Documents hidden in nested Folders — to re-analyze, move, or delete together.
+_Avoid_: multi-select, bulk selection
+
 **Batch re-analysis**:
-The user's explicit request to re-analyze every Document in a Folder (and its nested Folders) that matches one criterion — Outdated Extraction, couldn't be analyzed, or all of them — run as ordinary Extraction Jobs. Klartext never starts one on its own.
+The user's explicit request to re-analyze many Documents as ordinary Extraction Jobs, with membership chosen either by one criterion — Outdated Extraction, couldn't be analyzed, or all Documents — over a Folder and its nested Folders, or by a hand-picked Library selection. Klartext never starts one on its own.
 _Avoid_: migration, bulk update, reprocess
 
 ### Cross-frame communication
