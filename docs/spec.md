@@ -120,10 +120,14 @@ Open tracks:
 - Extraction wire-schema enforcement of root-level conditional requirements ([#137](https://github.com/JohnNooney/KlartextDMS/issues/137), research [#175](https://github.com/JohnNooney/KlartextDMS/issues/175)).
 - Individual occurrences of recurring Action Items ([#143](https://github.com/JohnNooney/KlartextDMS/issues/143)), then carrying Done marks across an Extraction schema upgrade ([#161](https://github.com/JohnNooney/KlartextDMS/issues/161)).
 - A general library grid selection mode with bulk re-analysis, move, and delete ([#160](https://github.com/JohnNooney/KlartextDMS/issues/160), prototype [#176](https://github.com/JohnNooney/KlartextDMS/issues/176)).
-- Mobile attention panel ([#165](https://github.com/JohnNooney/KlartextDMS/issues/165), moved from the v2 map).
+
+## Resolved decisions
+
+- **Mobile attention panel:** [Mobile attention panel UX prototype](https://github.com/JohnNooney/KlartextDMS/issues/165) chose the Count banner for phones: the whole banner opens See All, with no item rows or chevron; reading stays inline, and settled zero pending hides the banner. See All rows lead with Mark done then Add reminder, and timing pills plus Document metadata wrap safely. The shared sheet behavior and desktop top-three card stay unchanged. Implementation: [Mobile attention Count banner and leading-action See All rows](https://github.com/JohnNooney/KlartextDMS/issues/182). Prototype `prototype/mobile-attention-banner` is behavioral reference only — no code ports.
 
 Already `ready-for-agent` and sequenced into the v2.1 build order: [#169](https://github.com/JohnNooney/KlartextDMS/issues/169), [#147](https://github.com/JohnNooney/KlartextDMS/issues/147), [#146](https://github.com/JohnNooney/KlartextDMS/issues/146), [#72](https://github.com/JohnNooney/KlartextDMS/issues/72).
 
 ## Explicitly not in v2.1
 
 - Full literal Document translation (v2 Phase B), planned for v2.2.0.
+- Desktop adoption of the mobile attention Count banner; desktop keeps its current top-three card ([Mobile attention panel UX prototype](https://github.com/JohnNooney/KlartextDMS/issues/165)).
